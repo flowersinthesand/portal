@@ -60,7 +60,7 @@
 		}, function(type, flags) {
 			var old = socket[type];
 			
-			socket[type] = $.extend(function handler(fn) {
+			function handler(fn) {
 				if (old && !$.isFunction(fn)) {
 					return old.apply(socket, arguments);
 				}
@@ -68,7 +68,9 @@
 				handler.add(fn);
 				
 				return socket;
-			}, $.Callbacks(flags));
+			}
+			
+			socket[type] = $.extend(handler, $.Callbacks(flags));
 		});
 		
 		// The url is a identifier of this socket within the document
