@@ -149,12 +149,12 @@ asyncTest("request's reject method should fire close event", function() {
 
 asyncTest("connection's send method should fire message event", function() {
 	$.socket("url", {
-	    server: function(request) {
-	    	var connection = request.accept();
-	    	connection.on("open", function() {
-            	connection.send("data");
-            });
-	    }
+		server: function(request) {
+			var connection = request.accept();
+			connection.on("open", function() {
+				connection.send("data");
+			});
+		}
 	})
 	.message(function(data) {
 		equal(data, "data");
@@ -163,12 +163,12 @@ asyncTest("connection's send method should fire message event", function() {
 
 asyncTest("connection's close method should fire close event", function() {
 	$.socket("url", {
-	    server: function(request) {
-	    	var connection = request.accept();
-	    	connection.on("open", function() {
-            	connection.close();
-            });
-	    }
+		server: function(request) {
+			var connection = request.accept();
+			connection.on("open", function() {
+				connection.close();
+			});
+		}
 	})
 	.close(function() {
 		ok(true);
@@ -179,13 +179,13 @@ asyncTest("connection's open event should be fired after socket's open event", f
 	var result = "";
 	
 	$.socket("url", {
-	    server: function(request) {
-	    	request.accept().on("open", function() {
-            	result += "B";
-            	equal(result, "AB");
-            	start();
-            });
-	    }
+		server: function(request) {
+			request.accept().on("open", function() {
+				result += "B";
+				equal(result, "AB");
+				start();
+			});
+		}
 	})
 	.open(function() {
 		result += "A";
@@ -194,12 +194,12 @@ asyncTest("connection's open event should be fired after socket's open event", f
 
 asyncTest("connection's message event handler should receive a data sent by the socket", function() {
 	$.socket("url", {
-	    server: function(request) {
-	    	request.accept().on("message", function(data) {
-            	equal(data, "Hello");
-            	start();
-            });
-	    }
+		server: function(request) {
+			request.accept().on("message", function(data) {
+				equal(data, "Hello");
+				start();
+			});
+		}
 	})
 	.send("Hello");
 });
@@ -208,13 +208,13 @@ asyncTest("connection's close event should be fired after socket's close event",
 	var result = "";
 	
 	$.socket("url", {
-	    server: function(request) {
-	    	request.accept().on("close", function() {
-        		result += "B";
-            	equal(result, "AB");
-            	start();
-            })
-	    }
+		server: function(request) {
+			request.accept().on("close", function() {
+				result += "B";
+				equal(result, "AB");
+				start();
+			})
+		}
 	})
 	.close(function() {
 		result += "A";
@@ -224,13 +224,13 @@ asyncTest("connection's close event should be fired after socket's close event",
 
 asyncTest("connection's close event handler should receive close code and reason", function() {
 	$.socket("url", {
-	    server: function(request) {
-	    	request.accept().on("close", function(code, reason) {
-            	ok(code, 1000);
-            	ok(reason, "normal");
-            	start();
-            });
-	    }
+		server: function(request) {
+			request.accept().on("close", function(code, reason) {
+				ok(code, 1000);
+				ok(reason, "normal");
+				start();
+			});
+		}
 	})
 	.close(1000, "normal");
 });
