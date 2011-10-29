@@ -14,26 +14,26 @@ test("jQuery.socket(url) should return a socket object which is mapped to the gi
 	var socket = $.socket("url");
 	
 	ok(socket);
-	equal(socket, $.socket("url"));
+	strictEqual(socket, $.socket("url"));
 	
-	notEqual(Object.prototype.toString, $.socket("toString"));
+	notStrictEqual(Object.prototype.toString, $.socket("toString"));
 });
 
 test("jQuery.socket() should return the first socket object", function() {
 	var first, second;
 	
 	Object.prototype.property = 1;
-	equal(null, $.socket());
+	strictEqual(null, $.socket());
 	delete Object.prototype.property;
 	
 	first = $.socket("first", {});
 	
-	equal(first, $.socket());
+	strictEqual(first, $.socket());
 	
 	second = $.socket("second", {});
 	
-	notEqual(second, $.socket());
-	equal(first, $.socket());
+	notStrictEqual(second, $.socket());
+	strictEqual(first, $.socket());
 });
 
 module("Socket object", {
@@ -42,7 +42,7 @@ module("Socket object", {
 
 test("options property should include the given options", function() {
 	$.socket("url", {version: $.fn.jquery});
-	equal($.socket("url", {version: $.fn.jquery}).options.version, $.fn.jquery);
+	strictEqual($.socket("url", {version: $.fn.jquery}).options.version, $.fn.jquery);
 });
 
 test("on method should add callback", 4, function() {
@@ -81,7 +81,7 @@ $.each(["open", "message", "fail", "done"], function(i, name) {
 		
 		$.socket("url")[name](out("A"))[name](out("B")).fire(name)[name](out("C"));
 		
-		equal(result, name !== "message" ? "ABC" : "AB");
+		strictEqual(result, name !== "message" ? "ABC" : "AB");
 	});
 });
 
@@ -110,7 +110,7 @@ asyncTest("close method should delete socket reference", function() {
 	var socket = $.socket("url").close();
 	
 	setTimeout(function() {
-		notEqual(socket, $.socket("url"));
+		notStrictEqual(socket, $.socket("url"));
 		start();
 	}, 10);
 });
@@ -185,7 +185,7 @@ asyncTest("connection's send method should fire message event", function() {
 		}
 	})
 	.message(function(data) {
-		equal(data, "data");
+		strictEqual(data, "data");
 	}, start);
 });
 
@@ -210,9 +210,9 @@ asyncTest("connection's open event should be fired after socket's open event", f
 		server: function(request) {
 			var connection = request.accept();
 			connection.on("open", function() {
-				equal(this, connection);
+				strictEqual(this, connection);
 				result += "B";
-				equal(result, "AB");
+				strictEqual(result, "AB");
 				start();
 			});
 		}
@@ -227,8 +227,8 @@ asyncTest("connection's message event handler should receive a data sent by the 
 		server: function(request) {
 			var connection = request.accept();
 			connection.on("message", function(data) {
-				equal(this, connection);
-				equal(data, "Hello");
+				strictEqual(this, connection);
+				strictEqual(data, "Hello");
 				start();
 			});
 		}
@@ -243,9 +243,9 @@ asyncTest("connection's close event should be fired after socket's fail event", 
 		server: function(request) {
 			var connection = request.accept();
 			connection.on("close", function() {
-				equal(this, connection);
+				strictEqual(this, connection);
 				result += "B";
-				equal(result, "AB");
+				strictEqual(result, "AB");
 				start();
 			});
 		}
@@ -280,7 +280,7 @@ asyncTest("open event handler should be executed when the connection has been es
 		}
 	})
 	.open(function() {
-		equal(this, socket);
+		strictEqual(this, socket);
 	}, start);
 });
 
@@ -293,7 +293,7 @@ asyncTest("message event handler should be executed with data when a message has
 		}
 	})
 	.message(function(data) {
-		equal(this, socket);
+		strictEqual(this, socket);
 		ok(data);
 	}, start);
 });
@@ -308,7 +308,7 @@ asyncTest("message event's data should be parsed into an string if dataType is '
 		}
 	})
 	.message(function(data) {
-		equal(data, "[object Object]");
+		strictEqual(data, "[object Object]");
 	}, start);
 });
 
@@ -337,7 +337,7 @@ asyncTest("message event's data should be parsed into an xml document if dataTyp
 		}
 	})
 	.message(function(data) {
-		equal($(data).find("name").text(), "Donghwan");
+		strictEqual($(data).find("name").text(), "Donghwan");
 	}, start);
 });
 
@@ -348,7 +348,7 @@ asyncTest("fail event handler should be executed with a reason when the connecti
 		}
 	})
 	.fail(function(reason) {
-		equal(this, socket);
+		strictEqual(this, socket);
 		ok(reason);
 	}, start);
 });
@@ -356,7 +356,7 @@ asyncTest("fail event handler should be executed with a reason when the connecti
 asyncTest("fail event's reason should be 'close' if the socket's close method has been called with no arguments", function() {
 	$.socket("url")
 	.fail(function(reason) {
-		equal(reason, "close");
+		strictEqual(reason, "close");
 	}, start)
 	.close();
 });
@@ -371,14 +371,14 @@ asyncTest("fail event's reason should be 'parseerror' if parsing a message's dat
 		}
 	})
 	.fail(function(reason) {
-		equal(reason, "parseerror");
+		strictEqual(reason, "parseerror");
 	}, start);
 });
 
 asyncTest("fail event's reason should be 'timeout' if the socket has been timed out", function() {
 	$.socket("url", {timeout: 100})
 	.fail(function(reason) {
-		equal(reason, "timeout");
+		strictEqual(reason, "timeout");
 	}, start);
 });
 
@@ -389,7 +389,7 @@ asyncTest("fail event's reason should be 'error' if the socket has been closed d
 		}
 	})
 	.fail(function(reason) {
-		equal(reason, "error");
+		strictEqual(reason, "error");
 	}, start);
 });
 
@@ -402,7 +402,7 @@ asyncTest("done event handler should be executed when the connection has been cl
 		}
 	})
 	.done(function() {
-		equal(this, socket);
+		strictEqual(this, socket);
 	}, start);
 });
 
@@ -413,7 +413,7 @@ asyncTest("the reference to the socket should be removed when the connection has
 		}
 	})
 	.fail(function() {
-		notEqual(this, $.socket("url1"));
+		notStrictEqual(this, $.socket("url1"));
 	});
 	
 	$.socket("url2", {
@@ -424,7 +424,7 @@ asyncTest("the reference to the socket should be removed when the connection has
 		}
 	})
 	.done(function() {
-		notEqual(this, $.socket("url2"));
+		notStrictEqual(this, $.socket("url2"));
 	});
 	
 	setTimeout(start, 100);
