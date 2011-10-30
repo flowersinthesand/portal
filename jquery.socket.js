@@ -174,7 +174,7 @@
 					close: delay(function() {
 						if (socket.state() === "opened") {
 							socket.fire("done");
-							connectionEvent.triggerHandler("close", [1005, null]);
+							connectionEvent.triggerHandler("close", [1000, null]);
 						}
 					}),
 					on: function(type, fn) {
