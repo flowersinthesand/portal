@@ -12,7 +12,8 @@
 		sockets = {},
 		// Transports
 		transports = {},
-		// Reference to slice
+		// Reference to core prototype
+		hasOwn = Object.prototype.hasOwnProperty,
 		slice = Array.prototype.slice;
 
 	// Socket is based on The WebSocket API 
@@ -48,59 +49,69 @@
 				done: event.done.add,
 				// Adds event handlers
 				on: function(type) {
-					return event[type].add.apply(this, slice.call(arguments, 1));
+					// For custom event
+					if (!event[type] && state !== "closed") {
+						event[type] = $.Callbacks("");
+					}
+					
+					return event[type] ? event[type].add.apply(this, slice.call(arguments, 1)) : this;
 				},
 				// Removes event handlers
 				off: function(type) {
-					return event[type].remove.apply(this, slice.call(arguments, 1));
+					return event[type] ? event[type].remove.apply(this, slice.call(arguments, 1)) : this;
 				},
 				// Fires event handlers
 				fire: function(type) {
-					var parse,
+					var i,
 						context = this,
 						args = slice.call(arguments, 1);
 					
 					switch (type) {
 					case "open":
-						state = "open";
+						state = "opened";
+						// Clears timeout
 						if (timeoutId) {
 							clearTimeout(timeoutId);
 						}
 						break;
 						
 					case "message":
-						parse = ({text: window.String, json: $.parseJSON, xml: $.parseXML})[self.options.dataType]; 
-						if (parse) {
+						// Parses message data
+						if (self.options.dataType && typeof args[0] === "string" && self.options.dataType !== "text") {
 							try {
-								args[0] = parse(args[0]);
+								args[0] = ({json: $.parseJSON, xml: $.parseXML})[self.options.dataType](args[0]);
 							} catch (e) {
 								return self.close(0, "parseerror");
 							}
 						}
+						
+						// Custom event handlers
+						if (event[args[0] && args[0].event]) {
+							self.fire(args[0].event, args[0].data);
+						}
 						break;
 						
 					case "fail":
-						state = "failed";
-						event.done.disable();
-						event.message.disable();
-						delete sockets[url];
-						break;
-						
 					case "done":
-						state = "done";
-						event.fail.disable();
-						event.message.disable();
+						state = "closed";
+						// Disables all other handlers
+						for (i in event) {
+							if (i !== type && hasOwn.call(event, i)) {
+								event[i].disable();
+							}
+						}
 						delete sockets[url];
 						break;
 					}
 					
-					return event[type].fire.apply(context, args);
+					return event[type] ? event[type].fire.apply(context, args) : this;
 				},
 				// Transmits data using the connection
-				send: function(data) {
+				send: function(event, data) {
 					return self.open(function() {
 						if (transport) {
-							transport.send(data);
+							// TODO stringify
+							transport.send(data !== undefined ? {event: event, data: data} : event);
 						}
 					});
 				},
@@ -112,16 +123,17 @@
 					
 					return this;
 				},
-				// Finds a logical sub socket communicating with this socket
+				// Finds a sub socket communicating with this socket
 				find: function(name) {
-					return $.socket(url + "/" + name);
+					return $.socket(url + "/" + name, {type: "sub", event: name, source: url});
 				}
 			};
 		
-		if (self.options.type in transports) {
+		if (hasOwn.call(transports, self.options.type)) {
 			transport = transports[self.options.type](self);
 			transport.open();
 			
+			// Sets timeout
 			if (self.options.timeout > 0) {
 				timeoutId = setTimeout(function() {
 					self.close(0, "timeout");
@@ -155,13 +167,14 @@
 				// Connection object for the server
 				connection = {
 					send: delay(function(data) {
-						if (socket.state() === "open") {
+						if (socket.state() === "opened") {
 							socket.fire("message", data);
 						}
 					}),
 					close: delay(function() {
-						if (socket.state() === "open") {
+						if (socket.state() === "opened") {
 							socket.fire("done");
+							connectionEvent.triggerHandler("close", [1005, null]);
 						}
 					}),
 					on: function(type, fn) {
@@ -210,6 +223,36 @@
 					}
 				})
 			};
+		},
+		// Sub socket implementation
+		sub: function(socket) {
+			var // Event
+				event = socket.options.event,
+				// Source socket
+				source = sockets[socket.options.source];
+			
+			return {
+				open: function() {
+					source.open(function() {
+						socket.fire("open");
+					})
+					.fail(function(reason) {
+						socket.fire("fail", reason);
+					})
+					.done(function() {
+						socket.fire("done");
+					})
+					.on(event, function(data) {
+						socket.fire("message", data);
+					});
+				},
+				send: function(data) {
+					source.send(event, data);
+				},
+				close: function(code, reason) {
+					socket.fire("fail", reason);
+				}
+			};
 		}
 	});
 
@@ -223,7 +266,7 @@
 		// Returns the first socket in the document
 		if (!url) {
 			for (i in sockets) {
-				if (sockets.hasOwnProperty(i)) {
+				if (hasOwn.call(sockets, i)) {
 					return sockets[i];
 				}
 			}
@@ -231,7 +274,7 @@
 		}
 		
 		// Socket to which the given url is mapped
-		if (sockets.hasOwnProperty(url)) {
+		if (hasOwn.call(sockets, url)) {
 			return sockets[url];
 		}
 		

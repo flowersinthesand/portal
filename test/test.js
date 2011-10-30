@@ -115,7 +115,7 @@ asyncTest("close method should delete socket reference", function() {
 	}, 10);
 });
 
-test("find method should find a logical sub socket", function() {
+test("find method should find a sub socket", function() {
 	ok($.socket("url").find("chat"));
 });
 
@@ -175,11 +175,12 @@ asyncTest("request's reject method should fire fail event", function() {
 	}, start);
 });
 
-asyncTest("connection's send method should fire message event", function() {
+asyncTest("connection's send method should fire socket's message event", function() {
 	$.socket("url", {
 		server: function(request) {
 			var connection = request.accept();
 			connection.on("open", function() {
+				strictEqual(this, connection);
 				connection.send("data");
 			});
 		}
@@ -189,11 +190,12 @@ asyncTest("connection's send method should fire message event", function() {
 	}, start);
 });
 
-asyncTest("connection's close method should fire done event", function() {
+asyncTest("connection's close method should fire socket's done event", function() {
 	$.socket("url", {
 		server: function(request) {
 			var connection = request.accept();
 			connection.on("open", function() {
+				strictEqual(this, connection);
 				connection.close();
 			});
 		}
@@ -208,9 +210,7 @@ asyncTest("connection's open event should be fired after socket's open event", f
 	
 	$.socket("url", {
 		server: function(request) {
-			var connection = request.accept();
-			connection.on("open", function() {
-				strictEqual(this, connection);
+			request.accept().on("open", function() {
 				result += "B";
 				strictEqual(result, "AB");
 				start();
@@ -225,9 +225,7 @@ asyncTest("connection's open event should be fired after socket's open event", f
 asyncTest("connection's message event handler should receive a data sent by the socket", function() {
 	$.socket("url", {
 		server: function(request) {
-			var connection = request.accept();
-			connection.on("message", function(data) {
-				strictEqual(this, connection);
+			request.accept().on("message", function(data) {
 				strictEqual(data, "Hello");
 				start();
 			});
@@ -236,27 +234,43 @@ asyncTest("connection's message event handler should receive a data sent by the 
 	.send("Hello");
 });
 
-asyncTest("connection's close event should be fired after socket's fail event", function() {
+asyncTest("connection's close event should be fired if opened socket's fail event fires", function() {
 	var result = "";
 	
 	$.socket("url", {
 		server: function(request) {
-			var connection = request.accept();
-			connection.on("close", function() {
-				strictEqual(this, connection);
+			request.accept().on("close", function() {
 				result += "B";
 				strictEqual(result, "AB");
-				start();
 			});
 		}
 	})
 	.fail(function() {
 		result += "A";
-	})
+	}, start)
 	.close();
 });
 
-asyncTest("connection's close event handler should receive close code and reason", function() {
+asyncTest("connection's close event should be fired if opened socket's done event", function() {
+	var result = "";
+	
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("open", function() {
+				this.close();
+			})
+			.on("close", function() {
+				result += "B";
+				strictEqual(result, "AB");
+			});
+		}
+	})
+	.done(function() {
+		result += "A";
+	}, start);
+});
+
+asyncTest("connection's close event handler should be able to receive close code and reason", function() {
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("close", function(code, reason) {
@@ -303,12 +317,12 @@ asyncTest("message event's data should be parsed into a string if dataType is 't
 		dataType: "text",
 		server: function(request) {
 			request.accept().on("open", function() {
-				this.send({name: "Donghwan"});
+				this.send("name=Donghwan");
 			});
 		}
 	})
 	.message(function(data) {
-		strictEqual(data, "[object Object]");
+		strictEqual(data, "name=Donghwan");
 	}, start);
 });
 
@@ -393,7 +407,7 @@ asyncTest("fail event's reason should be 'error' if the socket has been closed d
 	}, start);
 });
 
-asyncTest("done event handler should be executed when the connection has been closed cleanly", function() {
+asyncTest("done event handler should be executed when the connection has been closed normally", function() {
 	var socket = $.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
@@ -403,6 +417,41 @@ asyncTest("done event handler should be executed when the connection has been cl
 	})
 	.done(function() {
 		strictEqual(this, socket);
+	}, start);
+});
+
+asyncTest("state should be 'opened' after open event", function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept();
+		}
+	})
+	.open(function() {
+		strictEqual(this.state(), "opened");
+	}, start);
+});
+
+asyncTest("state should be 'closed' after fail event", function() {
+	$.socket("url", {
+		server: function(request) {
+			request.reject();
+		}
+	})
+	.fail(function() {
+		strictEqual(this.state(), "closed");
+	}, start);
+});
+
+asyncTest("state should be 'closed' after done event", function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("open", function() {
+				this.close();
+			});
+		}
+	})
+	.done(function() {
+		strictEqual(this.state(), "closed");
 	}, start);
 });
 
@@ -428,4 +477,155 @@ asyncTest("the reference to the socket should be removed when the connection has
 	});
 	
 	setTimeout(start, 100);
+});
+
+module("Custom event", {
+	teardown: teardown
+});
+
+test("on and off method should work with custom event", function() {
+	var yes = function() {
+			ok(true);
+		},
+		no = function() {
+			ok(false);
+		};
+	
+	$.socket("url").on("custom", yes, no).off("custom", no).fire("custom");
+});
+
+asyncTest("custom event handler should be executed with data when a custom message has been received", function() {
+	$.socket("url", {
+		dataType: "json",
+		server: function(request) {
+			request.accept().on("open", function() {
+				this.send("{\"event\":\"dm\",\"data\":{\"sender\":\"flowersits\",\"message\":\"How are you?\"}}");
+			});
+		}
+	})
+	.on("dm", function(data) {
+		deepEqual(data, {sender: "flowersits", message: "How are you?"});
+	}, start);
+});
+
+asyncTest("send method should be able to send custom event message", function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("message", function(data) {
+				// TODO data should be string
+				deepEqual(data, {event: "dm", data: {receiver: "flowersits", message: "I'm fine thank you, and you?"}});
+				start();
+			});
+		}
+	})
+	.send("dm", {receiver: "flowersits", message: "I'm fine thank you, and you?"});
+});
+
+module("Sub socket", {
+	teardown: teardown
+});
+
+asyncTest("open event should be triggered following the source socket's open event", function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept();
+		}
+	})
+	.find("dm")
+	.open(function() {
+		ok(true);
+	}, start);
+});
+
+asyncTest("message event should be triggered following the source socket's corresponding message event", function() {
+	$.socket("url", {
+		dataType: "json",
+		server: function(request) {
+			request.accept().on("open", function() {
+				this.send("{\"event\":\"dm\",\"data\":{\"sender\":\"flowersits\",\"message\":\"How are you?\"}}");
+			});
+		}
+	})
+	.find("dm")
+	.message(function(data) {
+		deepEqual(data, {sender: "flowersits", message: "How are you?"});
+	}, start);
+});
+
+asyncTest("fail event should be triggered following the source socket's fail event", function() {
+	$.socket("url", {
+		server: function(request) {
+			request.reject();
+		}
+	})
+	.find("dm")
+	.fail(function(reason) {
+		strictEqual(reason, "error");
+	}, start);
+});
+
+asyncTest("done event should be triggered following the source socket's done event", function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("open", function() {
+				this.close();
+			});
+		}
+	})
+	.find("dm")
+	.done(function() {
+		ok(true);
+	}, start);
+});
+
+asyncTest("send method should send custom message to the source socket", function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("message", function(data) {
+				// TODO data should be string
+				deepEqual(data, {event: "dm", data: {receiver: "flowersits", message: "I'm fine thank you, and you?"}});
+				start();
+			});
+		}
+	})
+	.find("dm")
+	.send({receiver: "flowersits", message: "I'm fine thank you, and you?"});
+});
+
+asyncTest("close method should close only the sub socket, not the source socket", function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept();
+		}
+	})
+	.fail(function() {
+		ok(false);
+	})
+	.find("dm")
+	.fail(function(reason) {
+		strictEqual(reason, "close");
+	}, start)
+	.close();
+});
+
+asyncTest("find method should work with sub socket", function() {
+	$.socket("url", {
+		dataType: "json",
+		server: function(request) {
+			request.accept().on("open", function() {
+				this.send("{\"event\":\"chat\",\"data\":{\"event\":\"music\",\"data\":{\"message\":\"what's your favorite band?\"}}}");
+			})
+			.on("message", function(data) {
+				// TODO data should be string
+				deepEqual(data, {event:"chat", data: {event: "music", data: {message: "hollow jan"}}});
+				start();
+			});
+		}
+	})
+	.find("chat")
+	.find("music")
+	.message(function(data) {
+		deepEqual(data, {message: "what's your favorite band?"});
+		this.send({message: "hollow jan"});
+	});
 });
