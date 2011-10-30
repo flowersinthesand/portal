@@ -298,7 +298,7 @@ asyncTest("message event handler should be executed with data when a message has
 	}, start);
 });
 
-asyncTest("message event's data should be parsed into an string if dataType is 'text'", function() {
+asyncTest("message event's data should be parsed into a string if dataType is 'text'", function() {
 	$.socket("url", {
 		dataType: "text",
 		server: function(request) {
@@ -313,7 +313,7 @@ asyncTest("message event's data should be parsed into an string if dataType is '
 });
 
 
-asyncTest("message event's data should be parsed into an json object if dataType is 'json'", function() {
+asyncTest("message event's data should be parsed into a json object if dataType is 'json'", function() {
 	$.socket("url", {
 		dataType: "json",
 		server: function(request) {
