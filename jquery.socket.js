@@ -7,15 +7,68 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 (function($, undefined) {
-
+	
 	var // Sockets
 		sockets = {},
 		// Transports
 		transports = {},
+		// Default options
+		defaults = {
+			type: "test",
+			reconnectDelay: 500,
+			reconnect: function(delay, attempts) {
+				return attempts > 1 ? 2 * delay : 0;
+			}
+		},
 		// Reference to core prototype
 		hasOwn = Object.prototype.hasOwnProperty,
 		slice = Array.prototype.slice;
-
+	
+	// A resettable callback
+	function callbacks(flags) {
+		var list = [],
+			wrapper = {},
+			wrapped = $.Callbacks(flags);
+		
+		$.each(wrapped, function(key) {
+			wrapper[key] = function() {
+				return wrapped[key].apply(this, arguments);
+			};
+		});
+		
+		return $.extend(wrapper, {
+			add: function() {
+				var args = arguments;
+				
+				if (!wrapped.disabled()) {
+					$.merge(list, args);
+				}
+				
+				return wrapped.add.apply(this, args); 
+			},
+			remove: function() {
+				var i, j, args = arguments;
+				
+				if (!wrapped.disabled()) {
+					for (i = 0; i < args.length; i++) {
+						for (j = 0; j < list.length; j++) {
+							if (args[i] === list[j]) {
+								list.splice(j--, 1);
+							}
+						}
+					}
+				}
+				
+				return wrapped.remove.apply(this, args);
+			},
+			reset: function() {
+				wrapped.disable();
+				wrapped = $.Callbacks(flags);
+				return wrapped.add.apply(this, list);
+			}
+		});
+	}
+	
 	// Socket is based on The WebSocket API 
 	// W3C Working Draft 29 September 2011 - http://www.w3.org/TR/2011/WD-websockets-20110929/
 	function socket(url, options) {
@@ -24,99 +77,124 @@
 			// Timeout id
 			timeoutId,
 			// The state of the connection
-			state = "connecting",
+			oldState,
+			state,
 			// Socket event
 			event = {
-				open: $.Callbacks("once memory"),
-				message: $.Callbacks(""),
-				fail: $.Callbacks("once memory"),
-				done: $.Callbacks("once memory")
+				connecting: callbacks("once memory"),
+				open: callbacks("once memory"),
+				message: callbacks(),
+				fail: callbacks("once memory"),
+				done: callbacks("once memory"),
+				close: callbacks("once memory")
 			},
+			// Buffer
+			buffer = [],
+			// Reconnection
+			reconnectDelay,
+			reconnectTry,
 			// Socket object
 			self = {
 				// Final options object
-				options: $.extend(true, {
-					type: "test"
-				}, options),
+				options: $.extend(true, {}, defaults, options),
 				// Returns the state
 				state: function() {
 					return state;
 				},
-				// Shortcuts for on method
-				open: event.open.add,
-				message: event.message.add,
-				fail: event.fail.add,
-				done: event.done.add,
-				// Adds event handlers
-				on: function(type) {
+				// Adds event handler
+				on: function(type, fn) {
 					// For custom event
 					if (!event[type] && state !== "closed") {
-						event[type] = $.Callbacks("");
+						event[type] = callbacks();
 					}
 					
-					return event[type] ? event[type].add.apply(this, slice.call(arguments, 1)) : this;
+					if (event[type]) {
+						event[type].add(fn);
+					}
+					
+					return this;
 				},
-				// Removes event handlers
-				off: function(type) {
-					return event[type] ? event[type].remove.apply(this, slice.call(arguments, 1)) : this;
+				// Removes event handler
+				off: function(type, fn) {
+					if (event[type]) {
+						event[type].remove(fn);
+					}
+					
+					return this;
+				},
+				// Adds one time event handler 
+				one: function(type, fn) {
+					var proxy = function() {
+							self.off(type, proxy);
+							fn.apply(this, arguments);
+						};
+					
+					return self.on(type, proxy);
 				},
 				// Fires event handlers
 				fire: function(type) {
-					var i,
-						context = this,
+					var context = this,
 						args = slice.call(arguments, 1);
 					
-					switch (type) {
-					case "open":
-						state = "opened";
-						// Clears timeout
-						if (timeoutId) {
-							clearTimeout(timeoutId);
+					// Parses data
+					if (type === "message" && self.options.dataType && typeof args[0] === "string" && self.options.dataType !== "text") {
+						try {
+							args[0] = ({json: $.parseJSON, xml: $.parseXML})[self.options.dataType](args[0]);
+						} catch (e) {
+							return self.close(0, "parseerror");
 						}
-						break;
-						
-					case "message":
-						// Parses message data
-						if (self.options.dataType && typeof args[0] === "string" && self.options.dataType !== "text") {
-							try {
-								args[0] = ({json: $.parseJSON, xml: $.parseXML})[self.options.dataType](args[0]);
-							} catch (e) {
-								return self.close(0, "parseerror");
-							}
-						}
-						
-						// Custom event handlers
-						if (event[args[0] && args[0].event]) {
-							self.fire(args[0].event, args[0].data);
-						}
-						break;
-						
-					case "fail":
-					case "done":
-						state = "closed";
-						// Disables all other handlers
-						for (i in event) {
-							if (i !== type && hasOwn.call(event, i)) {
-								event[i].disable();
-							}
-						}
-						delete sockets[url];
-						break;
 					}
 					
-					return event[type] ? event[type].fire.apply(context, args) : this;
+					if (event[type]) {
+						event[type].fire.apply(context, args);
+					}
+					
+					return this;
+				},
+				// Establishes a connection
+				open: function() {
+					var type, 
+						reconnecting = event.connecting.fired();
+					
+					for (type in event) {
+						event[type].reset();
+					}
+					
+					if (!reconnecting) {
+						self.fire("connecting", 0, 0);
+					}
+					
+					if (hasOwn.call(transports, self.options.type)) {
+						transport = transports[self.options.type](self);
+						transport.open();
+						
+						// Sets timeout
+						if (self.options.timeout > 0) {
+							timeoutId = setTimeout(function() {
+								self.close(0, "timeout");
+							}, self.options.timeout);
+						}
+					}
+					
+					return this;
 				},
 				// Transmits data using the connection
 				send: function(event, data) {
-					return self.open(function() {
-						if (transport) {
-							// TODO stringify
-							transport.send(data !== undefined ? {event: event, data: data} : event);
-						}
-					});
+					// TODO stringify
+					data = data !== undefined ? {event: event, data: data} : event;
+					
+					if (state !== "opened") {
+						buffer.push(data);
+					} else if (transport) {
+						transport.send(data);
+					}
+					
+					return this;
 				},
 				// Disconnects the connection
 				close: function(code, reason) {
+					self.options.reconnect = false;
+					
 					if (transport) {
 						transport.close(code || 0, reason || "close");
 					}
@@ -125,23 +203,111 @@
 				},
 				// Finds a sub socket communicating with this socket
 				find: function(name) {
-					return $.socket(url + "/" + name, {type: "sub", event: name, source: url});
+					return $.socket(url + "/" + name, {type: "sub", event: name, source: url, timeout: 0, init: true, reconnect: false});
 				}
 			};
 		
-		if (hasOwn.call(transports, self.options.type)) {
-			transport = transports[self.options.type](self);
-			transport.open();
+		// Shortcuts for on method
+		$.each(event, function(type) {
+			var old = self[type],
+				on = function(fn) {
+					return self.on(type, fn);
+				};
 			
-			// Sets timeout
-			if (self.options.timeout > 0) {
-				timeoutId = setTimeout(function() {
-					self.close(0, "timeout");
-				}, self.options.timeout);
-			}
-		}
+			self[type] = !old ? on : function(fn) {
+				return ($.isFunction(fn) ? on : old).apply(this, arguments);
+			};
+		});
 		
-		return self;
+		// Initializes
+		self.connecting(function() {
+			state = "connecting";
+			
+			if (oldState === "connecting") {
+				reconnectTry++;
+			}
+		})
+		.open(function() {
+			state = "opened";
+			
+			// Clears timeout
+			if (timeoutId) {
+				clearTimeout(timeoutId);
+			}
+			
+			// Disables connecting event
+			event.connecting.disable();
+			
+			// Initializes variables related with reconnection
+			reconnectDelay = reconnectTry = null;
+			
+			// Flushes buffer
+			while (buffer.length) {
+				self.send(buffer.shift());
+			}
+		})
+		.message(function(data) {
+			// Fires custom event
+			if (event[data && data.event]) {
+				self.one("message", function() {
+					self.fire(data.event, data.data);
+				});
+			}
+		})
+		.fail(function() {
+			var type, excludes = ["close", "fail"];
+			
+			oldState = state;
+			state = "closed";
+			
+			// Disables open, message and custom events
+			for (type in event) {
+				if ($.inArray(type, excludes) < 0) {
+					event[type].disable();
+				}
+			}
+			
+			// Prepares close event
+			self.one("fail", function() {
+				self.fire("close");
+			});
+		})
+		.done(function() {
+			var type, excludes = ["close", "done"];
+			
+			oldState = state;
+			state = "closed";
+
+			// Disables open, message and custom events
+			for (type in event) {
+				if ($.inArray(type, excludes) < 0) {
+					event[type].disable();
+				}
+			}
+			
+			// Prepares close event
+			self.one("done", function() {
+				self.fire("close");
+			});
+		})
+		.close(function() {
+			self.one("close", function() {
+				// Handles reconnection
+				if (self.options.reconnect) {
+					reconnectTry = reconnectTry || 1;
+					reconnectDelay = self.options.reconnect(reconnectDelay || self.options.reconnectDelay, reconnectTry);
+					
+					if (reconnectDelay !== false) {
+						setTimeout(self.open, reconnectDelay);
+						
+						event.connecting.reset();
+						self.fire("connecting", reconnectDelay, reconnectTry);
+					}
+				}
+			});
+		});
+		
+		return self.open();
 	}
 	
 	$.extend(transports, {
@@ -233,18 +399,33 @@
 			
 			return {
 				open: function() {
-					source.open(function() {
-						socket.fire("open");
-					})
-					.fail(function(reason) {
-						socket.fire("fail", reason);
-					})
-					.done(function() {
-						socket.fire("done");
-					})
-					.on(event, function(data) {
-						socket.fire("message", data);
-					});
+					if (socket.options.init) {
+						source.open(function() {
+							if (socket.state() === "closed") {
+								socket.options.init = false;
+								socket.open();
+							}
+							
+							source.one("open", function() {
+								socket.fire("open");
+							});
+						})
+						.fail(function(reason) {
+							source.one("fail", function() {
+								socket.fire("fail", reason);
+							});
+						})
+						.done(function() {
+							source.one("done", function() {
+								socket.fire("done");
+							});
+						})
+						.on(event, function(data) {
+							source.one(event, function() {
+								socket.fire("message", data);
+							});
+						});
+					}
 				},
 				send: function(data) {
 					source.send(event, data);
@@ -255,14 +436,20 @@
 			};
 		}
 	});
-
+	
 	$(window).on("unload.socket", function() {
+		$.each(sockets, function(url, socket) {
+			if (socket.state() !== "closed") {
+				socket.close();
+			}
+		});
+		
 		sockets = {};
 	});
 	
 	$.socket = function(url, options) {
 		var i;
-
+		
 		// Returns the first socket in the document
 		if (!url) {
 			for (i in sockets) {
@@ -281,5 +468,7 @@
 		// The url is a identifier of this socket within the document
 		return (sockets[url] = socket(url, options));
 	};
+	
+	$.socket.defaults = defaults;
 	
 })(jQuery);
