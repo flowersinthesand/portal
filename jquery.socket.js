@@ -159,7 +159,7 @@
 						event[type].reset();
 					}
 					
-					// Fires connecting event If this is first connect attempt
+					// Fires connecting event If this is first connection attempt
 					if (!oldState) {
 						self.fire("connecting", 0, 0);
 					}
