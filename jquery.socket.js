@@ -409,9 +409,9 @@
 			return {
 				open: function() {
 					if (socket.options.init) {
+						socket.options.init = false;
 						source.open(function() {
 							if (socket.state() === "closed") {
-								socket.options.init = false;
 								socket.open();
 							}
 							
