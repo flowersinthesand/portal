@@ -153,14 +153,14 @@
 				},
 				// Establishes a connection
 				open: function() {
-					var type, 
-						reconnecting = event.connecting.fired();
+					var type;
 					
 					for (type in event) {
 						event[type].reset();
 					}
 					
-					if (!reconnecting) {
+					// Fires connecting event If this is first connect attempt
+					if (!oldState) {
 						self.fire("connecting", 0, 0);
 					}
 					
