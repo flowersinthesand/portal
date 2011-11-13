@@ -214,6 +214,7 @@
 					return self.on(type, fn);
 				};
 			
+			event[type].reserved = true;
 			self[type] = !old ? on : function(fn) {
 				return ($.isFunction(fn) ? on : old).apply(this, arguments);
 			};
@@ -247,11 +248,19 @@
 			}
 		})
 		.message(function(data) {
+			var eventName, eventHandler;
+			
 			// Fires custom event
-			if (event[data && data.event]) {
-				self.one("message", function() {
-					self.fire(data.event, data.data);
-				});
+			if (data) {
+				eventName = data.event;
+				if (eventName) {
+					eventHandler = event[eventName];
+					if (eventHandler && !eventHandler.reserved) {
+						self.one("message", function() {
+							self.fire(eventName, data.data);
+						});
+					}
+				}
 			}
 		})
 		.fail(function() {
