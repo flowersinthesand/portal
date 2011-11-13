@@ -593,6 +593,14 @@ asyncTest("close event should be fired after done event", function() {
 	});
 });
 
+asyncTest("state should be 'connecting' after connecting event", function() {
+	$.socket("url")
+	.connecting(function() {
+		strictEqual(this.state(), "connecting");
+		start();
+	});
+});
+
 asyncTest("state should be 'opened' after open event", function() {
 	$.socket("url", {
 		server: function(request) {
