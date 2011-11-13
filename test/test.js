@@ -825,7 +825,7 @@ asyncTest("socket should reconnect by default", 5, function() {
 asyncTest("sub socket should reconnect according to the source socket", 4, function() {
 	var count = 4;
 	
-	$.socket("/event" + Math.random(), {
+	$.socket("url", {
 		server: function(request) {
 			if (count--) {
 				request.accept().on("open", function() {
