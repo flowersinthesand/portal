@@ -1,14 +1,18 @@
-var defaults = $.extend(true, {}, $.socket.defaults);
+var original = $.extend(true, {}, $.socket);
+
+function setup() {
+	$.socket.defaults.type = "test";
+	$.socket.defaults.reconnectDelay = 10;
+}
 
 function teardown() {
 	$(window).trigger("unload.socket");
-	$.extend(true, $.socket.defaults, defaults);
+	$.extend(true, $.socket.defaults, original.defaults);
+	$.extend(true, $.socket.transports, original.transports);
 }
 
 module("jQuery.socket", {
-	setup: function() {
-		$.socket.defaults.reconnect = false;
-	},
+	setup: setup,
 	teardown: teardown
 });
 
@@ -43,9 +47,7 @@ test("jQuery.socket() should return the first socket object", function() {
 });
 
 module("Socket object", {
-	setup: function() {
-		$.socket.defaults.reconnect = false;
-	},
+	setup: setup,
 	teardown: teardown
 });
 
@@ -54,18 +56,18 @@ test("options property should include the given options", function() {
 	strictEqual($.socket("url", {version: $.fn.jquery}).options.version, $.fn.jquery);
 });
 
-test("on method should add a event handler", 6, function() {
+test("on method should add a event handler", 7, function() {
 	var type, 
 		yes = function() {
 			ok(true);
 		};
 	
-	for (type in {connecting: 1, open: 1, message: 1, fail: 1, done: 1, close: 1}) {
+	for (type in {connecting: 1, open: 1, message: 1, fail: 1, done: 1, close: 1, waiting: 1}) {
 		$.socket(type).on(type, yes).fire(type);
 	}
 });
 
-test("off method should remove a event handler", 5, function() {
+test("off method should remove a event handler", 6, function() {
 	var type, 
 		yes = function() {
 			ok(true);
@@ -74,23 +76,23 @@ test("off method should remove a event handler", 5, function() {
 			ok(false);
 		};
 		
-	for (type in {open: 1, message: 1, fail: 1, done: 1, close: 1}) {
+	for (type in {open: 1, message: 1, fail: 1, done: 1, close: 1, waiting: 1}) {
 		$.socket(type).on(type, no).off(type, no).on(type, yes).fire(type);
 	}
 });
 
-test("one method should add an one time event handler", 6, function() {
+test("one method should add an one time event handler", 7, function() {
 	var type, 
 		yes = function() {
 			ok(true);
 		};
 		
-	for (type in {connecting: 1, open: 1, message: 1, fail: 1, done: 1, close: 1}) {
+	for (type in {connecting: 1, open: 1, message: 1, fail: 1, done: 1, close: 1, waiting: 1}) {
 		$.socket(type).one(type, yes).fire(type).fire(type);
 	}
 });
 
-$.each(["connecting", "open", "message", "fail", "done", "close"], function(i, name) {
+$.each(["connecting", "open", "message", "fail", "done", "close", "waiting"], function(i, name) {
 	test(name + " method should add " + name + " event handler" + (name !== "message" ? " - flags: once, memory" : ""), function() {
 		var result = "",
 			out = function(string) {
@@ -159,10 +161,103 @@ test("find method should find a sub socket", function() {
 	ok($.socket("url").find("chat"));
 });
 
+module("Transport", {
+	setup: setup,
+	teardown: teardown
+});
+
+test("transport function should receive the socket", function() {
+	var soc;
+	
+	$.socket.transports.subway = function(socket) {
+		ok(socket);
+		soc = socket;
+	};
+	
+	$.socket("url", {type: "subway"});
+	strictEqual(soc, $.socket());
+});
+
+test("transport's open method should be executed after the socket.open()", function() {
+	var result = "";
+	
+	$.socket.transports.subway = function() {
+		result += "A";
+		return {
+			open: function() {
+				result += "B";
+			},
+			send: $.noop,
+			close: $.noop
+		};
+	};
+	
+	$.socket("url", {type: "subway"}).open();
+	strictEqual(result, "ABB");
+});
+
+test("transport's send method should be executed with data after the socket.send()", 1, function() {
+	$.socket.transports.subway = function(socket) {
+		return {
+			open: function() {
+				socket.fire("open");
+			},
+			send: function(data) {
+				strictEqual(data, "data");
+			},
+			close: $.noop
+		};
+	};
+	
+	$.socket("url", {type: "subway"}).send("data");
+});
+
+test("transport's close method should be executed with code and reason after the socket.close()", 2, function() {
+	$.socket.transports.subway = function(socket) {
+		return {
+			open: function() {
+				socket.fire("open");
+			},
+			send: $.noop,
+			close: function(code, reason) {
+				strictEqual(code, 1000);
+				strictEqual(reason, "reason");
+				socket.fire("fail", reason);
+			}
+		};
+	};
+	
+	$.socket("url", {type: "subway"}).close(1000, "reason");
+});
+
+test("transport function should be able to pass the responsibility onto the next transport function by returning void or false", function() {
+	var result = "";
+	
+	$.socket.transports.bus = function() {
+		result += "A";
+	};
+	$.socket.transports.subway = function() {
+		result += "B";
+		return {open: $.noop, send: $.noop, close: $.noop};
+	};
+	$.socket.transports.bicycle = function() {
+		ok(false);
+	};
+	
+	$.socket("url", {type: ["bus", "subway", "bicycle"]});
+	strictEqual(result, "AB");
+});
+
+test("transport function should be able to access url", function() {
+	$.socket.transports.subway = function(socket) {
+		ok(/^url\??/.test(socket.options.url));
+	};
+	
+	$.socket("url", {type: "subway"});
+});
+
 module("Transport test", {
-	setup: function() {
-		$.socket.defaults.reconnect = false;
-	},
+	setup: setup,
 	teardown: teardown
 });
 
@@ -312,7 +407,8 @@ asyncTest("connection's close event should be fired if opened socket's done even
 				strictEqual(result, "AB");
 				start();
 			});
-		}
+		},
+		reconnect: false
 	})
 	.done(function() {
 		result += "A";
@@ -333,17 +429,13 @@ asyncTest("connection's close event handler should be able to receive close code
 });
 
 module("Socket event", {
-	setup: function() {
-		$.socket.defaults.reconnect = false;
-	},
+	setup: setup,
 	teardown: teardown
 });
 
-asyncTest("connecting event handler should be executed with delay and attempts when a connection has tried", function() {
+asyncTest("connecting event handler should be executed when a connection has tried", function() {
 	var socket = $.socket("url");
-	socket.connecting(function(delay, attempts) {
-		ok($.isNumeric(delay));
-		ok($.isNumeric(attempts));
+	socket.connecting(function() {
 		strictEqual(this, socket);
 		start();
 	});
@@ -561,7 +653,8 @@ asyncTest("close event should be fired after fail event", function() {
 	$.socket("url", {
 		server: function(request) {
 			request.reject();
-		}
+		},
+		reconnect: false
 	})
 	.fail(function() {
 		result += "A";
@@ -581,7 +674,8 @@ asyncTest("close event should be fired after done event", function() {
 			request.accept().on("open", function() {
 				this.close();
 			});
-		}
+		},
+		reconnect: false
 	})
 	.done(function() {
 		result += "A";
@@ -589,6 +683,22 @@ asyncTest("close event should be fired after done event", function() {
 	.close(function() {
 		result += "B";
 		strictEqual(result, "AB");
+		start();
+	});
+});
+
+asyncTest("waiting event handler should be executed with delay and attempts when a reconnection has scheduled and the socket has started waiting for connection", function() {
+	var socket = $.socket("url", {
+		server: function(request) {
+			request.accept().on("open", function() {
+				this.close();
+			});
+		}
+	})
+	.waiting(function(delay, attempts) {
+		ok($.isNumeric(delay));
+		ok($.isNumeric(attempts));
+		strictEqual(this, socket);
 		start();
 	});
 });
@@ -639,10 +749,22 @@ asyncTest("state should be 'closed' after done event", function() {
 	});
 });
 
+asyncTest("state should be 'waiting' after waiting event", function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("open", function() {
+				this.close();
+			});
+		}
+	})
+	.waiting(function() {
+		strictEqual(this.state(), "waiting");
+		start();
+	});
+});
+
 module("Custom event", {
-	setup: function() {
-		$.socket.defaults.reconnect = false;
-	},
+	setup: setup,
 	teardown: teardown
 });
 
@@ -686,9 +808,7 @@ asyncTest("send method should be able to send custom event message", function() 
 });
 
 module("Sub socket", {
-	setup: function() {
-		$.socket.defaults.reconnect = false;
-	},
+	setup: setup,
 	teardown: teardown
 });
 
@@ -808,13 +928,11 @@ asyncTest("find method should work with sub socket", function() {
 });
 
 module("Reconnection", {
-	setup: function() {
-		$.socket.defaults.reconnectDelay = 10;
-	},
+	setup: setup,
 	teardown: teardown
 });
 
-asyncTest("socket should reconnect by default", 5, function() {
+asyncTest("socket should reconnect by default", 4, function() {
 	var reconnectCount = 4;
 	
 	$.socket("url", {
@@ -822,7 +940,7 @@ asyncTest("socket should reconnect by default", 5, function() {
 			request[reconnectCount-- ? "reject" : "accept"]();
 		}
 	})
-	.connecting(function() {
+	.waiting(function() {
 		ok(true);
 	})
 	.open(function() {
@@ -851,7 +969,7 @@ asyncTest("sub socket should reconnect according to the source socket", 4, funct
 	});
 });
 
-asyncTest("reconnect handler should receive last delay and the number of attempts and return next delay", 13, function() {
+asyncTest("reconnect handler should receive last delay and the number of attempts and return next delay", 12, function() {
 	var reconnectCount = 4, nextDelay = 20;
 	
 	$.socket("url", {
@@ -866,7 +984,7 @@ asyncTest("reconnect handler should receive last delay and the number of attempt
 			return delay + 1;
 		}
 	})
-	.connecting(function() {
+	.waiting(function() {
 		ok(true);
 	})
 	.open(function() {
@@ -874,7 +992,7 @@ asyncTest("reconnect handler should receive last delay and the number of attempt
 	});
 });
 
-asyncTest("reconnect handler which is false should prevent the socket from reconnecting", 1, function() {
+asyncTest("reconnect handler which is false should stop reconnection", 1, function() {
 	var reconnectCount = 4;
 	
 	$.socket("url", {
@@ -886,12 +1004,15 @@ asyncTest("reconnect handler which is false should prevent the socket from recon
 	.connecting(function() {
 		ok(true);
 	})
+	.waiting(function() {
+		ok(false);
+	})
 	.close(function() {
 		setTimeout(start, 100);
 	});
 });
 
-asyncTest("reconnect handler which returns false should prevent the socket from reconnecting", 1, function() {
+asyncTest("reconnect handler which returns false should stop reconnection", 1, function() {
 	var reconnectCount = 4;
 	
 	$.socket("url", {
@@ -905,7 +1026,27 @@ asyncTest("reconnect handler which returns false should prevent the socket from 
 	.connecting(function() {
 		ok(true);
 	})
+	.waiting(function() {
+		ok(false);
+	})
 	.close(function() {
 		setTimeout(start, 100);
+	});
+});
+
+asyncTest("in case of manual reconnection connecting event should be fired", function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("open", function() {
+				this.close();
+			});
+		},
+		reconnect: false
+	})
+	.one("close", function() {
+		$.socket().open().connecting(function() {
+			ok(true);
+			start();
+		});
 	});
 });

@@ -8,7 +8,9 @@
  */
 (function($, undefined) {
 	
-	var // Sockets
+	var // Socket events
+		socketEvents = "connecting open message fail done close waiting".split(" "),
+		// Sockets
 		sockets = {},
 		// Transports
 		transports = {},
@@ -74,23 +76,17 @@
 	function socket(url, options) {
 		var // Transport
 			transport,
-			// Timeout id
-			timeoutId,
+			// Timeout
+			timeoutTimer,
 			// The state of the connection
 			oldState,
 			state,
-			// Socket event
-			event = {
-				connecting: callbacks("once memory"),
-				open: callbacks("once memory"),
-				message: callbacks(),
-				fail: callbacks("once memory"),
-				done: callbacks("once memory"),
-				close: callbacks("once memory")
-			},
+			// Event helpers
+			events = {},
 			// Buffer
 			buffer = [],
 			// Reconnection
+			reconnectTimer,
 			reconnectDelay,
 			reconnectTry,
 			// Socket object
@@ -103,21 +99,28 @@
 				},
 				// Adds event handler
 				on: function(type, fn) {
+					var event = events[type];
+					
 					// For custom event
-					if (!event[type] && state !== "closed") {
-						event[type] = callbacks();
+					if (!event) {
+						if (events.message.disabled()) {
+							return this;
+						}
+						
+						event = events[type] = callbacks();
+						event.order = events.message.order;
 					}
 					
-					if (event[type]) {
-						event[type].add(fn);
-					}
+					event.add(fn);
 					
 					return this;
 				},
 				// Removes event handler
 				off: function(type, fn) {
-					if (event[type]) {
-						event[type].remove(fn);
+					var event = events[type];
+					
+					if (event) {
+						event.remove(fn);
 					}
 					
 					return this;
@@ -133,7 +136,7 @@
 				},
 				// Fires event handlers
 				fire: function(type) {
-					var context = this,
+					var event = events[type],
 						args = slice.call(arguments, 1);
 					
 					// Parses data
@@ -145,35 +148,42 @@
 						}
 					}
 					
-					if (event[type]) {
-						event[type].fire.apply(context, args);
+					if (event) {
+						event.fire.apply(self, args);
 					}
 					
 					return this;
 				},
 				// Establishes a connection
 				open: function() {
-					var type;
+					var type,
+						i = 0,
+						types = $.makeArray(self.options.type);
 					
-					for (type in event) {
-						event[type].reset();
+					// Cancels the scheduled connection
+					if (reconnectTimer) {
+						clearTimeout(reconnectTimer);
 					}
 					
-					// Fires connecting event If this is first connection attempt
-					if (!oldState) {
-						self.fire("connecting", 0, 0);
+					// Exposes url
+					self.options.url = url;
+					
+					// Chooses transport if not exists
+					while (!transport && i < types.length) {
+						type = types[i++];
+						transport = transports[type](self);
 					}
 					
-					if (hasOwn.call(transports, self.options.type)) {
-						transport = transports[self.options.type](self);
+					// Resets event helpers
+					for (i in events) {
+						events[i].reset();
+					}
+					
+					// Fires connecting event
+					self.fire("connecting");
+					
+					if (transport) {
 						transport.open();
-						
-						// Sets timeout
-						if (self.options.timeout > 0) {
-							timeoutId = setTimeout(function() {
-								self.close(0, "timeout");
-							}, self.options.timeout);
-						}
 					}
 					
 					return this;
@@ -193,7 +203,11 @@
 				},
 				// Disconnects the connection
 				close: function(code, reason) {
+					// Prevents reconnection
 					self.options.reconnect = false;
+					if (reconnectTimer) {
+						clearTimeout(reconnectTimer);
+					}
 					
 					if (transport) {
 						transport.close(code || 0, reason || "close");
@@ -203,22 +217,28 @@
 				},
 				// Finds a sub socket communicating with this socket
 				find: function(name) {
-					return $.socket(url + "/" + name, {type: "sub", event: name, source: url, timeout: 0, init: true, reconnect: false});
+					return $.socket(url + "/" + name, {type: "sub", event: name, source: url});
 				}
 			};
 		
-		// Shortcuts for on method
-		$.each(event, function(type) {
+		$.each(socketEvents, function(i, type) {
+			// Creates event helper
+			events[type] = callbacks(type === "message" ? "" : "once memory");
+			events[type].order = i;
+			
+			// Shortcuts for on method
 			var old = self[type],
 				on = function(fn) {
 					return self.on(type, fn);
 				};
 			
-			event[type].reserved = true;
 			self[type] = !old ? on : function(fn) {
 				return ($.isFunction(fn) ? on : old).apply(this, arguments);
 			};
 		});
+		
+		// done event and fail event are mutually exclusive 
+		events.done.order = events.fail.order;
 		
 		// Initializes
 		self.connecting(function() {
@@ -227,20 +247,27 @@
 			if (oldState === "connecting") {
 				reconnectTry++;
 			}
+			
+			// Sets timeout
+			if (self.options.timeout > 0) {
+				timeoutTimer = setTimeout(function() {
+					self.close(0, "timeout");
+				}, self.options.timeout);
+			}
 		})
 		.open(function() {
 			state = "opened";
 			
 			// Clears timeout
-			if (timeoutId) {
-				clearTimeout(timeoutId);
+			if (timeoutTimer) {
+				clearTimeout(timeoutTimer);
 			}
 			
 			// Disables connecting event
-			event.connecting.disable();
+			events.connecting.disable();
 			
 			// Initializes variables related with reconnection
-			reconnectDelay = reconnectTry = null;
+			reconnectTimer = reconnectDelay = reconnectTry = null;
 			
 			// Flushes buffer
 			while (buffer.length) {
@@ -248,14 +275,14 @@
 			}
 		})
 		.message(function(data) {
-			var eventName, eventHandler;
+			var eventName, event;
 			
 			// Fires custom event
 			if (data) {
 				eventName = data.event;
 				if (eventName) {
-					eventHandler = event[eventName];
-					if (eventHandler && !eventHandler.reserved) {
+					event = events[eventName];
+					if (event && event.order === events.message.order) {
 						self.one("message", function() {
 							self.fire(eventName, data.data);
 						});
@@ -264,15 +291,17 @@
 			}
 		})
 		.fail(function() {
-			var type, excludes = ["close", "fail"];
-			
 			oldState = state;
 			state = "closed";
 			
-			// Disables open, message and custom events
-			for (type in event) {
-				if ($.inArray(type, excludes) < 0) {
-					event[type].disable();
+			var type, event, order = events.fail.order;
+			
+			// Disables done event and event whose order is lower than fail event
+			events.done.disable();
+			for (type in events) {
+				event = events[type];
+				if (event.order < order) {
+					event.disable();
 				}
 			}
 			
@@ -282,15 +311,17 @@
 			});
 		})
 		.done(function() {
-			var type, excludes = ["close", "done"];
-			
 			oldState = state;
 			state = "closed";
-
-			// Disables open, message and custom events
-			for (type in event) {
-				if ($.inArray(type, excludes) < 0) {
-					event[type].disable();
+			
+			var type, event, order = events.done.order;
+			
+			// Disables fail event and event whose order is lower than done event
+			events.fail.disable();
+			for (type in events) {
+				event = events[type];
+				if (event.order < order) {
+					event.disable();
 				}
 			}
 			
@@ -300,20 +331,21 @@
 			});
 		})
 		.close(function() {
-			self.one("close", function() {
-				// Handles reconnection
-				if (self.options.reconnect) {
+			// Handles reconnection
+			if (self.options.reconnect) {
+				self.one("close", function() {
 					reconnectTry = reconnectTry || 1;
 					reconnectDelay = self.options.reconnect(reconnectDelay || self.options.reconnectDelay, reconnectTry);
 					
 					if (reconnectDelay !== false) {
-						setTimeout(self.open, reconnectDelay);
-						
-						event.connecting.reset();
-						self.fire("connecting", reconnectDelay, reconnectTry);
+						reconnectTimer = setTimeout(self.open, reconnectDelay);
+						self.fire("waiting", reconnectDelay, reconnectTry);
 					}
-				}
-			});
+				});
+			}
+		})
+		.waiting(function() {
+			state = "waiting";
 		});
 		
 		return self.open();
@@ -324,79 +356,81 @@
 		test: function(socket) {
 			var // Is it accepted?
 				accepted,
-				// Creates a function delaying its execution to simulate network delay
-				delay = function(fn) {
-					return function() {
-						var context = this,
-							args = arguments;
-						
-						setTimeout(function() {
-							fn.apply(context, args);
-						}, 5);
-						
-						return context;
-					};
-				},
 				// Connection event helper
-				connectionEvent = $({}),
-				// Connection object for the server
-				connection = {
-					send: delay(function(data) {
-						if (socket.state() === "opened") {
-							socket.fire("message", data);
-						}
-					}),
-					close: delay(function() {
-						if (socket.state() === "opened") {
-							socket.fire("done");
-							connectionEvent.triggerHandler("close", [1000, null]);
-						}
-					}),
-					on: function(type, fn) {
-						connectionEvent.on(type, function() {
-							fn.apply(connection, slice.call(arguments, 1));
-						});
-						return this;
-					}
-				},
-				// Request object for the server
-				request = {
-					accept: function() {
-						accepted = true;
-						return connection;
-					},
-					reject: function() {
-						accepted = false;
-					}
-				};
-			
-			if (socket.options.server) {
-				socket.options.server(request);
-			}
+				connectionEvent;
 			
 			return {
-				open: delay(function() {
-					switch (accepted) {
-					case true:
-						socket.fire("open");
-						connectionEvent.triggerHandler("open");
-						break;
-					case false:
-						socket.fire("fail", "error");
-						break;
+				open: function() {
+					var // Connection object for the server
+						connection = {
+							send: function(data) {
+								setTimeout(function() {
+									if (socket.state() === "opened") {
+										socket.fire("message", data);
+									}
+								}, 5);
+								return this;
+							},
+							close: function() {
+								setTimeout(function() {
+									if (socket.state() === "opened") {
+										socket.fire("done");
+										connectionEvent.triggerHandler("close", [1000, null]);
+									}
+								}, 5);
+								return this;
+							},
+							on: function(type, fn) {
+								connectionEvent.on(type, function() {
+									fn.apply(connection, slice.call(arguments, 1));
+								});
+								return this;
+							}
+						},
+						// Request object for the server
+						request = {
+							accept: function() {
+								accepted = true;
+								connectionEvent = connectionEvent || $({});
+								return connection;
+							},
+							reject: function() {
+								accepted = false;
+							}
+						};
+					
+					accepted = connectionEvent = undefined;
+					if (socket.options.server) {
+						socket.options.server(request);
 					}
-				}),
-				send: delay(function(data) {
-					if (accepted) {
-						connectionEvent.triggerHandler("message", [data]);
-					}
-				}),
-				close: delay(function(code, reason) {
-					socket.fire("fail", reason);
-					if (accepted) {
-						connectionEvent.triggerHandler("close", [code, reason]);
-					}
-				})
+					
+					setTimeout(function() {
+						switch (accepted) {
+						case true:
+							socket.fire("open");
+							connectionEvent.triggerHandler("open");
+							break;
+						case false:
+							socket.fire("fail", "error");
+							break;
+						}
+					}, 5);
+				},
+				send: function(data) {
+					setTimeout(function() {
+						if (accepted) {
+							connectionEvent.triggerHandler("message", [data]);
+						}
+					}, 5);
+				},
+				close: function(code, reason) {
+					setTimeout(function() {
+						socket.fire("fail", reason);
+						if (accepted) {
+							connectionEvent.triggerHandler("close", [code, reason]);
+						}
+					}, 5);
+				}
 			};
 		},
 		// Sub socket implementation
@@ -404,38 +438,38 @@
 			var // Event
 				event = socket.options.event,
 				// Source socket
-				source = sockets[socket.options.source];
+				source = $.socket(socket.options.source);
+			
+			socket.options.timeout = 0;
+			socket.options.reconnect = false;
+			
+			source.open(function() {
+				if (socket.state() === "closed") {
+					socket.open();
+				}
+				
+				source.one("open", function() {
+					socket.fire("open");
+				});
+			})
+			.fail(function() {
+				source.one("fail", function(reason) {
+					socket.fire("fail", reason);
+				});
+			})
+			.done(function() {
+				source.one("done", function() {
+					socket.fire("done");
+				});
+			})
+			.on(event, function() {
+				source.one(event, function(data) {
+					socket.fire("message", data);
+				});
+			});
 			
 			return {
-				open: function() {
-					if (socket.options.init) {
-						socket.options.init = false;
-						source.open(function() {
-							if (socket.state() === "closed") {
-								socket.open();
-							}
-							
-							source.one("open", function() {
-								socket.fire("open");
-							});
-						})
-						.fail(function(reason) {
-							source.one("fail", function() {
-								socket.fire("fail", reason);
-							});
-						})
-						.done(function() {
-							source.one("done", function() {
-								socket.fire("done");
-							});
-						})
-						.on(event, function(data) {
-							source.one(event, function() {
-								socket.fire("message", data);
-							});
-						});
-					}
-				},
+				open: $.noop,
 				send: function(data) {
 					source.send(event, data);
 				},
@@ -446,12 +480,16 @@
 		}
 	});
 	
+	// Closes all socket when the document is unloaded 
 	$(window).on("unload.socket", function() {
-		$.each(sockets, function(url, socket) {
+		var url, socket;
+		
+		for (url in sockets) {
+			socket = sockets[url];
 			if (socket.state() !== "closed") {
 				socket.close();
 			}
-		});
+		}
 		
 		sockets = {};
 	});
@@ -479,5 +517,6 @@
 	};
 	
 	$.socket.defaults = defaults;
+	$.socket.transports = transports;
 	
 })(jQuery);
