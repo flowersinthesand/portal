@@ -10,17 +10,22 @@
 			open: function() {
 				var // Connection object for the server
 					connection = {
-						send: function(data) {
+						send: function(event, data) {
 							setTimeout(function() {
-								if (socket.state() === "opened") {
-									socket.fire("message", data);
+								if (accepted) {
+									if (data === undefined) {
+										data = event;
+										event = "message";
+									}
+									
+									socket.notify($.stringifyJSON({type: event, data: data}));
 								}
 							}, 5);
 							return this;
 						},
 						close: function() {
 							setTimeout(function() {
-								if (socket.state() === "opened") {
+								if (accepted) {
 									socket.fire("done");
 									connectionEvent.triggerHandler("close", [1000, null]);
 								}
@@ -36,7 +41,6 @@
 					},
 					// Request object for the server
 					request = {
-						url: socket.options.url,
 						accept: function() {
 							accepted = true;
 							connectionEvent = connectionEvent || $({});
@@ -59,7 +63,7 @@
 						connectionEvent.triggerHandler("open");
 						break;
 					case false:
-						socket.fire("fail", "error");
+						socket.fire("fail", ["error"]);
 						break;
 					}
 				}, 5);
@@ -67,13 +71,13 @@
 			send: function(data) {
 				setTimeout(function() {
 					if (accepted) {
-						connectionEvent.triggerHandler("message", [data]);
+						var event = $.parseJSON(data);
+						connectionEvent.triggerHandler(event.type, [event.data]);
 					}
 				}, 5);
 			},
 			close: function(code, reason) {
 				setTimeout(function() {
-					socket.fire("fail", reason);
 					if (accepted) {
 						connectionEvent.triggerHandler("close", [code, reason]);
 					}

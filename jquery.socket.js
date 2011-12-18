@@ -12,6 +12,8 @@
 		socketEvents = "connecting open message fail done close waiting".split(" "),
 		// Sockets
 		sockets = {},
+		// Protocols
+		protocols = {},
 		// Transports
 		transports = {},
 		// Default options
@@ -23,8 +25,7 @@
 			}
 		},
 		// Reference to core prototype
-		hasOwn = Object.prototype.hasOwnProperty,
-		slice = Array.prototype.slice;
+		hasOwn = Object.prototype.hasOwnProperty;
 	
 	// A resettable callback
 	function callbacks(flags) {
@@ -89,10 +90,17 @@
 			reconnectTimer,
 			reconnectDelay,
 			reconnectTry,
+			// Temporal object
+			temp = {},
 			// Socket object
 			self = {
 				// Final options object
 				options: $.extend(true, {}, defaults, options),
+				// Gets or sets a value
+				data: function(key, value) {
+					var ret = $(temp).data(key, value);
+					return (ret && ret[0]) === temp ? this : ret || null;
+				},
 				// Returns the state
 				state: function() {
 					return state;
@@ -135,21 +143,22 @@
 					return self.on(type, proxy);
 				},
 				// Fires event handlers
-				fire: function(type) {
-					var event = events[type],
-						args = slice.call(arguments, 1);
-					
-					// Parses data
-					if (type === "message" && self.options.dataType && typeof args[0] === "string" && self.options.dataType !== "text") {
-						try {
-							args[0] = ({json: $.parseJSON, xml: $.parseXML})[self.options.dataType](args[0]);
-						} catch (e) {
-							return self.close(0, "parseerror");
-						}
-					}
+				fire: function(type, args) {
+					var event = events[type];
 					
 					if (event) {
-						event.fire.apply(self, args);
+						event.fireWith(self, args);
+					}
+					
+					return this;
+				},
+				// Fire helper for transport
+				notify: function(data) {
+					var i, event, events = $.makeArray(protocols.inbound.call(self, data));
+					
+					for (i = 0; i < events.length; i++) {
+						event = events[i];
+						self.fire(event.type, event.args || [event.data]);
 					}
 					
 					return this;
@@ -165,52 +174,61 @@
 						clearTimeout(reconnectTimer);
 					}
 					
-					// Exposes url
-					self.options.url = url;
-					
-					// Chooses transport if not exists
-					while (!transport && i < types.length) {
-						type = types[i++];
-						transport = transports[type](self);
-					}
-					
-					// Resets event helpers
+					// Resets temporal object and event helpers
+					temp = {};
 					for (i in events) {
 						events[i].reset();
 					}
 					
-					// Fires connecting event
-					self.fire("connecting");
+					// Chooses transport
+					transport = undefined;
+					for (i = 0; i < types.length; i++) {
+						type = types[i];
+						self.data("url", (protocols.url && protocols.url.call(self, url, type)) || url);
+						
+						transport = transports[type] && transports[type](self);
+						if (transport) {
+							// Fires connecting event
+							self.data("transport", type).fire("connecting");
+							transport.open();
+							break;
+						}
+					}
 					
-					if (transport) {
-						transport.open();
+					if (!transport) {
+						self.close("notransport");
 					}
 					
 					return this;
 				},
 				// Transmits data using the connection
 				send: function(event, data) {
-					// TODO stringify
-					data = data !== undefined ? {event: event, data: data} : event;
-					
 					if (state !== "opened") {
-						buffer.push(data);
+						buffer.push(arguments);
 					} else if (transport) {
-						transport.send(data);
+						if (data === undefined) {
+							data = event;
+							event = "message";
+						}
+						
+						transport.send(self.data("transport") === "sub" ? data : protocols.outbound.call(self, {type: event, data: data}));
 					}
 					
 					return this;
 				},
 				// Disconnects the connection
-				close: function(code, reason) {
+				close: function(reason) {
 					// Prevents reconnection
 					self.options.reconnect = false;
 					if (reconnectTimer) {
 						clearTimeout(reconnectTimer);
 					}
 					
+					// Fires fail event
+					self.fire("fail", [reason || "close"]);
+					
 					if (transport) {
-						transport.close(code || 0, reason || "close");
+						transport.close();
 					}
 					
 					return this;
@@ -251,7 +269,7 @@
 			// Sets timeout
 			if (self.options.timeout > 0) {
 				timeoutTimer = setTimeout(function() {
-					self.close(0, "timeout");
+					self.close("timeout");
 				}, self.options.timeout);
 			}
 		})
@@ -271,23 +289,7 @@
 			
 			// Flushes buffer
 			while (buffer.length) {
-				self.send(buffer.shift());
-			}
-		})
-		.message(function(data) {
-			var eventName, event;
-			
-			// Fires custom event
-			if (data) {
-				eventName = data.event;
-				if (eventName) {
-					event = events[eventName];
-					if (event && event.order === events.message.order) {
-						self.one("message", function() {
-							self.fire(eventName, data.data);
-						});
-					}
-				}
+				self.send.apply(self, buffer.shift());
 			}
 		})
 		.fail(function() {
@@ -339,7 +341,7 @@
 					
 					if (reconnectDelay !== false) {
 						reconnectTimer = setTimeout(self.open, reconnectDelay);
-						self.fire("waiting", reconnectDelay, reconnectTry);
+						self.fire("waiting", [reconnectDelay, reconnectTry]);
 					}
 				});
 			}
@@ -351,6 +353,33 @@
 		return self.open();
 	}
 	
+	// Protocols	
+	$.extend(protocols, {
+		inbound: function(data) {
+			return $.parseJSON(data);
+		},
+		outbound: function(event) {
+			event.socket = this.data("id");
+			return $.stringifyJSON(event);
+		},
+		url: function(url, transport) {
+			// UUID logic from http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/2117523#2117523
+			var id = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+				var r = Math.random() * 16 | 0,
+					v = c === "x" ? r : (r & 0x3 | 0x8);
+				
+			    return v.toString(16);
+			});
+			
+			// Stores the id
+			this.data("id", id);
+			
+			// Attaches id and transport
+			return url + (/\?/.test(url) ? "&" : "?") + $.param({id: id, transport: transport});
+		}
+	});
+	
+	// Transports
 	$.extend(transports, {
 		// Sub socket implementation
 		sub: function(socket) {
@@ -373,7 +402,7 @@
 			})
 			.fail(function() {
 				source.one("fail", function(reason) {
-					socket.fire("fail", reason);
+					socket.fire("fail", [reason]);
 				});
 			})
 			.done(function() {
@@ -383,7 +412,7 @@
 			})
 			.on(event, function() {
 				source.one(event, function(data) {
-					socket.fire("message", data);
+					socket.fire("message", [data]);
 				});
 			});
 			
@@ -392,8 +421,8 @@
 				send: function(data) {
 					source.send(event, data);
 				},
-				close: function(code, reason) {
-					socket.fire("fail", reason);
+				close: function() {
+					socket.fire("fail", ["close"]);
 				}
 			};
 		}
@@ -436,6 +465,98 @@
 	};
 	
 	$.socket.defaults = defaults;
+	$.socket.protocols = protocols; 
 	$.socket.transports = transports;
 	
 })(jQuery);
+
+/*
+ * jQuery stringifyJSON
+ * http://github.com/flowersinthesand/jquery-stringifyJSON
+ * 
+ * Copyright 2011, Donghwan Kim 
+ * Licensed under the Apache License, Version 2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
+// This plugin is heavily based on Douglas Crockford's reference implementation
+(function($) {
+	
+	var escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g, 
+		meta = {
+			'\b' : '\\b',
+			'\t' : '\\t',
+			'\n' : '\\n',
+			'\f' : '\\f',
+			'\r' : '\\r',
+			'"' : '\\"',
+			'\\' : '\\\\'
+		};
+	
+	function quote(string) {
+		return '"' + string.replace(escapable, function(a) {
+			var c = meta[a];
+			return typeof c === "string" ? c : "\\u" + ("0000" + a.charCodeAt(0).toString(16)).slice(-4);
+		}) + '"';
+	}
+	
+	function f(n) {
+		return n < 10 ? "0" + n : n;
+	}
+	
+	function str(key, holder) {
+		var i, v, len, partial, value = holder[key], type = typeof value;
+				
+		if (value && typeof value === "object" && typeof value.toJSON === "function") {
+			value = value.toJSON(key);
+			type = typeof value;
+		}
+		
+		switch (type) {
+		case "string":
+			return quote(value);
+		case "number":
+			return isFinite(value) ? String(value) : "null";
+		case "boolean":
+			return String(value);
+		case "object":
+			if (!value) {
+				return "null";
+			}
+			
+			switch (Object.prototype.toString.call(value)) {
+			case "[object Date]":
+				return isFinite(value.valueOf()) ? '"' + value.getUTCFullYear() + "-" + f(value.getUTCMonth() + 1) + "-" + f(value.getUTCDate()) + "T" + 
+						f(value.getUTCHours()) + ":" + f(value.getUTCMinutes()) + ":" + f(value.getUTCSeconds()) + "Z" + '"' : "null";
+			case "[object Array]":
+				len = value.length;
+				partial = [];
+				for (i = 0; i < len; i++) {
+					partial.push(str(i, value) || "null");
+				}
+				
+				return "[" + partial.join(",") + "]";
+			default:
+				partial = [];
+				for (i in value) {
+					if (Object.prototype.hasOwnProperty.call(value, i)) {
+						v = str(i, value);
+						if (v) {
+							partial.push(quote(i) + ":" + v);
+						}
+					}
+				}
+				
+				return "{" + partial.join(",") + "}";
+			}
+		}
+	}
+	
+	$.stringifyJSON = function(value) {
+		if (window.JSON && window.JSON.stringify) {
+			return window.JSON.stringify(value);
+		}
+		
+		return str("", {"": value});
+	};
+	
+}(jQuery));
