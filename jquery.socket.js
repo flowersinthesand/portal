@@ -391,33 +391,29 @@
 			socket.options.timeout = 0;
 			socket.options.reconnect = false;
 			
-			source.open(function() {
-				if (socket.state() === "closed") {
-					socket.open();
-				}
-				
-				source.one("open", function() {
-					socket.fire("open");
-				});
-			})
-			.fail(function() {
-				source.one("fail", function(reason) {
-					socket.fire("fail", [reason]);
-				});
-			})
-			.done(function() {
-				source.one("done", function() {
-					socket.fire("done");
-				});
-			})
-			.on(event, function() {
-				source.one(event, function(data) {
-					socket.fire("message", [data]);
-				});
-			});
-			
 			return {
-				open: $.noop,
+				open: function() {
+					if (!socket.options.init) {
+						socket.options.init = true;
+						
+						source.open(function() {
+							if (socket.state() === "closed") {
+								socket.open();
+							}
+							
+							socket.fire("open");
+						})
+						.fail(function(reason) {
+							socket.fire("fail", [reason]);
+						})
+						.done(function() {
+							socket.fire("done");
+						})
+						.on(event, function(data) {
+							socket.fire("message", [data]);
+						});
+					}
+				},
 				send: function(data) {
 					source.send(event, data);
 				},

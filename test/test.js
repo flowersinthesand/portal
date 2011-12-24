@@ -846,6 +846,28 @@ asyncTest("close method should close only the sub socket, not the source socket"
 	.close();
 });
 
+asyncTest("event handlers should be registered once even though the source socket has been reconnected", function() {
+	var count = 0, result = "";
+
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("open", function() {
+				this.send("dm", String.fromCharCode("A".charCodeAt(0) + count));
+				if (count++ < 3) {
+					this.close();
+				} else {
+					strictEqual(result, "ABC");
+					start();
+				}
+			});
+		}
+	})
+	.find("dm")
+	.message(function(data) {
+		result += data;
+	});
+});
+
 module("Reconnection", {
 	setup: setup,
 	teardown: teardown
