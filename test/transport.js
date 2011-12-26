@@ -1,4 +1,10 @@
 (function($) {
+	
+	function isBinary(data) {
+		var string = Object.prototype.toString.call(data);
+		return string === "[object Blob]" || string === "[object ArrayBuffer]";
+	}
+	
 	// The server-side view of the socket handling
 	$.socket.transports.test = function(socket) {
 		var // Is it accepted?
@@ -18,7 +24,7 @@
 										event = "message";
 									}
 									
-									socket.notify($.stringifyJSON({type: event, data: data}));
+									socket.notify(isBinary(data) ? data : $.stringifyJSON({type: event, data: data}));
 								}
 							}, 5);
 							return this;
@@ -71,7 +77,7 @@
 			send: function(data) {
 				setTimeout(function() {
 					if (accepted) {
-						var event = $.parseJSON(data);
+						var event = isBinary(data) ? {type: "message", data: data} : $.parseJSON(data);
 						connectionEvent.triggerHandler(event.type, [event.data]);
 					}
 				}, 5);

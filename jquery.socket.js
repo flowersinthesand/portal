@@ -72,6 +72,11 @@
 		});
 	}
 	
+	function isBinary(data) {
+		var string = Object.prototype.toString.call(data);
+		return string === "[object Blob]" || string === "[object ArrayBuffer]";
+	}
+	
 	// Socket is based on The WebSocket API 
 	// W3C Working Draft 29 September 2011 - http://www.w3.org/TR/2011/WD-websockets-20110929/
 	function socket(url, options) {
@@ -154,7 +159,8 @@
 				},
 				// Fire helper for transport
 				notify: function(data) {
-					var i, event, events = $.makeArray(protocols.inbound.call(self, data));
+					var events = isBinary(data) ? [{type: "message", data: data}] : $.makeArray(protocols.inbound.call(self, data)), 
+						i, event;
 					
 					for (i = 0; i < events.length; i++) {
 						event = events[i];
@@ -211,24 +217,28 @@
 							event = "message";
 						}
 						
-						transport.send(self.data("transport") === "sub" ? data : protocols.outbound.call(self, {type: event, data: data}));
+						transport.send(self.data("transport") === "sub" || isBinary(data) ? data : protocols.outbound.call(self, {type: event, data: data}));
 					}
 					
 					return this;
 				},
 				// Disconnects the connection
 				close: function(reason) {
+					var noFire;
+					
 					// Prevents reconnection
 					self.options.reconnect = false;
 					if (reconnectTimer) {
 						clearTimeout(reconnectTimer);
 					}
 					
-					// Fires fail event
-					self.fire("fail", [reason || "close"]);
-					
 					if (transport) {
-						transport.close();
+						noFire = transport.close();
+					}
+					
+					// Fires fail event
+					if (!noFire) {
+						self.fire("fail", [reason || "close"]);
 					}
 					
 					return this;
@@ -419,6 +429,44 @@
 				},
 				close: function() {
 					socket.fire("fail", ["close"]);
+				}
+			};
+		},
+		// WebSocket
+		ws: function(socket) {
+			var WebSocket = window.WebSocket || window.MozWebSocket,
+				ws, url, aborted;
+			
+			if (!WebSocket) {
+				return;
+			}
+			
+			url = decodeURI($('<a href="' + socket.data("url") + '"/>')[0].href.replace(/^http/, "ws"));
+			socket.data("url", url);
+
+			return {
+				open: function() {
+					ws = new WebSocket(url);
+					ws.onopen = function(event) {
+						socket.data("event", event).fire("open");
+					};
+					ws.onmessage = function(event) {
+						socket.data("event", event).notify(event.data);
+					};
+					ws.onerror = function(event) {
+						socket.data("event", event).fire("fail", ["error"]);
+					};
+					ws.onclose = function(event) {
+						socket.data("event", event).fire.apply(socket, event.wasClean ? ["done"] : ["fail", [aborted ? "close" : "error"]]);
+					};
+				},
+				send: function(data) {
+					ws.send(data);
+				},
+				close: function() {
+					aborted = true;
+					ws.close();
+					return true;
 				}
 			};
 		}

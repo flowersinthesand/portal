@@ -1083,7 +1083,7 @@ asyncTest("inbound handler should be able to return an array of event object", f
 	});
 });
 
-asyncTest("Event object should contain type, optional data and optional args property", function() {
+asyncTest("event object should contain type, optional data and optional args property", function() {
 	var outbound;
 	
 	$.socket.protocols.inbound = function(event) {
@@ -1148,6 +1148,39 @@ test("transport used for connection should be exposed by data('transport')", fun
 	ok($.socket("url").data("transport"));
 });
 
+asyncTest("binary data should be sent transparently", function() {
+	var i = 0,
+		toStringCall = Object.prototype.toString.call;
+	
+	Object.prototype.toString.call = function(data) {
+		return data.blob ? "[object Blob]" : data.arraybuffer ? "[object ArrayBuffer]" : toStringCall.apply(this, arguments);
+	};
+
+	$.socket.protocols.inbound = $.socket.protocols.outbound = function() {
+		ok(false);
+	};
+	
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("message", function(data) {
+				strictEqual(typeof data, "object");
+				this.send(data);
+			});
+		}
+	})
+	.message(function(data) {
+		i++;
+		strictEqual(typeof data, "object");
+		
+		if (i === 2) {
+			start();
+			Object.prototype.toString.call = toStringCall;
+		}
+	})
+	.send({blob: true})
+	.send({arraybuffer: true});
+});
+
 module("Protocol default", {
 	setup: setup,
 	teardown: teardown
@@ -1206,3 +1239,101 @@ test("url should contain id and transport", function() {
 	
 	$.socket("url");
 });
+
+if (!isLocal) {
+	module("Transport WebSocket", {
+		setup: function() {
+			setup();
+			
+			// TODO use a browser's WebSocket implementation
+			function EchoWebSocket(url) {
+				var self = this;
+				
+				$.extend(self, {
+					url: url,
+					send: function(data) {
+						setTimeout(function() {
+							self.onmessage && self.onmessage($.Event("message", {data: data}));
+						}, 5);
+					},
+					close: function() {
+						setTimeout(function() {
+							self.onclose && self.onclose($.Event("close", {code: 1006, reason: "", wasClean: false}));
+						}, 5);
+					}
+				});
+				
+				setTimeout(function() {
+					self.onopen && self.onopen($.Event("open"));
+				}, 5);
+			}
+			
+			this.WebSocket = window.WebSocket;
+			window.WebSocket = EchoWebSocket;
+			
+			$.socket.defaults.type = "ws";
+		},
+		teardown: function() {
+			teardown();
+			
+			window.WebSocket = this.WebSocket;
+		}
+	});
+	
+	test("If the browser doesn't support WebSocket object, transport should be skipped", function() {
+		var WebSocket = window.WebSocket;
+		
+		window.WebSocket = undefined;
+		
+		$.socket("ws").fail(function(reason) {
+			strictEqual(reason, "notransport");
+			start();
+		});
+		
+		window.WebSocket = WebSocket;
+	});
+	
+	if (window.WebSocket || window.MozWebSocket) {
+		test("url should be converted to accord with WebSocket specification", function() {
+			ok(/^(?:ws|wss):\/\/.+/.test($.socket("ws").data("url")));
+		});
+		
+		asyncTest("open method should work properly", function() {
+			$.socket("ws").open(function() {
+				ok(true);
+				start();
+			});
+		});
+		
+		asyncTest("send method should work properly", function() {
+			$.socket("ws").message(function(data) {
+				strictEqual(data, "data");
+				start();
+			})
+			.send("data");
+		});
+		
+		asyncTest("close method should work properly", function() {
+			$.socket("ws").fail(function(reason) {
+				strictEqual(reason, "close");
+				start();
+			})
+			.close();
+		});
+		
+		asyncTest("WebSocket event should be able to be accessed by data('event')", function() {
+			$.socket("ws").open(function() {
+				strictEqual(this.data("event").type, "open");
+				this.send("data");
+			})
+			.message(function() {
+				strictEqual(this.data("event").type, "message");
+				this.close();
+			})
+			.close(function() {
+				strictEqual(this.data("event").type, "close");
+				start();
+			});
+		});
+	}
+}
