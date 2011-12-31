@@ -59,6 +59,10 @@ module("Socket object", {
 	teardown: teardown
 });
 
+test("url method should return the given url", function() {
+	strictEqual($.socket("url").url(), "url");
+});
+
 test("options property should include the given options", function() {
 	$.socket("url", {version: $.fn.jquery});
 	strictEqual($.socket("url", {version: $.fn.jquery}).options.version, $.fn.jquery);
@@ -1181,12 +1185,35 @@ asyncTest("binary data should be sent transparently", function() {
 	.send({arraybuffer: true});
 });
 
+test("read handler should receive a chunk and return an array of data", function() {
+	$.socket.protocols.read = function(chunk) {
+		var array = chunk.split("@@");
+		if (array.length > 1) {
+			array[0] = (this.data("data") || "") + array[0];
+			this.data("data", "");
+			
+			if (/@@$/.test(chunk)) {
+				array.pop();
+			}
+			
+			return array;
+		} else {
+			this.data("data", chunk);
+		}
+	};
+	
+	$.socket("url");
+	ok(!$.socket.protocols.read.call($.socket(), "A"));
+	deepEqual($.socket.protocols.read.call($.socket(), "A@@"), ["AA"]);
+	deepEqual($.socket.protocols.read.call($.socket(), "A@@B@@C"), ["A", "B", "C"]);
+});
+
 module("Protocol default", {
 	setup: setup,
 	teardown: teardown
 });
 
-test("A final data to be sent to the server should be a JSON string representing a event object", function() {
+test("a final data to be sent to the server should be a JSON string representing a event object", function() {
 	$.socket.transports.test = function(socket) {
 		return {
 			open: function() {
@@ -1206,7 +1233,7 @@ test("A final data to be sent to the server should be a JSON string representing
 	$.socket("url").send("data");
 });
 
-test("A raw data sent by the server should be a JSON string representing a event object", function() {
+test("a raw data sent by the server should be a JSON string representing a event object", function() {
 	$.socket.transports.test = function(socket) {
 		return {
 			open: function() {
@@ -1240,50 +1267,70 @@ test("url should contain id and transport", function() {
 	$.socket("url");
 });
 
+test("chunks for streaming should accord with the event stream format", function() {
+	deepEqual($.socket.protocols.read.call($.socket("url"), "data: A\r\n\r\ndata: A\r\ndata: B\rdata: C\n\r\ndata: \r\n"), ["A", "A\nB\nC", ""]);
+});
+
+// TODO cross domain, heartbeat
+function testOpenAndSendAndClose(url) {
+	asyncTest("open method should work properly", function() {
+		$.socket(url).open(function() {
+			ok(true);
+			start();
+		});
+	});
+	
+	asyncTest("send method should work properly", function() {
+		$.socket(url).message(function(data) {
+			strictEqual(data, "data");
+			start();
+		})
+		.send("data");
+	});
+	
+	asyncTest("send method should work properly with big data", function() {
+		var i, text = "A";
+		
+		for (i = 0; i < 32768; i++) {
+			text += "A";
+		}
+		
+		$.socket(url).message(function(data) {
+			strictEqual(data, text);
+			start();
+		})
+		.send(text);
+	});
+	
+	asyncTest("close method should work properly", function() {
+		$.socket(url).fail(function(reason) {
+			strictEqual(reason, "close");
+			start();
+		})
+		.close();
+	});
+	
+	asyncTest("done event should be fired when the server disconnects a connection cleanly", function() {
+		$.socket(url + "?close=true").done(function() {
+			ok(true);
+			start();
+		});
+	});
+}
+
 if (!isLocal) {
 	module("Transport WebSocket", {
 		setup: function() {
 			setup();
-			
-			// TODO use a browser's WebSocket implementation
-			function EchoWebSocket(url) {
-				var self = this;
-				
-				$.extend(self, {
-					url: url,
-					send: function(data) {
-						setTimeout(function() {
-							self.onmessage && self.onmessage($.Event("message", {data: data}));
-						}, 5);
-					},
-					close: function() {
-						setTimeout(function() {
-							self.onclose && self.onclose($.Event("close", {code: 1006, reason: "", wasClean: false}));
-						}, 5);
-					}
-				});
-				
-				setTimeout(function() {
-					self.onopen && self.onopen($.Event("open"));
-				}, 5);
-			}
-			
-			this.WebSocket = window.WebSocket;
-			window.WebSocket = EchoWebSocket;
-			
 			$.socket.defaults.type = "ws";
 		},
-		teardown: function() {
-			teardown();
-			
-			window.WebSocket = this.WebSocket;
-		}
+		teardown: teardown
 	});
 	
 	test("If the browser doesn't support WebSocket object, transport should be skipped", function() {
-		var WebSocket = window.WebSocket;
+		var WebSocket = window.WebSocket, MozWebSocket = window.MozWebSocket;
 		
-		window.WebSocket = undefined;
+		window.WebSocket = window.MozWebSocket = undefined;
 		
 		$.socket("ws").fail(function(reason) {
 			strictEqual(reason, "notransport");
@@ -1291,6 +1338,7 @@ if (!isLocal) {
 		});
 		
 		window.WebSocket = WebSocket;
+		window.MozWebSocket = MozWebSocket;
 	});
 	
 	if (window.WebSocket || window.MozWebSocket) {
@@ -1298,28 +1346,7 @@ if (!isLocal) {
 			ok(/^(?:ws|wss):\/\/.+/.test($.socket("ws").data("url")));
 		});
 		
-		asyncTest("open method should work properly", function() {
-			$.socket("ws").open(function() {
-				ok(true);
-				start();
-			});
-		});
-		
-		asyncTest("send method should work properly", function() {
-			$.socket("ws").message(function(data) {
-				strictEqual(data, "data");
-				start();
-			})
-			.send("data");
-		});
-		
-		asyncTest("close method should work properly", function() {
-			$.socket("ws").fail(function(reason) {
-				strictEqual(reason, "close");
-				start();
-			})
-			.close();
-		});
+		testOpenAndSendAndClose("ws");
 		
 		asyncTest("WebSocket event should be able to be accessed by data('event')", function() {
 			$.socket("ws").open(function() {
@@ -1336,4 +1363,33 @@ if (!isLocal) {
 			});
 		});
 	}
+	
+	module("Transport HTTP Streaming", {
+		setup: function() {
+			setup();
+			$.socket.defaults.type = "stream";
+			$.socket.protocols.enableXDR = true;
+		},
+		teardown: teardown
+	});
+	
+	test("stream transport should execute real transports", function() {
+		var result = "";
+		
+		$.socket.transports.streamxdr = function() {
+			result += "A";
+		};
+		$.socket.transports.streamiframe = function() {
+			result += "B";
+		};
+		$.socket.transports.streamxhr = function() {
+			result += "C";
+		};
+		
+		$.socket("stream");
+		
+		strictEqual(result, "ABC");
+	});
+	
+	testOpenAndSendAndClose("stream");
 }

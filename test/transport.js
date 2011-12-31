@@ -82,10 +82,10 @@
 					}
 				}, 5);
 			},
-			close: function(code, reason) {
+			close: function() {
 				setTimeout(function() {
 					if (accepted) {
-						connectionEvent.triggerHandler("close", [code, reason]);
+						connectionEvent.triggerHandler("close");
 					}
 				}, 5);
 			}
