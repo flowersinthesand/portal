@@ -1392,14 +1392,30 @@ if (!isLocal) {
 	});
 	
 	testOpenAndSendAndClose("stream");
-	
-	module("Transport Server-Sent Events", {
-		setup: function() {
-			setup();
-			$.socket.defaults.type = "sse";
-		},
-		teardown: teardown
-	});
-	
-	testOpenAndSendAndClose("sse");
+
+	if (window.EventSource) {
+		module("Transport Server-Sent Events", {
+			setup: function() {
+				setup();
+				$.socket.defaults.type = "sse";
+			},
+			teardown: teardown
+		});
+		
+		testOpenAndSendAndClose("sse");
+		
+		asyncTest("Server-Sent Events event should be able to be accessed by data('event')", function() {
+			$.socket("sse?close=true", {reconnect: false}).open(function() {
+				strictEqual(this.data("event").type, "open");
+				this.send("data");
+			})
+			.message(function() {
+				strictEqual(this.data("event").type, "message");
+			})
+			.close(function() {
+				strictEqual(this.data("event").type, "error");
+				start();
+			});
+		});
+	}
 }
