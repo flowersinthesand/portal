@@ -17,7 +17,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-@WebServlet(urlPatterns = "/test/stream", asyncSupported = true)
+@WebServlet(urlPatterns = { "/test/stream", "/test/sse" }, asyncSupported = true)
 public class StreamServlet extends HttpServlet {
 
 	private static final long serialVersionUID = -1896457417378814518L;
@@ -29,11 +29,12 @@ public class StreamServlet extends HttpServlet {
 			throws ServletException, IOException {
 		request.setCharacterEncoding("utf-8");
 		response.setCharacterEncoding("utf-8");
-		response.setContentType("text/plain");
+		response.setContentType("text/"
+				+ ("sse".equals(request.getParameter("transport")) ? "event-stream" : "plain"));
 		response.setHeader("Access-Control-Allow-Origin", "*");
 
 		final PrintWriter writer = response.getWriter();
-		writer.print(Arrays.toString(new float[400]).replaceAll(".", " "));
+		writer.println(Arrays.toString(new float[400]).replaceAll(".", " "));
 		writer.flush();
 
 		final String id = request.getParameter("id");
@@ -89,7 +90,7 @@ public class StreamServlet extends HttpServlet {
 			builder.append("data: ").append(data).append("\n");
 		}
 
-		return builder.deleteCharAt(builder.length() - 1).toString();
+		return builder.toString();
 	}
 
 }

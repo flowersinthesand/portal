@@ -711,6 +711,7 @@
 				}
 			});
 		},
+		// XDomainRequest
 		streamxdr: function(socket) {
 			var XDomainRequest = window.XDomainRequest,
 				xdr, url, rewriteURL;
@@ -777,6 +778,36 @@
 				},
 				close: function() {
 					xdr.abort();
+				}
+			});
+		},
+		// Server-Sent Events
+		sse: function(socket) {
+			var EventSource = window.EventSource,
+				es;
+			
+			if (!EventSource || socket.data("crossDomain")) {
+				return;
+			}
+			
+			return $.extend(transports.http(socket), {
+				open: function() {
+					es = new EventSource(socket.data("url"));
+					es.onopen = function(event) {
+						socket.data("event", event).fire("open");
+					};
+					es.onmessage = function(event) {
+						socket.data("event", event).notify(event.data);
+					};
+					es.onerror = function(event) {
+						es.close();
+						
+						// There is no way to find whether this connection closed normally or not 
+						socket.data("event", event).fire("done");
+					};
+				},
+				close: function() {
+					es.close();
 				}
 			});
 		}

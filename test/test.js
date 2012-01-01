@@ -1392,4 +1392,14 @@ if (!isLocal) {
 	});
 	
 	testOpenAndSendAndClose("stream");
+	
+	module("Transport Server-Sent Events", {
+		setup: function() {
+			setup();
+			$.socket.defaults.type = "sse";
+		},
+		teardown: teardown
+	});
+	
+	testOpenAndSendAndClose("sse");
 }
