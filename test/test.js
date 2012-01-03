@@ -1152,38 +1152,39 @@ test("transport used for connection should be exposed by data('transport')", fun
 	ok($.socket("url").data("transport"));
 });
 
-asyncTest("binary data should be sent transparently", function() {
-	var i = 0,
-		toStringCall = Object.prototype.toString.call;
-	
-	Object.prototype.toString.call = function(data) {
-		return data.blob ? "[object Blob]" : data.arraybuffer ? "[object ArrayBuffer]" : toStringCall.apply(this, arguments);
-	};
-
-	$.socket.protocols.inbound = $.socket.protocols.outbound = function() {
-		ok(false);
-	};
-	
-	$.socket("url", {
-		server: function(request) {
-			request.accept().on("message", function(data) {
-				strictEqual(typeof data, "object");
-				this.send(data);
-			});
-		}
-	})
-	.message(function(data) {
-		i++;
-		strictEqual(typeof data, "object");
+if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKitBlobBuilder)) {
+	asyncTest("binary data should be sent transparently", function() {
+		var i = 0;
 		
-		if (i === 2) {
-			start();
-			Object.prototype.toString.call = toStringCall;
+		function isBinary(data) {
+			var string = Object.prototype.toString.call(data);
+			return string === "[object Blob]" || string === "[object ArrayBuffer]";
 		}
-	})
-	.send({blob: true})
-	.send({arraybuffer: true});
-});
+		
+		$.socket.protocols.inbound = $.socket.protocols.outbound = function() {
+			ok(false);
+		};
+		
+		$.socket("url", {
+			server: function(request) {
+				request.accept().on("message", function(data) {
+					ok(isBinary(data));
+					this.send(data);
+				});
+			}
+		})
+		.message(function(data) {
+			i++;
+			ok(isBinary(data));
+			
+			if (i === 2) {
+				start();
+			}
+		})
+		.send(new (window.MozBlobBuilder || window.WebKitBlobBuilder)().getBlob())
+		.send(new window.ArrayBuffer());
+	});
+}
 
 test("read handler should receive a chunk and return an array of data", function() {
 	$.socket.protocols.read = function(chunk) {
@@ -1418,4 +1419,14 @@ if (!isLocal) {
 			});
 		});
 	}
+	
+	module("Transport Long Polling", {
+		setup: function() {
+			setup();
+			$.socket.defaults.type = "longpoll";
+		},
+		teardown: teardown
+	});
+	
+	testOpenAndSendAndClose("longpoll");
 }
