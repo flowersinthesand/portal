@@ -1419,14 +1419,4 @@ if (!isLocal) {
 			});
 		});
 	}
-	
-	module("Transport Long Polling", {
-		setup: function() {
-			setup();
-			$.socket.defaults.type = "longpoll";
-		},
-		teardown: teardown
-	});
-	
-	testOpenAndSendAndClose("longpoll");
 }
