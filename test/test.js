@@ -1273,7 +1273,7 @@ test("chunks for streaming should accord with the event stream format", function
 });
 
 // TODO cross domain, heartbeat
-function testOpenAndSendAndClose(url) {
+function testTransport(url) {
 	asyncTest("open method should work properly", function() {
 		$.socket(url).open(function() {
 			ok(true);
@@ -1347,7 +1347,7 @@ if (!isLocal) {
 			ok(/^(?:ws|wss):\/\/.+/.test($.socket("ws").data("url")));
 		});
 		
-		testOpenAndSendAndClose("ws");
+		testTransport("ws");
 		
 		asyncTest("WebSocket event should be able to be accessed by data('event')", function() {
 			$.socket("ws").open(function() {
@@ -1392,18 +1392,31 @@ if (!isLocal) {
 		strictEqual(result, "ABC");
 	});
 	
-	testOpenAndSendAndClose("stream");
+	testTransport("stream");
 
-	if (window.EventSource) {
-		module("Transport Server-Sent Events", {
-			setup: function() {
-				setup();
-				$.socket.defaults.type = "sse";
-			},
-			teardown: teardown
+	module("Transport Server-Sent Events", {
+		setup: function() {
+			setup();
+			$.socket.defaults.type = "sse";
+		},
+		teardown: teardown
+	});
+	
+	test("If the browser doesn't support EventSource object, transport should be skipped", function() {
+		var EventSource = window.EventSource;
+		
+		window.EventSource = undefined;
+		
+		$.socket("ws").fail(function(reason) {
+			strictEqual(reason, "notransport");
+			start();
 		});
 		
-		testOpenAndSendAndClose("sse");
+		window.EventSource = EventSource;
+	});
+	
+	if (window.EventSource) {
+		testTransport("sse");
 		
 		asyncTest("Server-Sent Events event should be able to be accessed by data('event')", function() {
 			$.socket("sse?close=true", {reconnect: false}).open(function() {
