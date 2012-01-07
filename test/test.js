@@ -19,6 +19,11 @@ function teardown() {
 	}
 }
 
+function param(url, name) {
+	var match = new RegExp("[?&]" + name + "=([^&]+)").exec(url);
+	return match ? decodeURIComponent(match[1]) : null;
+}
+
 module("jQuery.socket", {
 	setup: setup,
 	teardown: teardown
@@ -1256,13 +1261,10 @@ test("socket id used for connection should be exposed by data('id')", function()
 
 test("url should contain id and transport", function() {
 	$.socket.transports.test = function(socket) {
-		function param(name) {
-			var match = new RegExp("[?&]" + name + "=([^&]+)").exec(socket.data("url"));
-			return match ? decodeURIComponent(match[1]) : null;
-		}
+		var url = socket.data("url");
 		
-		strictEqual(param("id"), socket.data("id"));
-		strictEqual(param("transport"), "test");
+		strictEqual(param(url, "id"), socket.data("id"));
+		strictEqual(param(url, "transport"), "test");
 	};
 	
 	$.socket("url");
@@ -1315,6 +1317,27 @@ function testTransport(url) {
 		$.socket(url + "?close=true").done(function() {
 			ok(true);
 			start();
+		});
+	});
+}
+
+function testLongPollingTransport(url) {
+	testTransport(url);
+	
+	asyncTest("data('url') should be modified whenever trying to connect to the server", 3, function() {
+		var oldURL;
+		
+		$.socket(url).send(0).message(function(i) {
+			if (oldURL) {
+				notStrictEqual(oldURL, this.data("url"));
+			}
+			oldURL = this.data("url");
+			
+			if (i > 2) {
+				start();
+			} else {
+				this.send(++i);
+			}
 		});
 	});
 }
@@ -1432,4 +1455,33 @@ if (!isLocal) {
 			});
 		});
 	}
+	
+	module("Transport Long Polling - XMLHttpRequest", {
+		setup: function() {
+			setup();
+			$.socket.defaults.type = "longpoll";
+		},
+		teardown: teardown
+	});
+	
+	testLongPollingTransport("longpoll");
+	
+	module("Transport Long Polling - JSONP", {
+		setup: function() {
+			setup();
+			$.socket.defaults.type = "longpoll";
+			this.ajaxSupport = $.support.ajax;
+			$.support.ajax = false;
+		},
+		teardown: function() {
+			teardown();
+			$.support.ajax = this.ajaxSupport;
+		}
+	});
+	
+	test("window should have a function whose name is equals to data('url')'s callback parameter", function() {
+		ok($.isFunction(window[param($.socket("url").data("url"), "callback")]));
+	});
+	
+	testLongPollingTransport("longpoll");
 }

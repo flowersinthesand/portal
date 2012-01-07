@@ -2,7 +2,6 @@ package com.github.flowersinthesand.jquerysocket;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -17,10 +16,12 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-@WebServlet(urlPatterns = { "/test/stream", "/test/sse" }, asyncSupported = true)
-public class StreamServlet extends HttpServlet {
+import com.google.gson.Gson;
 
-	private static final long serialVersionUID = -1896457417378814518L;
+@WebServlet(urlPatterns = "/test/longpoll", asyncSupported = true)
+public class LongPollServlet extends HttpServlet {
+
+	private static final long serialVersionUID = 6086040891642945979L;
 
 	private Map<String, AsyncContext> asyncContexts = new ConcurrentHashMap<String, AsyncContext>();
 
@@ -30,12 +31,9 @@ public class StreamServlet extends HttpServlet {
 		request.setCharacterEncoding("utf-8");
 		response.setCharacterEncoding("utf-8");
 		response.setContentType("text/"
-				+ ("sse".equals(request.getParameter("transport")) ? "event-stream" : "plain"));
+				+ ("longpolljsonp".equals(request.getParameter("transport")) ? "javascript"
+						: "plain"));
 		response.setHeader("Access-Control-Allow-Origin", "*");
-
-		final PrintWriter writer = response.getWriter();
-		writer.println(Arrays.toString(new float[400]).replaceAll(".", " "));
-		writer.flush();
 
 		final String id = request.getParameter("id");
 		final AsyncContext ac = request.startAsync();
@@ -74,23 +72,33 @@ public class StreamServlet extends HttpServlet {
 		request.setCharacterEncoding("utf-8");
 		response.setHeader("Access-Control-Allow-Origin", "*");
 
-		Event event = new Event().parse(request.getReader().readLine());
-		AsyncContext ac = asyncContexts.get(event.socket);
-		if (ac != null) {
-			PrintWriter writer = ac.getResponse().getWriter();
-			writer.print(format(event.stringify()));
-			writer.flush();
-		}
+		final Event event = new Event().parse(request.getReader().readLine());
+
+		// Just for test
+		new Timer().schedule(new TimerTask() {
+			@Override
+			public void run() {
+				try {
+					AsyncContext ac = asyncContexts.get(event.socket);
+					if (ac != null) {
+						PrintWriter writer = ac.getResponse().getWriter();
+						writer.print(format(event.stringify(), ac.getRequest().getParameterMap()));
+						writer.flush();
+						ac.complete();
+					}
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			}
+		}, 100);
 	}
 
-	private String format(String string) {
-		StringBuilder builder = new StringBuilder();
-
-		for (String data : string.split("\r\n|\r|\n")) {
-			builder.append("data: ").append(data).append("\n");
+	private String format(String string, Map<String, String[]> params) {
+		if ("longpollxhr".equals(params.get("transport")[0])) {
+			return string;
 		}
 
-		return builder.toString() + "\n";
+		return params.get("callback")[0] + "(" + new Gson().toJson(string).toString() + ")";
 	}
 
 }

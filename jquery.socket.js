@@ -543,14 +543,15 @@
 		// HTTP Support
 		http: function(socket) {
 			var queue = [], 
-				sending, 
-				post = function() {
-					if (queue.length) {
-						$.ajax(socket.url(), {type: "post", data: queue.shift(), complete: post});
-					} else {
-						sending = false;
-					}
-				};
+				sending;
+			
+			function post() {
+				if (queue.length) {
+					$.ajax(socket.url(), {type: "POST", data: queue.shift()}).always(post);
+				} else {
+					sending = false;
+				}
+			}
 			
 			return {
 				send: function(data) {
@@ -571,7 +572,7 @@
 				candidates.unshift("stream" + i);
 			}
 		},
-		// XMLHttpRequest
+		// HTTP Streaming - XMLHttpRequest
 		streamxhr: function(socket) {
 			var XMLHttpRequest = window.XMLHttpRequest, 
 				xhr, stop, aborted;
@@ -634,7 +635,7 @@
 				}
 			});
 		},
-		// Iframe
+		// HTTP Streaming - Iframe
 		streamiframe: function(socket) {
 			var ActiveXObject = window.ActiveXObject,
 				doc, stop, iframe, cdoc;
@@ -711,7 +712,7 @@
 				}
 			});
 		},
-		// XDomainRequest
+		// HTTP Streaming - XDomainRequest
 		streamxdr: function(socket) {
 			var XDomainRequest = window.XDomainRequest,
 				xdr, url, rewriteURL;
@@ -808,6 +809,106 @@
 				},
 				close: function() {
 					es.close();
+				}
+			});
+		},
+		// Long Polling facade
+		longpoll: function(socket) {
+			var i, candidates = socket.data("transports");
+			
+			for (i in {jsonp: 1, xhr: 1}) {
+				candidates.unshift("longpoll" + i);
+			}
+		},
+		// Long Polling - XMLHttpRequest
+		longpollxhr: function(socket) {
+			var count = 1, url = socket.data("url"), 
+				xhr;
+			
+			if (!$.support.ajax || (socket.data("crossDomain") && !$.support.cors)) {
+				return;
+			}
+			
+			function poll() {
+				var u = url + (/\?/.test(url) ? "&" : "?") +  $.param({count: count++});
+				
+				socket.data("url", u);
+				
+				xhr = $.ajax(u, {type: "GET", dataType: "text", async: true, cache: true, timeout: 0})
+				.done(function(data) {
+					if (xhr.status === 200) {
+						if (data) {
+							socket.notify(data);
+							poll();
+						} else {
+							socket.fire("done");
+						}
+					} else {
+						socket.fire("fail", ["error"]);
+					}
+				})
+				.fail(function(jqXHR, reason) {
+					socket.fire("fail", [reason === "abort" ? "close" : "error"]);
+				});
+			}
+			
+			return $.extend(transports.http(socket), {
+				open: function() {
+					poll();
+					
+					setTimeout(function() {
+						socket.fire("open");
+					}, 10);
+				},
+				close: function() {
+					xhr.abort();
+					return true;
+				}
+			});
+		},
+		// Long Polling - JSONP
+		longpolljsonp: function(socket) {
+			var count = 1, url = socket.data("url"), callback = $.expando + "_" + socket.data("id").replace(/-/g, ""),
+				xhr, called;
+			
+			function poll() {
+				var u = url + (/\?/.test(url) ? "&" : "?") +  $.param({callback: callback, count: count++});
+				
+				socket.data("url", u);
+				
+				xhr = $.ajax(u, {dataType: "script", crossDomain: true, cache: true, timeout: 0})
+				.done(function() {
+					if (called) {
+						called = false;
+						poll();
+					} else {
+						socket.fire("done");
+					}
+				})
+				.fail(function(jqXHR, reason) {
+					socket.fire("fail", [reason === "abort" ? "close" : "error"]);
+				});
+			}
+			
+			return $.extend(transports.http(socket), {
+				open: function() {
+					window[callback] = function(data) {
+						called = true;
+						socket.notify(data);
+					};
+					socket.one("close", function() {
+						window[callback] = undefined;
+					});
+					
+					poll();
+					
+					setTimeout(function() {
+						socket.fire("open");
+					}, 10);
+				},
+				close: function() {
+					xhr.abort();
+					return true;
 				}
 			});
 		}
