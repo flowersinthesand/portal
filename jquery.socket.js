@@ -180,8 +180,17 @@
 					return this;
 				},
 				// Fire helper for transport
-				notify: function(data) {
-					var events = isBinary(data) ? [{type: "message", data: data}] : $.makeArray(self.options.inbound.call(self, data)), 
+				notify: function(data, chunk) {
+					if (chunk) {
+						data = self.options.read.call(self, data);
+						while (data && data.length) {
+							socket.notify(data.shift());
+						}
+						
+						return this;
+					}
+					
+					var events = isBinary(data) ? [{type: "message", data: data}] : $.makeArray(self.options.inbound.call(self, data)),
 						i, event;
 					
 					for (i = 0; i < events.length; i++) {
@@ -422,7 +431,7 @@
 				return array;
 			}
 		},
-		// TODO TEST
+		// TODO rename and test
 		enableXDR: false
 	});
 	
@@ -555,10 +564,7 @@
 						if (!index) {
 							socket.fire("open");
 						} else if (length > index) {
-							data = socket.options.read.call(socket, xhr.responseText.substring(index, length));
-							while (data && data.length) {
-								socket.notify(data.shift());
-							}
+							socket.notify(xhr.responseText.substring(index, length), true);
 						}
 						
 						socket.data("index", length);
@@ -652,10 +658,7 @@
 							
 							if (text) {
 								response.innerText = "";
-								data = socket.options.read.call(socket, text);
-								while (data && data.length) {
-									socket.notify(data.shift());
-								}
+								socket.notify(text, true);
 							}
 	
 							if (cdoc.readyState === "complete") {
@@ -679,13 +682,13 @@
 		// HTTP Streaming - XDomainRequest
 		streamxdr: function(socket) {
 			var XDomainRequest = window.XDomainRequest,
-				xdr, url, rewriteURL;
+				xdr, url;
 			
 			if (!XDomainRequest || !socket.options.enableXDR) {
 				return;
 			}
 			
-			rewriteURL = function(url) {
+			function rewriteURL(url) {
 				// Maintaining session by rewriting URL
 				// http://stackoverflow.com/questions/6453779/maintaining-session-by-rewriting-url
 				var name, match, 
@@ -721,10 +724,7 @@
 				if (!index) {
 					socket.fire("open");
 				} else {
-					data = socket.options.read.call(socket, xdr.responseText.substring(index, length));
-					while (data && data.length) {
-						socket.notify(data.shift());
-					}
+					socket.notify(xdr.responseText.substring(index, length), true);
 				}
 				
 				socket.data("index", length);
