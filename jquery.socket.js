@@ -184,7 +184,7 @@
 					if (chunk) {
 						data = self.options.read.call(self, data);
 						while (data && data.length) {
-							socket.notify(data.shift());
+							self.notify(data.shift());
 						}
 						
 						return this;
