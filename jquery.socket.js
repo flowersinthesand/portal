@@ -12,18 +12,10 @@
 		socketEvents = "connecting open message close waiting".split(" "),
 		// Sockets
 		sockets = {},
-		// Protocols
-		protocols = {},
+		// Default options
+		defaults = {},
 		// Transports
 		transports = {},
-		// Default options
-		defaults = {
-			type: "",
-			reconnectDelay: 500,
-			reconnect: function(delay, attempts) {
-				return attempts > 1 ? 2 * delay : 0;
-			}
-		},
 		// Reference to core prototype
 		hasOwn = Object.prototype.hasOwnProperty;
 	
@@ -189,7 +181,7 @@
 				},
 				// Fire helper for transport
 				notify: function(data) {
-					var events = isBinary(data) ? [{type: "message", data: data}] : $.makeArray(protocols.inbound.call(self, data)), 
+					var events = isBinary(data) ? [{type: "message", data: data}] : $.makeArray(self.options.inbound.call(self, data)), 
 						i, event;
 					
 					for (i = 0; i < events.length; i++) {
@@ -222,7 +214,7 @@
 					
 					while (types.length) {
 						type = types.shift();
-						url = protocols.url.call(self, self.url(), type);
+						url = self.options.url.call(self, self.url(), type);
 						self.data("url", url).data("crossDomain", isCrossDomain(url));
 						
 						transport = transports[type] && transports[type](self);
@@ -250,7 +242,7 @@
 							event = "message";
 						}
 						
-						transport.send(self.data("transport") === "sub" || isBinary(data) ? data : protocols.outbound.call(self, {type: event, data: data}));
+						transport.send(self.data("transport") === "sub" || isBinary(data) ? data : self.options.outbound.call(self, {type: event, data: data}));
 					}
 					
 					return this;
@@ -366,8 +358,13 @@
 		return self.open();
 	}
 	
-	// Protocols	
-	$.extend(protocols, {
+	// Default options
+	$.extend(defaults, {
+		type: "ws sse stream longpoll".split(" "),
+		reconnectDelay: 500,
+		reconnect: function(delay, attempts) {
+			return attempts > 1 ? 2 * delay : 0;
+		},
 		inbound: function(data) {
 			return $.parseJSON(data);
 		},
@@ -558,7 +555,7 @@
 						if (!index) {
 							socket.fire("open");
 						} else if (length > index) {
-							data = protocols.read.call(socket, xhr.responseText.substring(index, length));
+							data = socket.options.read.call(socket, xhr.responseText.substring(index, length));
 							while (data && data.length) {
 								socket.notify(data.shift());
 							}
@@ -655,7 +652,7 @@
 							
 							if (text) {
 								response.innerText = "";
-								data = protocols.read.call(socket, text);
+								data = socket.options.read.call(socket, text);
 								while (data && data.length) {
 									socket.notify(data.shift());
 								}
@@ -684,7 +681,7 @@
 			var XDomainRequest = window.XDomainRequest,
 				xdr, url, rewriteURL;
 			
-			if (!XDomainRequest || !protocols.enableXDR) {
+			if (!XDomainRequest || !socket.options.enableXDR) {
 				return;
 			}
 			
@@ -724,7 +721,7 @@
 				if (!index) {
 					socket.fire("open");
 				} else {
-					data = protocols.read.call(socket, xdr.responseText.substring(index, length));
+					data = socket.options.read.call(socket, xdr.responseText.substring(index, length));
 					while (data && data.length) {
 						socket.notify(data.shift());
 					}
@@ -918,7 +915,6 @@
 	};
 	
 	$.socket.defaults = defaults;
-	$.socket.protocols = protocols; 
 	$.socket.transports = transports;
 	
 })(jQuery);

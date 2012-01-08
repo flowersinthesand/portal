@@ -10,7 +10,7 @@ function teardown() {
 	
 	var i, j;
 	
-	for (i in {defaults: 1, protocols: 1, transports: 1}) {
+	for (i in {defaults: 1, transports: 1}) {
 		for (j in $.socket[i]) {
 			delete $.socket[i][j];
 		}
@@ -904,7 +904,7 @@ test("url used for connection should be exposed by data('url')", function() {
 test("url handler should receive the original url and a transport name and return a url to be used to establish a connection", function() {
 	var socket;
 	
-	$.socket.protocols.url = function(url, transport) {
+	$.socket.defaults.url = function(url, transport) {
 		socket = this;
 		strictEqual(url, "url");
 		strictEqual(transport, "test");
@@ -917,7 +917,7 @@ test("url handler should receive the original url and a transport name and retur
 });
 
 asyncTest("outbound handler should receive a event object and return a final data to be sent to the server", function() {
-	$.socket.protocols.outbound = function(event) {
+	$.socket.defaults.outbound = function(event) {
 		deepEqual(event, {type: "message", data: "data"});
 		return $.stringifyJSON(event);
 	};
@@ -934,7 +934,7 @@ asyncTest("outbound handler should receive a event object and return a final dat
 });
 
 asyncTest("inbound handler should receive a raw data from the server and return a event object", function() {
-	$.socket.protocols.inbound = function(data) {
+	$.socket.defaults.inbound = function(data) {
 		deepEqual($.parseJSON(data), {type: "message", data: "data"});
 		return $.parseJSON(data);
 	};
@@ -953,7 +953,7 @@ asyncTest("inbound handler should receive a raw data from the server and return 
 });
 
 asyncTest("inbound handler should be able to return an array of event object", function() {
-	$.socket.protocols.inbound = function(data) {
+	$.socket.defaults.inbound = function(data) {
 		var event = $.parseJSON(data); 
 		ok($.isArray(event.data));
 		
@@ -986,10 +986,10 @@ asyncTest("inbound handler should be able to return an array of event object", f
 asyncTest("event object should contain type, optional data and optional args property", function() {
 	var outbound;
 	
-	$.socket.protocols.inbound = function(event) {
+	$.socket.defaults.inbound = function(event) {
 		return event;
 	};
-	$.socket.protocols.outbound = function(event) {
+	$.socket.defaults.outbound = function(event) {
 		if (outbound) {
 			outbound(event);
 			outbound = null;
@@ -1057,7 +1057,7 @@ if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKit
 			return string === "[object Blob]" || string === "[object ArrayBuffer]";
 		}
 		
-		$.socket.protocols.inbound = $.socket.protocols.outbound = function() {
+		$.socket.defaults.inbound = $.socket.defaults.outbound = function() {
 			ok(false);
 		};
 		
@@ -1083,7 +1083,7 @@ if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKit
 }
 
 test("read handler should receive a chunk and return an array of data", function() {
-	$.socket.protocols.read = function(chunk) {
+	$.socket.defaults.read = function(chunk) {
 		var array = chunk.split("@@");
 		if (array.length > 1) {
 			array[0] = (this.data("data") || "") + array[0];
@@ -1100,9 +1100,9 @@ test("read handler should receive a chunk and return an array of data", function
 	};
 	
 	$.socket("url");
-	ok(!$.socket.protocols.read.call($.socket(), "A"));
-	deepEqual($.socket.protocols.read.call($.socket(), "A@@"), ["AA"]);
-	deepEqual($.socket.protocols.read.call($.socket(), "A@@B@@C"), ["A", "B", "C"]);
+	ok(!$.socket.defaults.read.call($.socket(), "A"));
+	deepEqual($.socket.defaults.read.call($.socket(), "A@@"), ["AA"]);
+	deepEqual($.socket.defaults.read.call($.socket(), "A@@B@@C"), ["A", "B", "C"]);
 });
 
 module("Protocol default", {
@@ -1162,7 +1162,7 @@ test("url should contain id and transport", function() {
 });
 
 test("chunks for streaming should accord with the event stream format", function() {
-	deepEqual($.socket.protocols.read.call($.socket("url"), "data: A\r\n\r\ndata: A\r\ndata: B\rdata: C\n\r\ndata: \r\n"), ["A", "A\nB\nC", ""]);
+	deepEqual($.socket.defaults.read.call($.socket("url"), "data: A\r\n\r\ndata: A\r\ndata: B\rdata: C\n\r\ndata: \r\n"), ["A", "A\nB\nC", ""]);
 });
 
 // TODO cross domain, heartbeat
@@ -1285,7 +1285,7 @@ if (!isLocal) {
 		setup: function() {
 			setup();
 			$.socket.defaults.type = "stream";
-			$.socket.protocols.enableXDR = true;
+			$.socket.defaults.enableXDR = true;
 		},
 		teardown: teardown
 	});
