@@ -556,7 +556,7 @@
 			
 			xhr = new XMLHttpRequest();
 			xhr.onreadystatechange = function() {
-				var index, length, data,
+				var index, length,
 					onchunk = function() {
 						index = socket.data("index");
 						length = xhr.responseText.length;
@@ -650,7 +650,7 @@
 						
 						stop = iterate(function() {
 							var clone = response.cloneNode(true), 
-								text, data;
+								text;
 
 							clone.appendChild(cdoc.createTextNode("."));
 							text = clone.innerText;
@@ -710,15 +710,14 @@
 				}
 				
 				return url;
-			};
+			}
 			
 			url = rewriteURL(socket.data("url"));
 			socket.data("url", url);
 			
 			xdr = new XDomainRequest();
 			xdr.onprogress = function() {
-				var data, 
-					index = socket.data("index"), 
+				var index = socket.data("index"), 
 					length = xdr.responseText.length;
 				
 				if (!index) {

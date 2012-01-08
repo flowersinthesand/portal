@@ -549,7 +549,7 @@ asyncTest("close event's reason should be 'error' if the socket has been closed 
 });
 
 asyncTest("close event's reason should be 'done' if the socket has been closed normally", function() {
-	var socket = $.socket("url", {
+	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.close();
@@ -1050,7 +1050,7 @@ test("transport used for connection should be exposed by data('transport')", fun
 
 if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKitBlobBuilder)) {
 	asyncTest("binary data should be sent transparently", function() {
-		var i = 0;
+		var BlobBuilder = window.MozBlobBuilder || window.WebKitBlobBuilder, i = 0;
 		
 		function isBinary(data) {
 			var string = Object.prototype.toString.call(data);
@@ -1077,7 +1077,7 @@ if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKit
 				start();
 			}
 		})
-		.send(new (window.MozBlobBuilder || window.WebKitBlobBuilder)().getBlob())
+		.send(new BlobBuilder().getBlob())
 		.send(new window.ArrayBuffer());
 	});
 }
