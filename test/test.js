@@ -1348,11 +1348,34 @@ if (!isLocal) {
 			});
 		});
 	}
+
+	module("Transport Long Polling", {
+		setup: function() {
+			setup();
+			$.socket.defaults.type = "longpoll";
+		},
+		teardown: teardown
+	});
+	
+	test("longpoll transport should execute real transports", function() {
+		var result = "";
+		
+		$.socket.transports.longpollxhr = function() {
+			result += "A";
+		};
+		$.socket.transports.longpolljsonp = function() {
+			result += "B";
+		};
+		
+		$.socket("longpoll");
+		
+		strictEqual(result, "AB");
+	});
 	
 	module("Transport Long Polling - XMLHttpRequest", {
 		setup: function() {
 			setup();
-			$.socket.defaults.type = "longpoll";
+			$.socket.defaults.type = "longpollxhr";
 		},
 		teardown: teardown
 	});
@@ -1362,14 +1385,9 @@ if (!isLocal) {
 	module("Transport Long Polling - JSONP", {
 		setup: function() {
 			setup();
-			$.socket.defaults.type = "longpoll";
-			this.ajaxSupport = $.support.ajax;
-			$.support.ajax = false;
+			$.socket.defaults.type = "longpolljsonp";
 		},
-		teardown: function() {
-			teardown();
-			$.support.ajax = this.ajaxSupport;
-		}
+		teardown: teardown
 	});
 	
 	test("window should have a function whose name is equals to data('url')'s callback parameter", function() {
