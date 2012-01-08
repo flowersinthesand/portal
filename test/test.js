@@ -109,6 +109,19 @@ test("one method should add an one time event handler", 5, function() {
 	}
 });
 
+test("the context of all event handlers should be the corresponding socket object", 7, function() {
+	var type,
+		socket,
+		fn = function() {
+			strictEqual(this, socket);
+		};
+	
+	for (type in {connecting: 1, open: 1, message: 1, close: 1, waiting: 1, custom1: 1, custom2: 1}) {
+		socket = $.socket(type); 
+		socket.on(type, fn).fire(type);
+	}
+});
+
 $.each(["connecting", "open", "message", "close", "waiting"], function(i, name) {
 	test(name + " method should add " + name + " event handler" + (name !== "message" ? " - flags: once, memory" : ""), function() {
 		var result = "",
@@ -415,9 +428,8 @@ module("Socket event", {
 });
 
 asyncTest("connecting event handler should be executed when a connection has tried", function() {
-	var socket = $.socket("url");
-	socket.connecting(function() {
-		strictEqual(this, socket);
+	$.socket("url").connecting(function() {
+		ok(true);
 		start();
 	});
 });
@@ -441,13 +453,13 @@ asyncTest("connecting event should be disabled after open event", function() {
 });
 
 asyncTest("open event handler should be executed when the connection has been established", function() {
-	var socket = $.socket("url", {
+	$.socket("url", {
 		server: function(request) {
 			request.accept();
 		}
 	})
 	.open(function() {
-		strictEqual(this, socket);
+		ok(true);
 		start();
 	});
 });
@@ -474,7 +486,7 @@ asyncTest("open event should be disabled after close event", function() {
 });
 
 asyncTest("message event handler should be executed with data when a message has been received", function() {
-	var socket = $.socket("url", {
+	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.send("data");
@@ -482,20 +494,18 @@ asyncTest("message event handler should be executed with data when a message has
 		}
 	})
 	.message(function(data) {
-		strictEqual(this, socket);
 		ok(data);
 		start();
 	});
 });
 
 asyncTest("close event handler should be executed with a reason when the connection has been closed", function() {
-	var socket = $.socket("url", {
+	$.socket("url", {
 		server: function(request) {
 			request.reject();
 		}
 	})
 	.close(function(reason) {
-		strictEqual(this, socket);
 		ok(reason);
 		start();
 	});
@@ -553,7 +563,7 @@ asyncTest("close event's reason should be 'done' if the socket has been closed n
 });
 
 asyncTest("waiting event handler should be executed with delay and attempts when a reconnection has scheduled and the socket has started waiting for connection", function() {
-	var socket = $.socket("url", {
+	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.close();
@@ -563,7 +573,6 @@ asyncTest("waiting event handler should be executed with delay and attempts when
 	.waiting(function(delay, attempts) {
 		ok($.isNumeric(delay));
 		ok($.isNumeric(attempts));
-		strictEqual(this, socket);
 		start();
 	});
 });
