@@ -9,7 +9,7 @@
 (function($, undefined) {
 	
 	var // Socket events
-		socketEvents = "connecting open message fail done close waiting".split(" "),
+		socketEvents = "connecting open message close waiting".split(" "),
 		// Sockets
 		sockets = {},
 		// Protocols
@@ -269,9 +269,9 @@
 						noFire = transport.close();
 					}
 					
-					// Fires fail event
+					// Fires close event
 					if (!noFire) {
-						self.fire("fail", [reason || "close"]);
+						self.fire("close", [reason || "close"]);
 					}
 					
 					return this;
@@ -297,9 +297,6 @@
 				return ($.isFunction(fn) ? on : old).apply(this, arguments);
 			};
 		});
-		
-		// done event and fail event are mutually exclusive 
-		events.done.order = events.fail.order;
 		
 		// Initializes
 		self.connecting(function() {
@@ -335,47 +332,20 @@
 				self.send.apply(self, buffer.shift());
 			}
 		})
-		.fail(function() {
-			oldState = state;
-			state = "closed";
-			
-			var type, event, order = events.fail.order;
-			
-			// Disables done event and event whose order is lower than fail event
-			events.done.disable();
-			for (type in events) {
-				event = events[type];
-				if (event.order < order) {
-					event.disable();
-				}
-			}
-			
-			// Prepares close event
-			self.one("fail", function() {
-				self.fire("close");
-			});
-		})
-		.done(function() {
-			oldState = state;
-			state = "closed";
-			
-			var type, event, order = events.done.order;
-			
-			// Disables fail event and event whose order is lower than done event
-			events.fail.disable();
-			for (type in events) {
-				event = events[type];
-				if (event.order < order) {
-					event.disable();
-				}
-			}
-			
-			// Prepares close event
-			self.one("done", function() {
-				self.fire("close");
-			});
-		})
 		.close(function() {
+			oldState = state;
+			state = "closed";
+			
+			var type, event, order = events.close.order;
+			
+			// Disables event whose order is lower than close event
+			for (type in events) {
+				event = events[type];
+				if (event.order < order) {
+					event.disable();
+				}
+			}
+			
 			// Handles reconnection
 			if (self.options.reconnect) {
 				self.one("close", function() {
@@ -483,11 +453,8 @@
 							
 							socket.fire("open");
 						})
-						.fail(function(reason) {
-							socket.fire("fail", [reason]);
-						})
-						.done(function() {
-							socket.fire("done");
+						.close(function(reason) {
+							socket.fire("close", [reason]);
 						})
 						.on(event, function(data) {
 							socket.fire("message", [data]);
@@ -498,7 +465,7 @@
 					source.send(event, data);
 				},
 				close: function() {
-					socket.fire("fail", ["close"]);
+					socket.fire("close", ["close"]);
 				}
 			};
 		},
@@ -524,10 +491,10 @@
 						socket.data("event", event).notify(event.data);
 					};
 					ws.onerror = function(event) {
-						socket.data("event", event).fire("fail", ["error"]);
+						socket.data("event", event).fire("close", ["error"]);
 					};
 					ws.onclose = function(event) {
-						socket.data("event", event).fire.apply(socket, event.wasClean ? ["done"] : ["fail", [aborted ? "close" : "error"]]);
+						socket.data("event", event).fire.apply(socket, ["close", [event.wasClean ? "done" : aborted ? "close" : "error"]]);
 					};
 				},
 				send: function(data) {
@@ -615,7 +582,7 @@
 						stop();
 					}
 					
-					socket.fire.apply(socket, xhr.status === 200 ? ["done"] : ["fail", [aborted ? "close" : "error"]]);
+					socket.fire.apply(socket, ["close", [xhr.status === 200 ? "done" : aborted ? "close" : "error"]]);
 					break;
 				}
 			};
@@ -669,7 +636,7 @@
 								// Meaningless
 								response = cdoc.fileSize;
 							} catch(e) {
-								socket.fire("fail", ["error"]);
+								socket.fire("close", ["error"]);
 								return false;
 							}
 						}
@@ -695,7 +662,7 @@
 							}
 	
 							if (cdoc.readyState === "complete") {
-								socket.fire("done");
+								socket.fire("close", ["done"]);
 								return false;
 							}
 						});
@@ -766,10 +733,10 @@
 				socket.data("index", length);
 			};
 			xdr.onerror = function() {
-				socket.fire("fail", ["error"]);
+				socket.fire("close", ["error"]);
 			};
 			xdr.onload = function() {
-				socket.fire("done");
+				socket.fire("close", ["done"]);
 			};
 			
 			return $.extend(transports.http(socket), {
@@ -804,7 +771,7 @@
 						es.close();
 						
 						// There is no way to find whether this connection closed normally or not 
-						socket.data("event", event).fire("done");
+						socket.data("event", event).fire("close", ["done"]);
 					};
 				},
 				close: function() {
@@ -841,14 +808,14 @@
 							socket.notify(data);
 							poll();
 						} else {
-							socket.fire("done");
+							socket.fire("close", ["done"]);
 						}
 					} else {
-						socket.fire("fail", ["error"]);
+						socket.fire("close", ["error"]);
 					}
 				})
 				.fail(function(jqXHR, reason) {
-					socket.fire("fail", [reason === "abort" ? "close" : "error"]);
+					socket.fire("close", [reason === "abort" ? "close" : "error"]);
 				});
 			}
 			
@@ -882,11 +849,11 @@
 						called = false;
 						poll();
 					} else {
-						socket.fire("done");
+						socket.fire("close", ["done"]);
 					}
 				})
 				.fail(function(jqXHR, reason) {
-					socket.fire("fail", [reason === "abort" ? "close" : "error"]);
+					socket.fire("close", [reason === "abort" ? "close" : "error"]);
 				});
 			}
 			

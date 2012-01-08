@@ -73,18 +73,18 @@ test("options property should include the given options", function() {
 	strictEqual($.socket("url", {version: $.fn.jquery}).options.version, $.fn.jquery);
 });
 
-test("on method should add a event handler", 7, function() {
+test("on method should add a event handler", 5, function() {
 	var type, 
 		yes = function() {
 			ok(true);
 		};
 	
-	for (type in {connecting: 1, open: 1, message: 1, fail: 1, done: 1, close: 1, waiting: 1}) {
+	for (type in {connecting: 1, open: 1, message: 1, close: 1, waiting: 1}) {
 		$.socket(type).on(type, yes).fire(type);
 	}
 });
 
-test("off method should remove a event handler", 6, function() {
+test("off method should remove a event handler", 4, function() {
 	var type, 
 		yes = function() {
 			ok(true);
@@ -93,23 +93,23 @@ test("off method should remove a event handler", 6, function() {
 			ok(false);
 		};
 		
-	for (type in {open: 1, message: 1, fail: 1, done: 1, close: 1, waiting: 1}) {
+	for (type in {open: 1, message: 1, close: 1, waiting: 1}) {
 		$.socket(type).on(type, no).off(type, no).on(type, yes).fire(type);
 	}
 });
 
-test("one method should add an one time event handler", 7, function() {
+test("one method should add an one time event handler", 5, function() {
 	var type, 
 		yes = function() {
 			ok(true);
 		};
 		
-	for (type in {connecting: 1, open: 1, message: 1, fail: 1, done: 1, close: 1, waiting: 1}) {
+	for (type in {connecting: 1, open: 1, message: 1, close: 1, waiting: 1}) {
 		$.socket(type).one(type, yes).fire(type).fire(type);
 	}
 });
 
-$.each(["connecting", "open", "message", "fail", "done", "close", "waiting"], function(i, name) {
+$.each(["connecting", "open", "message", "close", "waiting"], function(i, name) {
 	test(name + " method should add " + name + " event handler" + (name !== "message" ? " - flags: once, memory" : ""), function() {
 		var result = "",
 			out = function(string) {
@@ -300,9 +300,6 @@ asyncTest("request should be pended if there is no action on request", function(
 	})
 	.open(function() {
 		ok(false);
-	})
-	.done(function() {
-		ok(false);
 	});
 });
 
@@ -315,13 +312,10 @@ asyncTest("request's accept method should return connection object and fire open
 	.open(function() {
 		ok(true);
 		start();
-	})
-	.done(function() {
-		ok(false);
 	});
 });
 
-asyncTest("request's reject method should fire fail event", function() {
+asyncTest("request's reject method should fire close event whose the reason attribute is error", function() {
 	$.socket("url", {
 		server: function(request) {
 			ok(!request.reject());
@@ -330,8 +324,8 @@ asyncTest("request's reject method should fire fail event", function() {
 	.open(function() {
 		ok(false);
 	})
-	.fail(function() {
-		ok(true);
+	.one("close", function(reason) {
+		strictEqual(reason, "error");
 		start();
 	});
 });
@@ -352,7 +346,7 @@ asyncTest("connection's send method should fire socket's message event", functio
 	});
 });
 
-asyncTest("connection's close method should fire socket's done event", function() {
+asyncTest("connection's close method should fire socket's close event whose the reason attribute is done", function() {
 	$.socket("url", {
 		server: function(request) {
 			var connection = request.accept();
@@ -362,8 +356,8 @@ asyncTest("connection's close method should fire socket's done event", function(
 			});
 		}
 	})
-	.done(function() {
-		ok(true);
+	.one("close", function(reason) {
+		strictEqual(reason, "done");
 		start();
 	});
 });
@@ -397,7 +391,7 @@ asyncTest("connection's message event handler should receive a data sent by the 
 	.send("Hello");
 });
 
-asyncTest("connection's close event should be fired if opened socket's fail event fires", function() {
+asyncTest("connection's close event should be fired if opened socket's close event fires", function() {
 	var result = "";
 	
 	$.socket("url", {
@@ -409,31 +403,10 @@ asyncTest("connection's close event should be fired if opened socket's fail even
 			});
 		}
 	})
-	.fail(function() {
+	.close(function() {
 		result += "A";
 	})
 	.close();
-});
-
-asyncTest("connection's close event should be fired if opened socket's done event", function() {
-	var result = "";
-	
-	$.socket("url", {
-		server: function(request) {
-			request.accept().on("open", function() {
-				this.close();
-			})
-			.on("close", function() {
-				result += "B";
-				strictEqual(result, "AB");
-				start();
-			});
-		},
-		reconnect: false
-	})
-	.done(function() {
-		result += "A";
-	});
 });
 
 module("Socket event", {
@@ -479,7 +452,7 @@ asyncTest("open event handler should be executed when the connection has been es
 	});
 });
 
-asyncTest("open event should be disabled after fail event", function() {
+asyncTest("open event should be disabled after close event", function() {
 	var result = "";
 	
 	$.socket("url", {
@@ -491,29 +464,7 @@ asyncTest("open event should be disabled after fail event", function() {
 		result += "A";
 		this.close();
 	})
-	.fail(function() {
-		this.open(function() {
-			result += "B";
-		});
-		strictEqual(result, "A");
-		start();
-	});
-});
-
-asyncTest("open event should be disabled after done event", function() {
-	var result = "";
-	
-	$.socket("url", {
-		server: function(request) {
-			request.accept().on("open", function() {
-				this.close();
-			});
-		}
-	})
-	.open(function() {
-		result += "A";
-	})
-	.done(function() {
+	.close(function() {
 		this.open(function() {
 			result += "B";
 		});
@@ -537,57 +488,57 @@ asyncTest("message event handler should be executed with data when a message has
 	});
 });
 
-asyncTest("fail event handler should be executed with a reason when the connection has been closed due to an error", function() {
+asyncTest("close event handler should be executed with a reason when the connection has been closed", function() {
 	var socket = $.socket("url", {
 		server: function(request) {
 			request.reject();
 		}
 	})
-	.fail(function(reason) {
+	.close(function(reason) {
 		strictEqual(this, socket);
 		ok(reason);
 		start();
 	});
 });
 
-asyncTest("fail event's reason should be 'notransport' if there is no available transport", function() {
+asyncTest("close event's reason should be 'notransport' if there is no available transport", function() {
 	$.socket("url", {type: "what"})
-	.fail(function(reason) {
+	.close(function(reason) {
 		strictEqual(reason, "notransport");
 		start();
 	});
 });
 
-asyncTest("fail event's reason should be 'close' if the socket's close method has been called with no arguments", function() {
+asyncTest("close event's reason should be 'close' if the socket's close method has been called", function() {
 	$.socket("url")
-	.fail(function(reason) {
+	.close(function(reason) {
 		strictEqual(reason, "close");
 		start();
 	})
 	.close();
 });
 
-asyncTest("fail event's reason should be 'timeout' if the socket has been timed out", function() {
+asyncTest("close event's reason should be 'timeout' if the socket has been timed out", function() {
 	$.socket("url", {timeout: 10})
-	.fail(function(reason) {
+	.close(function(reason) {
 		strictEqual(reason, "timeout");
 		start();
 	});
 });
 
-asyncTest("fail event's reason should be 'error' if the socket has been closed due to not specific error", function() {
+asyncTest("close event's reason should be 'error' if the socket has been closed due to not specific error", function() {
 	$.socket("url", {
 		server: function(request) {
 			request.reject();
 		}
 	})
-	.one("fail", function(reason) {
+	.one("close", function(reason) {
 		strictEqual(reason, "error");
 		start();
 	});
 });
 
-asyncTest("done event handler should be executed when the connection has been closed normally", function() {
+asyncTest("close event's reason should be 'done' if the socket has been closed normally", function() {
 	var socket = $.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
@@ -595,48 +546,8 @@ asyncTest("done event handler should be executed when the connection has been cl
 			});
 		}
 	})
-	.done(function() {
-		strictEqual(this, socket);
-		start();
-	});
-});
-
-asyncTest("close event should be fired after fail event", function() {
-	var result = "";
-	
-	$.socket("url", {
-		server: function(request) {
-			request.reject();
-		},
-		reconnect: false
-	})
-	.fail(function() {
-		result += "A";
-	})
-	.close(function() {
-		result += "B";
-		strictEqual(result, "AB");
-		start();
-	});
-});
-
-asyncTest("close event should be fired after done event", function() {
-	var result = "";
-	
-	$.socket("url", {
-		server: function(request) {
-			request.accept().on("open", function() {
-				this.close();
-			});
-		},
-		reconnect: false
-	})
-	.done(function() {
-		result += "A";
-	})
-	.close(function() {
-		result += "B";
-		strictEqual(result, "AB");
+	.one("close", function(reason) {
+		strictEqual(reason, "done");
 		start();
 	});
 });
@@ -677,27 +588,13 @@ asyncTest("state should be 'opened' after open event", function() {
 	});
 });
 
-asyncTest("state should be 'closed' after fail event", function() {
+asyncTest("state should be 'closed' after close event", function() {
 	$.socket("url", {
 		server: function(request) {
 			request.reject();
 		}
 	})
-	.fail(function() {
-		strictEqual(this.state(), "closed");
-		start();
-	});
-});
-
-asyncTest("state should be 'closed' after done event", function() {
-	$.socket("url", {
-		server: function(request) {
-			request.accept().on("open", function() {
-				this.close();
-			});
-		}
-	})
-	.done(function() {
+	.close(function() {
 		strictEqual(this.state(), "closed");
 		start();
 	});
@@ -792,30 +689,15 @@ asyncTest("message event should be triggered following the source socket's corre
 	});
 });
 
-asyncTest("fail event should be triggered following the source socket's fail event", function() {
+asyncTest("close event should be triggered following the source socket's close event", function() {
 	$.socket("url", {
 		server: function(request) {
 			request.reject();
 		}
 	})
 	.find("dm")
-	.fail(function(reason) {
+	.close(function(reason) {
 		strictEqual(reason, "error");
-		start();
-	});
-});
-
-asyncTest("done event should be triggered following the source socket's done event", function() {
-	$.socket("url", {
-		server: function(request) {
-			request.accept().on("open", function() {
-				this.close();
-			});
-		}
-	})
-	.find("dm")
-	.done(function() {
-		ok(true);
 		start();
 	});
 });
@@ -841,13 +723,13 @@ asyncTest("close method should close only the sub socket, not the source socket"
 			request.accept();
 		}
 	})
-	.fail(function() {
+	.close(function() {
 		if (!started) {
 			ok(false);
 		}
 	})
 	.find("dm")
-	.fail(function(reason) {
+	.close(function(reason) {
 		strictEqual(reason, "close");
 		start();
 		started = true;
@@ -1306,16 +1188,16 @@ function testTransport(url) {
 	});
 	
 	asyncTest("close method should work properly", function() {
-		$.socket(url).fail(function(reason) {
+		$.socket(url).close(function(reason) {
 			strictEqual(reason, "close");
 			start();
 		})
 		.close();
 	});
 	
-	asyncTest("done event should be fired when the server disconnects a connection cleanly", function() {
-		$.socket(url + "?close=true").done(function() {
-			ok(true);
+	asyncTest("close event whose the reason attribute is done should be fired when the server disconnects a connection cleanly", function() {
+		$.socket(url + "?close=true").one("close", function(reason) {
+			strictEqual(reason, "done");
 			start();
 		});
 	});
@@ -1328,10 +1210,12 @@ function testLongPollingTransport(url) {
 		var oldURL;
 		
 		$.socket(url).send(0).message(function(i) {
+			var url = this.data("url");
+			
 			if (oldURL) {
-				notStrictEqual(oldURL, this.data("url"));
+				notStrictEqual(oldURL, url);
 			}
-			oldURL = this.data("url");
+			oldURL = url;
 			
 			if (i > 2) {
 				start();
@@ -1356,7 +1240,7 @@ if (!isLocal) {
 		
 		window.WebSocket = window.MozWebSocket = undefined;
 		
-		$.socket("ws").fail(function(reason) {
+		$.socket("ws").close(function(reason) {
 			strictEqual(reason, "notransport");
 			start();
 		});
@@ -1430,7 +1314,7 @@ if (!isLocal) {
 		
 		window.EventSource = undefined;
 		
-		$.socket("ws").fail(function(reason) {
+		$.socket("ws").close(function(reason) {
 			strictEqual(reason, "notransport");
 			start();
 		});

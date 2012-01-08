@@ -32,7 +32,7 @@
 						close: function() {
 							setTimeout(function() {
 								if (accepted) {
-									socket.fire("done");
+									socket.fire("close", ["done"]);
 									connectionEvent.triggerHandler("close", [1000, null]);
 								}
 							}, 5);
@@ -69,7 +69,7 @@
 						connectionEvent.triggerHandler("open");
 						break;
 					case false:
-						socket.fire("fail", ["error"]);
+						socket.fire("close", ["error"]);
 						break;
 					}
 				}, 5);
