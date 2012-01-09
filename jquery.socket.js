@@ -202,9 +202,8 @@
 				},
 				// Establishes a connection
 				open: function() {
-					var i = 0, 
-						types = $.makeArray(self.options.type),
-						url, type;
+					var types = $.makeArray(self.options.type),
+						i, url, type;
 					
 					// Cancels the scheduled connection
 					if (reconnectTimer) {
@@ -351,7 +350,7 @@
 			if (self.options.reconnect) {
 				self.one("close", function() {
 					reconnectTry = reconnectTry || 1;
-					reconnectDelay = self.options.reconnect(reconnectDelay || self.options.reconnectDelay, reconnectTry);
+					reconnectDelay = self.options.reconnect.call(self, reconnectDelay || self.options.reconnectDelay, reconnectTry);
 					
 					if (reconnectDelay !== false) {
 						reconnectTimer = setTimeout(self.open, reconnectDelay);
@@ -785,19 +784,18 @@
 		},
 		// Long Polling - XMLHttpRequest
 		longpollxhr: function(socket) {
-			var count = 1, url = socket.data("url"), 
+			var count = 1, 
+				url = socket.data("url"), 
 				xhr;
 			
 			if (!$.support.ajax || (socket.data("crossDomain") && !$.support.cors)) {
 				return;
 			}
 			
+			url += (/\?/.test(url) ? "&" : "?") +  $.param({count: ""});
+			
 			function poll() {
-				var u = url + (/\?/.test(url) ? "&" : "?") +  $.param({count: count++});
-				
-				socket.data("url", u);
-				
-				xhr = $.ajax(u, {type: "GET", dataType: "text", async: true, cache: true, timeout: 0})
+				xhr = $.ajax(socket.data("url", url + count++).data("url"), {type: "GET", dataType: "text", async: true, cache: true, timeout: 0})
 				.done(function(data) {
 					if (xhr.status === 200) {
 						if (data) {
@@ -831,15 +829,24 @@
 		},
 		// Long Polling - JSONP
 		longpolljsonp: function(socket) {
-			var count = 1, url = socket.data("url"), callback = $.expando + "_" + socket.data("id").replace(/-/g, ""),
+			var count = 1, 
+				url = socket.data("url"), 
+				callback = $.expando + "_" + socket.data("id").replace(/-/g, ""),
 				xhr, called;
 			
+			url += (/\?/.test(url) ? "&" : "?") +  $.param({callback: callback, count: ""});
+			
+			// Attaches callback
+			window[callback] = function(data) {
+				called = true;
+				socket.notify(data);
+			};
+			socket.one("close", function() {
+				window[callback] = undefined;
+			});
+			
 			function poll() {
-				var u = url + (/\?/.test(url) ? "&" : "?") +  $.param({callback: callback, count: count++});
-				
-				socket.data("url", u);
-				
-				xhr = $.ajax(u, {dataType: "script", crossDomain: true, cache: true, timeout: 0})
+				xhr = $.ajax(socket.data("url", url + count++).data("url"), {dataType: "script", crossDomain: true, cache: true, timeout: 0})
 				.done(function() {
 					if (called) {
 						called = false;
@@ -855,14 +862,6 @@
 			
 			return $.extend(transports.http(socket), {
 				open: function() {
-					window[callback] = function(data) {
-						called = true;
-						socket.notify(data);
-					};
-					socket.one("close", function() {
-						window[callback] = undefined;
-					});
-					
 					poll();
 					
 					setTimeout(function() {
