@@ -10,7 +10,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
 
-@WebServlet(urlPatterns = "/test/ws", asyncSupported = true)
+@WebServlet(urlPatterns = "/ws", asyncSupported = true)
 public class EchoWebSocketServlet extends WebSocketServlet {
 
 	private static final long serialVersionUID = 4437311371784508862L;
