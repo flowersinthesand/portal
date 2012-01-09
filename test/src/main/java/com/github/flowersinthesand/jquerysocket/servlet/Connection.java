@@ -2,7 +2,10 @@ package com.github.flowersinthesand.jquerysocket.servlet;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,14 +22,14 @@ import com.google.gson.Gson;
 // TODO move to jquery-socket-servlet
 public class Connection {
 
-	private Queue<String> queue;
+	private Queue<Map<String, Object>> queue;
 	private AsyncContext asyncContext;
 	private String id;
 	private String transport;
 	private String callback;
 
 	public Connection() {
-		queue = new ConcurrentLinkedQueue<String>();
+		queue = new ConcurrentLinkedQueue<Map<String, Object>>();
 	}
 	
 	public void setAsyncContext(AsyncContext ac) throws IOException {
@@ -66,8 +69,9 @@ public class Connection {
 			writer.flush();
 		}
 
-		while (this.asyncContext != null && !queue.isEmpty()) {
-			this.send(queue.poll());
+		if (!queue.isEmpty()) {
+			transmit(new Gson().toJson(queue));
+			queue.clear();
 		}
 	}
 
@@ -85,18 +89,30 @@ public class Connection {
 		return id;
 	}
 
-	public void send(String data) throws IOException {
-		if (asyncContext == null) {
-			queue.offer(data);
-		} else {
-			PrintWriter writer = asyncContext.getResponse().getWriter();
-			writer.print(format(data));
-			writer.flush();
+	public void send(Object data) throws IOException {
+		send("message", data);
+	}
 
-			if (transport.equals("longpollxhr") || transport.equals("longpolljsonp")) {
-				asyncContext.complete();
-				asyncContext = null;
-			}
+	public void send(String type, Object data) throws IOException {
+		Map<String, Object> event = new LinkedHashMap<String, Object>();
+		event.put("type", type);
+		event.put("data", data);
+
+		if (asyncContext == null) {
+			queue.offer(event);
+		} else {
+			transmit(new Gson().toJson(event));
+		}
+	}
+
+	private void transmit(String data) throws IOException {
+		PrintWriter writer = asyncContext.getResponse().getWriter();
+		writer.print(format(data));
+		writer.flush();
+
+		if (transport.equals("longpollxhr") || transport.equals("longpolljsonp")) {
+			asyncContext.complete();
+			asyncContext = null;
 		}
 	}
 
@@ -126,6 +142,10 @@ public class Connection {
 	}
 
 	private static final Map<String, Connection> connections = new ConcurrentHashMap<String, Connection>();
+
+	public static final List<Connection> findAll() {
+		return new ArrayList<Connection>(connections.values());
+	}
 
 	public static final Connection find(String id) {
 		if (!connections.containsKey(id)) {

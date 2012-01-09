@@ -1,6 +1,7 @@
 package com.github.flowersinthesand.jquerysocket;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -9,6 +10,9 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 @WebServlet(urlPatterns = "/ws", asyncSupported = true)
 public class EchoWebSocketServlet extends WebSocketServlet {
@@ -42,9 +46,9 @@ public class EchoWebSocketServlet extends WebSocketServlet {
 
 			@Override
 			public void onMessage(String json) {
-				Event event = new Event().parse(json);
+				Map<String, Object> event = new Gson().fromJson(json, new TypeToken<Map<String, Object>>() {}.getType());
 				try {
-					connection.sendMessage(event.stringify());
+					connection.sendMessage(new Gson().toJson(event));
 				} catch (IOException e) {
 					throw new RuntimeException(e);
 				}
