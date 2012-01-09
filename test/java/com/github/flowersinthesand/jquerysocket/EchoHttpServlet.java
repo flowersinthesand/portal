@@ -12,7 +12,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.github.flowersinthesand.jquerysocket.servlet.Connection;
 
-@WebServlet(urlPatterns = { "/test/stream", "/test/sse", "/test/longpoll" }, asyncSupported = true)
+@WebServlet(urlPatterns = "/test/http", asyncSupported = true)
 public class EchoHttpServlet extends HttpServlet {
 
 	private static final long serialVersionUID = -1896457417378814518L;

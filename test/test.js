@@ -1308,7 +1308,7 @@ if (!isLocal) {
 		strictEqual(result, "ABC");
 	});
 	
-	testTransport("stream");
+	testTransport("http");
 
 	module("Transport Server-Sent Events", {
 		setup: function() {
@@ -1332,7 +1332,7 @@ if (!isLocal) {
 	});
 	
 	if (window.EventSource) {
-		testTransport("sse");
+		testTransport("http");
 		
 		asyncTest("Server-Sent Events event should be able to be accessed by data('event')", function() {
 			$.socket("sse?close=true", {reconnect: false}).open(function() {
@@ -1380,7 +1380,7 @@ if (!isLocal) {
 		teardown: teardown
 	});
 	
-	testLongPollingTransport("longpoll");
+	testLongPollingTransport("http");
 	
 	module("Transport Long Polling - JSONP", {
 		setup: function() {
@@ -1394,5 +1394,5 @@ if (!isLocal) {
 		ok($.isFunction(window[param($.socket("url").data("url"), "callback")]));
 	});
 	
-	testLongPollingTransport("longpoll");
+	testLongPollingTransport("http");
 }
