@@ -814,13 +814,7 @@
 			}
 			
 			return $.extend(transports.http(socket), {
-				open: function() {
-					poll();
-					
-					setTimeout(function() {
-						socket.fire("open");
-					}, 10);
-				},
+				open: poll,
 				close: function() {
 					xhr.abort();
 					return true;
@@ -861,13 +855,7 @@
 			}
 			
 			return $.extend(transports.http(socket), {
-				open: function() {
-					poll();
-					
-					setTimeout(function() {
-						socket.fire("open");
-					}, 10);
-				},
+				open: poll,
 				close: function() {
 					xhr.abort();
 					return true;
