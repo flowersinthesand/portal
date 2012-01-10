@@ -50,9 +50,8 @@ public class Connection {
 			}
 			
 			private void cleanup(AsyncEvent event) {
-				String transport = event.getAsyncContext().getRequest().getParameter("transport");
-				System.out.println(transport);
-				if (transport.equals("longpollxhr") || transport.equals("longpolljsonp")) {
+				String tp = event.getAsyncContext().getRequest().getParameter("transport");
+				if (tp.equals("longpollxhr") || tp.equals("longpolljsonp")) {
 					longPollTimer = new Timer();
 					longPollTimer.schedule(new TimerTask() {
 						@Override
@@ -60,7 +59,7 @@ public class Connection {
 							connections.remove(id);
 						}
 					}, 5000);
-				} else if (transport.equals("streamiframe") || transport.equals("streamxdr") || transport.equals("streamxhr") || transport.equals("sse")) {
+				} else if (tp.equals("streamiframe") || tp.equals("streamxdr") || tp.equals("streamxhr") || tp.equals("sse")) {
 					connections.remove(id);
 				}
 			}
