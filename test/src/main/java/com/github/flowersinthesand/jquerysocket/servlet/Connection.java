@@ -7,9 +7,10 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncEvent;
@@ -22,63 +23,78 @@ import com.google.gson.Gson;
 // TODO move to jquery-socket-servlet
 public class Connection {
 
-	private Queue<Map<String, Object>> queue;
+	private List<Map<String, Object>> events = new CopyOnWriteArrayList<Map<String, Object>>();
 	private AsyncContext asyncContext;
 	private String id;
 	private String transport;
-	private String callback;
-
-	public Connection() {
-		queue = new ConcurrentLinkedQueue<Map<String, Object>>();
-	}
+	private Timer longPollTimer;
+	private String jsonpCallback;
 	
 	public void setAsyncContext(AsyncContext ac) throws IOException {
 		this.asyncContext = ac;
-
-		HttpServletRequest request = (HttpServletRequest) this.asyncContext.getRequest();
-		HttpServletResponse response = (HttpServletResponse) this.asyncContext.getResponse();
-
-		setId(request.getParameter("id"));
-		transport = request.getParameter("transport");
-		callback = request.getParameter("callback");
-
-		this.asyncContext.addListener(new AsyncListener() {
+		ac.addListener(new AsyncListener() {
 			public void onComplete(AsyncEvent event) throws IOException {
-				connections.remove(id);
+				cleanup();
 			}
 
 			public void onTimeout(AsyncEvent event) throws IOException {
-				connections.remove(id);
+				cleanup();
 			}
 
 			public void onError(AsyncEvent event) throws IOException {
-				connections.remove(id);
+				cleanup();
 			}
 
 			public void onStartAsync(AsyncEvent event) throws IOException {
 
 			}
+			
+			private void cleanup() {
+				if (transport.equals("longpollxhr") || transport.equals("longpolljsonp")) {
+					longPollTimer = new Timer();
+					longPollTimer.schedule(new TimerTask() {
+						@Override
+						public void run() {
+							connections.remove(id);
+						}
+					}, 5000);
+				} else {
+					connections.remove(id);
+				}
+			}
 		});
+		
+		HttpServletRequest request = (HttpServletRequest) ac.getRequest();
+		HttpServletResponse response = (HttpServletResponse) ac.getResponse();
 
+		id = request.getParameter("id");
+		transport = request.getParameter("transport");
+		
 		response.setContentType("text/" + (transport.equals("longpolljsonp") ? "javascript" : transport.equals("sse") ? "event-stream" : "plain"));
 		response.setHeader("Access-Control-Allow-Origin", "*");
-
-		if (transport.equals("streamiframe") || transport.equals("streamxdr") || transport.equals("streamxhr") || transport.equals("sse")) {
+		
+		if (transport.equals("longpollxhr") || transport.equals("longpolljsonp")) {
+			jsonpCallback = request.getParameter("callback");
+			if (longPollTimer != null) {
+				longPollTimer.cancel();
+			} else {
+				events.add(0, new LinkedHashMap<String, Object>());
+				events.get(0).put("type", "open");
+			}
+		} else if (transport.equals("streamiframe") || transport.equals("streamxdr") || transport.equals("streamxhr") || transport.equals("sse")) {
 			PrintWriter writer = response.getWriter();
 			writer.println(Arrays.toString(new float[400]).replaceAll(".", " "));
 			writer.flush();
 		}
-
-		if (!queue.isEmpty()) {
-			transmit(new Gson().toJson(queue));
-			queue.clear();
+		
+		if (!events.isEmpty()) {
+			transmit(events);
+			events.clear();
 		}
 	}
 
 	public void setId(String id) {
-		if (this.id == null) {
-			this.id = id;
-		}
+		this.id = id;
 	}
 
 	public AsyncContext getAsyncContext() {
@@ -99,15 +115,15 @@ public class Connection {
 		event.put("data", data);
 
 		if (asyncContext == null) {
-			queue.offer(event);
+			events.add(event);
 		} else {
-			transmit(new Gson().toJson(event));
+			transmit(event);
 		}
 	}
 
-	private void transmit(String data) throws IOException {
+	private void transmit(Object data) throws IOException {
 		PrintWriter writer = asyncContext.getResponse().getWriter();
-		writer.print(format(data));
+		writer.print(format(new Gson().toJson(data)));
 		writer.flush();
 
 		if (transport.equals("longpollxhr") || transport.equals("longpolljsonp")) {
@@ -122,8 +138,8 @@ public class Connection {
 		if ("longpollxhr".equals(transport)) {
 			builder.append(string);
 		} else if ("longpolljsonp".equals(transport)) {
-			builder.append(callback).append("(").append(new Gson().toJson(string)).append(")");
-		} else {
+			builder.append(jsonpCallback).append("(").append(new Gson().toJson(string)).append(")");
+		} else if (transport.equals("streamiframe") || transport.equals("streamxdr") || transport.equals("streamxhr") || transport.equals("sse")) {
 			for (String data : string.split("\r\n|\r|\n")) {
 				builder.append("data: ").append(data).append("\n");
 			}
@@ -136,6 +152,7 @@ public class Connection {
 	public void close() throws IOException {
 		if (asyncContext != null) {
 			asyncContext.complete();
+			asyncContext = null;
 		}
 
 		connections.remove(id);
