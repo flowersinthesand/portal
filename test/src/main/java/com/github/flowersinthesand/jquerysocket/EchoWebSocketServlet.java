@@ -1,6 +1,7 @@
 package com.github.flowersinthesand.jquerysocket;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -46,9 +47,13 @@ public class EchoWebSocketServlet extends WebSocketServlet {
 
 			@Override
 			public void onMessage(String json) {
-				Map<String, Object> event = new Gson().fromJson(json, new TypeToken<Map<String, Object>>() {}.getType());
+				Map<String, Object> requestEvent = new Gson().fromJson(json, new TypeToken<Map<String, Object>>() {}.getType());
+				Map<String, Object> responseEvent = new LinkedHashMap<String, Object>();
+				responseEvent.put("type", requestEvent.get("type"));
+				responseEvent.put("data", requestEvent.get("data"));
+				
 				try {
-					connection.sendMessage(new Gson().toJson(event));
+					connection.sendMessage(new Gson().toJson(responseEvent));
 				} catch (IOException e) {
 					throw new RuntimeException(e);
 				}
