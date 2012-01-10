@@ -34,22 +34,24 @@ public class Connection {
 		this.asyncContext = ac;
 		ac.addListener(new AsyncListener() {
 			public void onComplete(AsyncEvent event) throws IOException {
-				cleanup();
+				cleanup(event);
 			}
 
 			public void onTimeout(AsyncEvent event) throws IOException {
-				cleanup();
+				cleanup(event);
 			}
 
 			public void onError(AsyncEvent event) throws IOException {
-				cleanup();
+				cleanup(event);
 			}
 
 			public void onStartAsync(AsyncEvent event) throws IOException {
 
 			}
 			
-			private void cleanup() {
+			private void cleanup(AsyncEvent event) {
+				String transport = event.getAsyncContext().getRequest().getParameter("transport");
+				System.out.println(transport);
 				if (transport.equals("longpollxhr") || transport.equals("longpolljsonp")) {
 					longPollTimer = new Timer();
 					longPollTimer.schedule(new TimerTask() {
@@ -58,7 +60,7 @@ public class Connection {
 							connections.remove(id);
 						}
 					}, 5000);
-				} else {
+				} else if (transport.equals("streamiframe") || transport.equals("streamxdr") || transport.equals("streamxhr") || transport.equals("sse")) {
 					connections.remove(id);
 				}
 			}
