@@ -1363,13 +1363,16 @@ if (!isLocal) {
 		$.socket.transports.longpollxhr = function() {
 			result += "A";
 		};
-		$.socket.transports.longpolljsonp = function() {
+		$.socket.transports.longpollxdr = function() {
 			result += "B";
+		};
+		$.socket.transports.longpolljsonp = function() {
+			result += "C";
 		};
 		
 		$.socket("longpoll");
 		
-		strictEqual(result, "AB");
+		strictEqual(result, "ABC");
 	});
 	
 	module("Transport Long Polling - XMLHttpRequest", {
