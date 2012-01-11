@@ -153,9 +153,14 @@ public class Connection {
 	}
 
 	public void close() throws IOException {
+		events.clear();
 		if (asyncContext != null) {
 			asyncContext.complete();
 			asyncContext = null;
+		}
+		if (longPollTimer != null) {
+			longPollTimer.cancel();
+			longPollTimer = null;
 		}
 
 		connections.remove(id);
