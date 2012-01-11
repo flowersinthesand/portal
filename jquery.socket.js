@@ -194,7 +194,7 @@
 					
 					for (i = 0; i < events.length; i++) {
 						event = events[i];
-						self.fire(event.type, event.args || [event.data]);
+						self.fire(event.type, [event.data]);
 					}
 					
 					return this;

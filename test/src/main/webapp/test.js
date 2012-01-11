@@ -964,16 +964,11 @@ asyncTest("inbound handler should be able to return an array of event object", f
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.send("composite", [
-					{type: "chat", args: ["flowersits", "Hooray!"]}, 
 					{type: "music", data: ["Hollow Jan", "49 Morphines", "Vassline"]},
 					{type: "start"}
 				]);
 			});
 		}
-	})
-	.on("chat", function(sender, message) {
-		strictEqual(sender, "flowersits");
-		strictEqual(message, "Hooray!");
 	})
 	.on("music", function(data) {
 		deepEqual(data, ["Hollow Jan", "49 Morphines", "Vassline"]);
@@ -983,7 +978,7 @@ asyncTest("inbound handler should be able to return an array of event object", f
 	});
 });
 
-asyncTest("event object should contain type, optional data and optional args property", function() {
+asyncTest("event object should contain a event type and optional data property", function() {
 	var outbound;
 	
 	$.socket.defaults.inbound = function(event) {
@@ -1023,12 +1018,6 @@ asyncTest("event object should contain type, optional data and optional args pro
 			deepEqual(data, {key: "value"});
 		})
 		.notify({type: "message", data: {key: "value"}});
-		
-		this.one("music", function(band, song) {
-			strictEqual(band, "Devin Townsend Band");
-			strictEqual(song, "Vampira");
-		})
-		.notify({type: "music", args: ["Devin Townsend Band", "Vampira"]});
 		
 		this.one("chat", function(data) {
 			strictEqual(data, "data");
