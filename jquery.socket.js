@@ -614,8 +614,6 @@
 			
 			return $.extend(transports.http(socket), {
 				open: function() {
-					var response;
-					
 					iframe.src = socket.data("url");
 					doc.body.appendChild(iframe);
 					
@@ -625,18 +623,14 @@
 							return;
 						}
 						
+						var response = cdoc.body.lastChild;
+						
 						// Detects connection failure
-						if (cdoc.readyState === "complete") {
-							try {
-								// Meaningless
-								response = cdoc.fileSize;
-							} catch(e) {
-								socket.fire("close", ["error"]);
-								return false;
-							}
+						if (!response) {
+							socket.fire("close", ["error"]);
+							return false;
 						}
 						
-						response = cdoc.body.lastChild;
 						response.innerText = "";
 						socket.fire("open");
 						
