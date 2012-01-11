@@ -1382,6 +1382,19 @@ if (!isLocal) {
 	
 	testLongPollingTransport("http");
 	
+	module("Transport Long Polling - XDomainRequest", {
+		setup: function() {
+			setup();
+			$.socket.defaults.type = "longpollxdr";
+			$.socket.defaults.enableXDR = true;
+		},
+		teardown: teardown
+	});
+	
+	if (window.XDomainRequest) {
+		testLongPollingTransport("http");
+	}
+	
 	module("Transport Long Polling - JSONP", {
 		setup: function() {
 			setup();

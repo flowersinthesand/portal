@@ -257,7 +257,7 @@
 				},
 				// Disconnects the connection
 				close: function(reason) {
-					var noFire;
+					var hasFeedback;
 					
 					// Prevents reconnection
 					self.options.reconnect = false;
@@ -266,11 +266,11 @@
 					}
 					
 					if (transport) {
-						noFire = transport.close();
+						hasFeedback = transport.close();
 					}
 					
 					// Fires close event
-					if (!noFire) {
+					if (!hasFeedback) {
 						self.fire("close", [reason || "close"]);
 					}
 					
@@ -778,7 +778,7 @@
 		longpoll: function(socket) {
 			var i, candidates = socket.data("transports");
 			
-			for (i in {jsonp: 1, xhr: 1}) {
+			for (i in {jsonp: 1, xdr: 1, xhr: 1}) {
 				candidates.unshift("longpoll" + i);
 			}
 		},
@@ -797,15 +797,11 @@
 			function poll() {
 				xhr = $.ajax(socket.data("url", url + count++).data("url"), {type: "GET", dataType: "text", async: true, cache: true, timeout: 0})
 				.done(function(data) {
-					if (xhr.status === 200) {
-						if (data) {
-							socket.notify(data);
-							poll();
-						} else {
-							socket.fire("close", ["done"]);
-						}
+					if (data) {
+						socket.notify(data);
+						poll();
 					} else {
-						socket.fire("close", ["error"]);
+						socket.fire("close", ["done"]);
 					}
 				})
 				.fail(function(jqXHR, reason) {
@@ -818,6 +814,44 @@
 				close: function() {
 					xhr.abort();
 					return true;
+				}
+			});
+		},
+		// Long Polling - XDomainRequest
+		longpollxdr: function(socket) {
+			var XDomainRequest = window.XDomainRequest,
+				count = 1, 
+				url = socket.data("url"), 
+				xdr;
+			
+			if (!XDomainRequest || !socket.options.enableXDR) {
+				return;
+			}
+			
+			url += (/\?/.test(url) ? "&" : "?") +  $.param({count: ""});
+			
+			function poll() {
+				xdr = new XDomainRequest();
+				xdr.onerror = function() {
+					socket.fire("close", ["error"]);
+				};
+				xdr.onload = function() {
+					if (xdr.responseText) {
+						socket.notify(xdr.responseText);
+						poll();
+					} else {
+						socket.fire("close", ["done"]);
+					}
+				};
+
+				xdr.open("GET", socket.data("url", url + count++).data("url"));
+				xdr.send();
+			}
+			
+			return $.extend(transports.http(socket), {
+				open: poll,
+				close: function() {
+					xdr.abort();
 				}
 			});
 		},

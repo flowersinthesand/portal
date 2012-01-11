@@ -51,7 +51,7 @@ public class Connection {
 			
 			private void cleanup(AsyncEvent event) {
 				String tp = event.getAsyncContext().getRequest().getParameter("transport");
-				if (tp.equals("longpollxhr") || tp.equals("longpolljsonp")) {
+				if (tp.equals("longpollxhr") || tp.equals("longpollxdr") || tp.equals("longpolljsonp")) {
 					longPollTimer = new Timer();
 					longPollTimer.schedule(new TimerTask() {
 						@Override
@@ -74,8 +74,10 @@ public class Connection {
 		response.setContentType("text/" + (transport.equals("longpolljsonp") ? "javascript" : transport.equals("sse") ? "event-stream" : "plain"));
 		response.setHeader("Access-Control-Allow-Origin", "*");
 		
-		if (transport.equals("longpollxhr") || transport.equals("longpolljsonp")) {
-			jsonpCallback = request.getParameter("callback");
+		if (transport.equals("longpollxhr") || transport.equals("longpollxdr") || transport.equals("longpolljsonp")) {
+			if (transport.equals("longpolljsonp")) {
+				jsonpCallback = request.getParameter("callback");
+			}
 			if (longPollTimer != null) {
 				longPollTimer.cancel();
 			} else {
@@ -127,7 +129,7 @@ public class Connection {
 		writer.print(format(new Gson().toJson(data)));
 		writer.flush();
 
-		if (transport.equals("longpollxhr") || transport.equals("longpolljsonp")) {
+		if (transport.equals("longpollxhr") || transport.equals("longpollxdr") || transport.equals("longpolljsonp")) {
 			asyncContext.complete();
 			asyncContext = null;
 		}
@@ -136,7 +138,7 @@ public class Connection {
 	private String format(String string) {
 		StringBuilder builder = new StringBuilder();
 
-		if ("longpollxhr".equals(transport)) {
+		if ("longpollxhr".equals(transport) || "longpollxdr".equals(transport)) {
 			builder.append(string);
 		} else if ("longpolljsonp".equals(transport)) {
 			builder.append(jsonpCallback).append("(").append(new Gson().toJson(string)).append(")");
