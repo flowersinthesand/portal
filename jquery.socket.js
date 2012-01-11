@@ -438,9 +438,7 @@
 	$.extend(transports, {
 		// Sub socket implementation
 		sub: function(socket) {
-			var // Event
-				event = socket.options.event,
-				// Source socket
+			var event = socket.options.event,
 				source = $.socket(socket.options.source);
 			
 			socket.options.timeout = 0;
@@ -776,8 +774,7 @@
 		},
 		// Long Polling - XMLHttpRequest
 		longpollxhr: function(socket) {
-			var count = 1, 
-				url = socket.data("url"), 
+			var count = 1, url = socket.data("url"),
 				xhr;
 			
 			if (!$.support.ajax || (socket.data("crossDomain") && !$.support.cors)) {
@@ -811,9 +808,7 @@
 		},
 		// Long Polling - XDomainRequest
 		longpollxdr: function(socket) {
-			var XDomainRequest = window.XDomainRequest,
-				count = 1, 
-				url = socket.data("url"), 
+			var XDomainRequest = window.XDomainRequest, count = 1, url = socket.data("url"), 
 				xdr;
 			
 			if (!XDomainRequest || !socket.options.enableXDR) {
@@ -824,9 +819,6 @@
 			
 			function poll() {
 				xdr = new XDomainRequest();
-				xdr.onerror = function() {
-					socket.fire("close", ["error"]);
-				};
 				xdr.onload = function() {
 					if (xdr.responseText) {
 						socket.notify(xdr.responseText);
@@ -835,7 +827,10 @@
 						socket.fire("close", ["done"]);
 					}
 				};
-
+				xdr.onerror = function() {
+					socket.fire("close", ["error"]);
+				};
+				
 				xdr.open("GET", socket.data("url", url + count++).data("url"));
 				xdr.send();
 			}
@@ -849,9 +844,7 @@
 		},
 		// Long Polling - JSONP
 		longpolljsonp: function(socket) {
-			var count = 1, 
-				url = socket.data("url"), 
-				callback = $.expando + "_" + socket.data("id").replace(/-/g, ""),
+			var count = 1, url = socket.data("url"), callback = $.expando + "_" + socket.data("id").replace(/-/g, ""),
 				xhr, called;
 			
 			url += (/\?/.test(url) ? "&" : "?") +  $.param({callback: callback, count: ""});
