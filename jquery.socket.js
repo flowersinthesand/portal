@@ -538,11 +538,7 @@
 		},
 		// HTTP Streaming facade
 		stream: function(socket) {
-			var i, candidates = socket.data("transports");
-			
-			for (i in {xhr: 1, iframe: 1, xdr: 1}) {
-				candidates.unshift("stream" + i);
-			}
+			socket.data("transports").unshift("streamxdr", "streamiframe", "streamxhr");
 		},
 		// HTTP Streaming - XMLHttpRequest
 		streamxhr: function(socket) {
@@ -776,11 +772,7 @@
 		},
 		// Long Polling facade
 		longpoll: function(socket) {
-			var i, candidates = socket.data("transports");
-			
-			for (i in {jsonp: 1, xdr: 1, xhr: 1}) {
-				candidates.unshift("longpoll" + i);
-			}
+			socket.data("transports").unshift("longpollxhr", "longpollxdr", "longpolljsonp");
 		},
 		// Long Polling - XMLHttpRequest
 		longpollxhr: function(socket) {
