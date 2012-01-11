@@ -103,7 +103,6 @@
 			// Timeout
 			timeoutTimer,
 			// The state of the connection
-			oldState,
 			state,
 			// Event helpers
 			events = {},
@@ -302,7 +301,8 @@
 		self.connecting(function() {
 			state = "connecting";
 			
-			if (oldState === "connecting") {
+			// Increases the amount of reconnection attempts
+			if (reconnectTry) {
 				reconnectTry++;
 			}
 			
@@ -333,7 +333,6 @@
 			}
 		})
 		.close(function() {
-			oldState = state;
 			state = "closed";
 			
 			var type, event, order = events.close.order;
