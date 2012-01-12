@@ -5,6 +5,11 @@
 		return string === "[object Blob]" || string === "[object ArrayBuffer]";
 	}
 	
+	function param(url, name) {
+		var match = new RegExp("[?&]" + name + "=([^&]+)").exec(url);
+		return match ? decodeURIComponent(match[1]) : null;
+	}
+	
 	// The server-side view of the socket handling
 	$.socket.transports.test = function(socket) {
 		var // Is it accepted?
@@ -14,7 +19,10 @@
 		
 		return {
 			open: function() {
-				var // Connection object for the server
+				var // Heartbeat
+					heartbeat,
+					heartbeatTimer,
+					// Connection object for the server
 					connection = {
 						send: function(event, data) {
 							setTimeout(function() {
@@ -57,6 +65,16 @@
 						}
 					};
 				
+				function resetHeartbeatTimer() {
+					if (heartbeatTimer) {
+						clearTimeout(heartbeatTimer);
+					}
+					
+					heartbeatTimer = setTimeout(function() {
+						socket.close("error");
+					}, heartbeat);
+				}
+				
 				accepted = connectionEvent = undefined;
 				if (socket.options.server) {
 					socket.options.server(request);
@@ -65,6 +83,15 @@
 				setTimeout(function() {
 					switch (accepted) {
 					case true:
+						heartbeat = param(socket.data("url"), "heartbeat");
+						if (heartbeat > 0) {
+							resetHeartbeatTimer();
+							connectionEvent.on("heartbeat", function() {
+								resetHeartbeatTimer();
+								connection.send("heartbeat", null);
+							});
+						}
+						
 						socket.fire("open");
 						connectionEvent.triggerHandler("open");
 						break;

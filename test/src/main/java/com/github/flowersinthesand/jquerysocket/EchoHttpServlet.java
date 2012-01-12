@@ -33,11 +33,7 @@ public class EchoHttpServlet extends HttpServlet {
 			new Timer().schedule(new TimerTask() {
 				@Override
 				public void run() {
-					try {
-						connection.close();
-					} catch (IOException e) {
-						throw new RuntimeException(e);
-					}
+					connection.close();
 				}
 			}, 1000);
 		}
@@ -50,7 +46,14 @@ public class EchoHttpServlet extends HttpServlet {
 		response.setCharacterEncoding("utf-8");
 
 		Map<String, Object> event = new Gson().fromJson(request.getReader().readLine(), new TypeToken<Map<String, Object>>() {}.getType());
-		Connection.find((String) event.get("socket")).send((String) event.get("type"), event.get("data"));
+		Connection connection = Connection.find((String) event.get("socket"));
+		if (event.get("type").equals("heartbeat")) {
+			connection.resetHeartbeatTimer();
+			connection.send("heartbeat", null);
+			return;
+		}
+		
+		connection.send((String) event.get("type"), event.get("data"));
 	}
 
 }

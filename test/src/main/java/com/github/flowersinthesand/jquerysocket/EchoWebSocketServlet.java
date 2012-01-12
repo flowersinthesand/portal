@@ -22,9 +22,12 @@ public class EchoWebSocketServlet extends WebSocketServlet {
 
 	@Override
 	public WebSocket doWebSocketConnect(final HttpServletRequest request, String protocol) {
+		final long heartbeat = parseLong(request.getParameter("heartbeat"));
+		
 		return new WebSocket.OnTextMessage() {
 
 			Connection connection;
+			Timer heartbeatTimer;
 
 			@Override
 			public void onOpen(Connection c) {
@@ -48,6 +51,16 @@ public class EchoWebSocketServlet extends WebSocketServlet {
 			@Override
 			public void onMessage(String json) {
 				Map<String, Object> requestEvent = new Gson().fromJson(json, new TypeToken<Map<String, Object>>() {}.getType());
+				if (requestEvent.get("type").equals("heartbeat")) {
+					resetHeartbeatTimer();
+					try {
+						connection.sendMessage("{\"type\":\"heartbeat\"}");
+					} catch (IOException e) {
+						throw new RuntimeException(e);
+					}
+					return;
+				}
+				
 				Map<String, Object> responseEvent = new LinkedHashMap<String, Object>();
 				responseEvent.put("type", requestEvent.get("type"));
 				responseEvent.put("data", requestEvent.get("data"));
@@ -58,7 +71,29 @@ public class EchoWebSocketServlet extends WebSocketServlet {
 					throw new RuntimeException(e);
 				}
 			}
+			
+			private void resetHeartbeatTimer() {
+				if (heartbeatTimer != null) {
+					heartbeatTimer.cancel();
+				}
+				
+				heartbeatTimer = new Timer();
+				heartbeatTimer.schedule(new TimerTask() {
+					@Override
+					public void run() {
+						connection.close();
+					}
+				}, heartbeat);
+			}
 		};
+	}
+	
+	private long parseLong(String string) {
+		try {
+			return new Long(string);
+		} catch (NumberFormatException e) {
+			return 0;
+		}
 	}
 
 }

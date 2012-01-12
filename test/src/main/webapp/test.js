@@ -2,7 +2,6 @@ var original = $.extend(true, {}, $.socket);
 
 function setup() {
 	$.socket.defaults.type = "test";
-	$.socket.defaults.reconnectDelay = 10;
 }
 
 function teardown() {
@@ -769,7 +768,10 @@ asyncTest("event handlers should be registered once even though the source socke
 });
 
 module("Reconnection", {
-	setup: setup,
+	setup: function() {
+		setup();
+		$.socket.defaults.reconnectDelay = 10;
+	},
 	teardown: teardown
 });
 
@@ -889,6 +891,55 @@ asyncTest("in case of manual reconnection connecting event should be fired", fun
 			ok(true);
 			start();
 		});
+	});
+});
+
+module("Heartbeat", {
+	setup: function() {
+		setup();
+		$.socket.defaults.heartbeat = 500;
+		$.socket.defaults._heartbeat = 100;
+	},
+	teardown: teardown
+});
+
+asyncTest("heartbeat event should be sent to the server repeatedly", function() {
+	var i = 0, ts;
+	
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("heartbeat", function() {
+				var now = $.now();
+				
+				if (ts) {
+					ok(now - ts < $.socket.defaults.heartbeat);
+				}
+				ts = now;
+				
+				if (i++ > 2) {
+					start();
+				}
+			});
+		}
+	});
+});
+
+asyncTest("connection should be closed when the server makes no response to a heartbeat", function() {
+	$.socket.defaults.url = function(url) {
+		return url;
+	};
+	
+	$.socket("url", {
+		server: function(request) {
+			request.accept();
+		}
+	})
+	.open(function() {
+		ok(true);
+	})
+	.close(function(reason) {
+		strictEqual(reason, "error");
+		start();
 	});
 });
 
@@ -1139,12 +1190,13 @@ test("socket id used for connection should be exposed by data('id')", function()
 	ok($.socket("url").data("id"));
 });
 
-test("url should contain id and transport", function() {
+test("url should contain id, transport and heartbeat", function() {
 	$.socket.transports.test = function(socket) {
 		var url = socket.data("url");
 		
 		strictEqual(param(url, "id"), socket.data("id"));
 		strictEqual(param(url, "transport"), "test");
+		equal(param(url, "heartbeat"), socket.options.heartbeat);
 	};
 	
 	$.socket("url");
@@ -1154,7 +1206,7 @@ test("chunks for streaming should accord with the event stream format", function
 	deepEqual($.socket.defaults.read.call($.socket("url"), "data: A\r\n\r\ndata: A\r\ndata: B\rdata: C\n\r\ndata: \r\n"), ["A", "A\nB\nC", ""]);
 });
 
-// TODO cross domain, heartbeat
+// TODO cross domain
 function testTransport(url) {
 	asyncTest("open method should work properly", function() {
 		$.socket(url).open(function() {

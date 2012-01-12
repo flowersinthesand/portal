@@ -102,6 +102,8 @@
 			transport,
 			// Timeout
 			timeoutTimer,
+			// Heartbeat
+			heartbeatTimer,
 			// The state of the connection
 			state,
 			// Event helpers
@@ -209,6 +211,11 @@
 						clearTimeout(reconnectTimer);
 					}
 					
+					// Cancels the heartbeat timer
+					if (heartbeatTimer) {
+						clearTimeout(heartbeatTimer);
+					}
+					
 					// Resets temporal object and event helpers
 					temp = {};
 					for (i in events) {
@@ -306,7 +313,7 @@
 				reconnectTry++;
 			}
 			
-			// Sets timeout
+			// Sets timeout timer
 			if (self.options.timeout > 0) {
 				timeoutTimer = setTimeout(function() {
 					self.close("timeout");
@@ -314,11 +321,30 @@
 			}
 		})
 		.open(function() {
+			// Helper function for setting heartbeat timer
+			function setHeartbeatTimer() {
+				heartbeatTimer = setTimeout(function() {
+					self.send("heartbeat", null).one("heartbeat", function() {
+						clearTimeout(heartbeatTimer);
+						setHeartbeatTimer();
+					});
+					
+					heartbeatTimer = setTimeout(function() {
+						self.close("error");
+					}, self.options._heartbeat);
+				}, self.options.heartbeat - self.options._heartbeat);
+			}
+			
 			state = "opened";
 			
-			// Clears timeout
+			// Clears timeout timer
 			if (timeoutTimer) {
 				clearTimeout(timeoutTimer);
+			}
+			
+			// Sets heartbeat timer
+			if (self.options.heartbeat > 0) {
+				setHeartbeatTimer();
 			}
 			
 			// Disables connecting event
@@ -333,9 +359,14 @@
 			}
 		})
 		.close(function() {
+			var type, event, order = events.close.order;
+			
 			state = "closed";
 			
-			var type, event, order = events.close.order;
+			// Clears heartbeat timer
+			if (heartbeatTimer) {
+				clearTimeout(heartbeatTimer);
+			}
 			
 			// Disables event whose order is lower than close event
 			for (type in events) {
@@ -368,6 +399,9 @@
 	// Default options
 	$.extend(defaults, {
 		type: "ws sse stream longpoll".split(" "),
+		heartbeat: 200000,
+		// TODO rename
+		_heartbeat: 5000,
 		reconnectDelay: 500,
 		reconnect: function(delay, attempts) {
 			return attempts > 1 ? 2 * delay : 0;
@@ -392,7 +426,7 @@
 			this.data("id", id);
 			
 			// Attaches id and transport
-			return url + (/\?/.test(url) ? "&" : "?") + $.param({id: id, transport: transport});
+			return url + (/\?/.test(url) ? "&" : "?") + $.param({id: id, transport: transport, heartbeat: this.options.heartbeat || false});
 		},
 		read: function(chunk) {
 			var eol = /\r\n|\r|\n/g, lines = [], array = [], index = 0, 

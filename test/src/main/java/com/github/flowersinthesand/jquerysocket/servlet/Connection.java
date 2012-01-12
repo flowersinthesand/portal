@@ -27,6 +27,8 @@ public class Connection {
 	private AsyncContext asyncContext;
 	private String id;
 	private String transport;
+	private long heartbeat;
+	private Timer heartbeatTimer;
 	private Timer longPollTimer;
 	private String jsonpCallback;
 	
@@ -50,17 +52,19 @@ public class Connection {
 			}
 			
 			private void cleanup(AsyncEvent event) {
+				asyncContext = null;
+				
 				String tp = event.getAsyncContext().getRequest().getParameter("transport");
 				if (tp.equals("longpollxhr") || tp.equals("longpollxdr") || tp.equals("longpolljsonp")) {
 					longPollTimer = new Timer();
 					longPollTimer.schedule(new TimerTask() {
 						@Override
 						public void run() {
-							connections.remove(id);
+							close();
 						}
 					}, 5000);
 				} else if (tp.equals("streamiframe") || tp.equals("streamxdr") || tp.equals("streamxhr") || tp.equals("sse")) {
-					connections.remove(id);
+					close();
 				}
 			}
 		});
@@ -70,6 +74,10 @@ public class Connection {
 
 		id = request.getParameter("id");
 		transport = request.getParameter("transport");
+		try {
+			heartbeat = new Long(request.getParameter("heartbeat"));
+		} catch (NumberFormatException e) {
+		}
 		
 		response.setContentType("text/" + (transport.equals("longpolljsonp") ? "javascript" : transport.equals("sse") ? "event-stream" : "plain"));
 		response.setHeader("Access-Control-Allow-Origin", "*");
@@ -89,11 +97,27 @@ public class Connection {
 			writer.println(Arrays.toString(new float[400]).replaceAll(".", " "));
 			writer.flush();
 		}
-		
+		if (heartbeat > 0) {
+			resetHeartbeatTimer();
+		}
 		if (!events.isEmpty()) {
 			transmit(events);
 			events.clear();
+		}	
+	}
+	
+	public void resetHeartbeatTimer() {
+		if (heartbeatTimer != null) {
+			heartbeatTimer.cancel();
 		}
+		
+		heartbeatTimer = new Timer();
+		heartbeatTimer.schedule(new TimerTask() {
+			@Override
+			public void run() {
+				close();
+			}
+		}, heartbeat);
 	}
 
 	public void setId(String id) {
@@ -152,11 +176,15 @@ public class Connection {
 		return builder.toString();
 	}
 
-	public void close() throws IOException {
+	public void close() {
 		events.clear();
 		if (asyncContext != null) {
 			asyncContext.complete();
 			asyncContext = null;
+		}
+		if (heartbeatTimer != null) {
+			heartbeatTimer.cancel();
+			heartbeatTimer = null;
 		}
 		if (longPollTimer != null) {
 			longPollTimer.cancel();
