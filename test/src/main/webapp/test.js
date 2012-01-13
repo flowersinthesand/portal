@@ -1315,7 +1315,7 @@ if (!isLocal) {
 			ok(/^(?:ws|wss):\/\/.+/.test($.socket("ws").data("url")));
 		});
 		
-		testTransport("ws", true);
+		testTransport("echo", true);
 		
 		asyncTest("WebSocket event should be able to be accessed by data('event')", function() {
 			$.socket("ws").open(function() {
@@ -1360,7 +1360,7 @@ if (!isLocal) {
 		strictEqual(result, "ABC");
 	});
 	
-	testTransport("http", window.XDomainRequest ? true : window.ActiveXObject ? false : $.support.cors);
+	testTransport("echo", window.XDomainRequest ? true : window.ActiveXObject ? false : $.support.cors);
 
 	module("Transport Server-Sent Events", {
 		setup: function() {
@@ -1384,7 +1384,7 @@ if (!isLocal) {
 	});
 	
 	if (window.EventSource) {
-		testTransport("http", false);
+		testTransport("echo", false);
 		
 		asyncTest("Server-Sent Events event should be able to be accessed by data('event')", function() {
 			$.socket("sse?close=true", {reconnect: false}).open(function() {
@@ -1435,7 +1435,7 @@ if (!isLocal) {
 		teardown: teardown
 	});
 	
-	testLongPollingTransport("http", $.support.cors);
+	testLongPollingTransport("echo", $.support.cors);
 	
 	module("Transport Long Polling - XDomainRequest", {
 		setup: function() {
@@ -1447,7 +1447,7 @@ if (!isLocal) {
 	});
 	
 	if (window.XDomainRequest) {
-		testLongPollingTransport("http", true);
+		testLongPollingTransport("echo", true);
 	}
 	
 	module("Transport Long Polling - JSONP", {
@@ -1462,5 +1462,5 @@ if (!isLocal) {
 		ok($.isFunction(window[param($.socket("url").data("url"), "callback")]));
 	});
 	
-	testLongPollingTransport("http", true);
+	testLongPollingTransport("echo", true);
 }
