@@ -42,10 +42,10 @@ public class EchoHttpServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-		request.setCharacterEncoding("utf-8");
-		response.setCharacterEncoding("utf-8");
-
-		Map<String, Object> event = new Gson().fromJson(request.getReader().readLine(), new TypeToken<Map<String, Object>>() {}.getType());
+		response.setHeader("Access-Control-Allow-Origin", "*");
+		
+		String data = request.getReader().readLine().substring("data=".length());
+		Map<String, Object> event = new Gson().fromJson(data, new TypeToken<Map<String, Object>>() {}.getType());
 		Connection connection = Connection.find((String) event.get("socket"));
 		if (event.get("type").equals("heartbeat")) {
 			connection.resetHeartbeatTimer();

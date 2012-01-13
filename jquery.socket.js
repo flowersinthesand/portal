@@ -545,16 +545,43 @@
 		},
 		// HTTP Support
 		http: function(socket) {
-			var queue = [], 
-				sending;
+			var send,
+				sending,
+				queue = [];
 			
 			function post() {
 				if (queue.length) {
-					$.ajax(socket.url(), {type: "POST", data: queue.shift()}).always(post);
+					send(socket.url(), queue.shift());
 				} else {
 					sending = false;
 				}
 			}
+			
+			send = !socket.data("crossDomain") || (socket.data("crossDomain") && $.support.cors) ? 
+			function(url, data) {
+				$.ajax(url, {type: "POST", data: "data=" + data, async: true, timeout: 0}).always(post);
+			} : window.XDomainRequest && socket.options.enableXDR ? 
+			function(url, data) {
+				var xdr = new window.XDomainRequest();
+				
+				xdr.onload = post;
+				xdr.open("POST", url);
+				xdr.send("data=" + data);
+			} : 
+			function(url, data) {
+				var $form = $("<form method='POST' enctype='text/plain' />"),
+					$iframe = $("<iframe name='" + socket.data("id") + "'/>");
+				
+				$form.attr({action: url, target: $iframe.attr("name")}).hide().appendTo("body")
+				.append($("<textarea name='data' />").val(data))
+				.append($iframe)
+				.submit();
+				
+				$iframe.load(function() {
+					$form.remove();
+					post();
+				});
+			};
 			
 			return {
 				send: function(data) {
