@@ -1206,9 +1206,11 @@ test("chunks for streaming should accord with the event stream format", function
 	deepEqual($.socket.defaults.read.call($.socket("url"), "data: A\r\n\r\ndata: A\r\ndata: B\rdata: C\n\r\ndata: \r\n"), ["A", "A\nB\nC", ""]);
 });
 
-function testTransport(url, skip, extraTest) {
+function testTransport(transport) {
+	var url = "echo";
+	
 	if (QUnit.urlParams.crossdomain) {
-		if (!skip) {
+		if (/sse|streamiframe/.test(transport) || (/streamxhr|longpollxhr/.test(transport) && !$.support.cors)) {
 			return;
 		}
 		
@@ -1259,13 +1261,7 @@ function testTransport(url, skip, extraTest) {
 		});
 	});
 	
-	if (extraTest) {
-		extraTest(url);
-	}
-}
-
-function testLongPollingTransport(url, skip) {
-	testTransport(url, skip, function(url) {
+	if (/^longpoll/.test(transport)) {
 		asyncTest("data('url') should be modified whenever trying to connect to the server", 3, function() {
 			var oldURL;
 			
@@ -1284,7 +1280,7 @@ function testLongPollingTransport(url, skip) {
 				}
 			});
 		});
-	});
+	}
 }
 
 if (!isLocal) {
@@ -1301,7 +1297,7 @@ if (!isLocal) {
 		
 		window.WebSocket = window.MozWebSocket = undefined;
 		
-		$.socket("ws").close(function(reason) {
+		$.socket("echo").close(function(reason) {
 			strictEqual(reason, "notransport");
 			start();
 		});
@@ -1312,13 +1308,13 @@ if (!isLocal) {
 	
 	if (window.WebSocket || window.MozWebSocket) {
 		test("url should be converted to accord with WebSocket specification", function() {
-			ok(/^(?:ws|wss):\/\/.+/.test($.socket("ws").data("url")));
+			ok(/^(?:ws|wss):\/\/.+/.test($.socket("echo").data("url")));
 		});
 		
-		testTransport("echo", true);
+		testTransport("ws");
 		
 		asyncTest("WebSocket event should be able to be accessed by data('event')", function() {
-			$.socket("ws").open(function() {
+			$.socket("echo").open(function() {
 				strictEqual(this.data("event").type, "open");
 				this.send("data");
 			})
@@ -1355,12 +1351,12 @@ if (!isLocal) {
 			result += "C";
 		};
 		
-		$.socket("stream");
+		$.socket("echo");
 		
 		strictEqual(result, "ABC");
 	});
 	
-	testTransport("echo", window.XDomainRequest ? true : window.ActiveXObject ? false : $.support.cors);
+	testTransport(window.XDomainRequest ? "streamxdr" : window.ActiveXObject ? "streamiframe" : "streamxhr");
 
 	module("Transport Server-Sent Events", {
 		setup: function() {
@@ -1375,7 +1371,7 @@ if (!isLocal) {
 		
 		window.EventSource = undefined;
 		
-		$.socket("ws").close(function(reason) {
+		$.socket("echo").close(function(reason) {
 			strictEqual(reason, "notransport");
 			start();
 		});
@@ -1384,10 +1380,10 @@ if (!isLocal) {
 	});
 	
 	if (window.EventSource) {
-		testTransport("echo", false);
+		testTransport("sse", false);
 		
 		asyncTest("Server-Sent Events event should be able to be accessed by data('event')", function() {
-			$.socket("sse?close=true", {reconnect: false}).open(function() {
+			$.socket("echo?close=true", {reconnect: false}).open(function() {
 				strictEqual(this.data("event").type, "open");
 				this.send("data");
 			})
@@ -1422,7 +1418,7 @@ if (!isLocal) {
 			result += "C";
 		};
 		
-		$.socket("longpoll");
+		$.socket("echo");
 		
 		strictEqual(result, "ABC");
 	});
@@ -1435,7 +1431,7 @@ if (!isLocal) {
 		teardown: teardown
 	});
 	
-	testLongPollingTransport("echo", $.support.cors);
+	testTransport("longpollxhr");
 	
 	module("Transport Long Polling - XDomainRequest", {
 		setup: function() {
@@ -1447,7 +1443,7 @@ if (!isLocal) {
 	});
 	
 	if (window.XDomainRequest) {
-		testLongPollingTransport("echo", true);
+		testTransport("longpollxdr");
 	}
 	
 	module("Transport Long Polling - JSONP", {
@@ -1459,8 +1455,8 @@ if (!isLocal) {
 	});
 	
 	test("window should have a function whose name is equals to data('url')'s callback parameter", function() {
-		ok($.isFunction(window[param($.socket("url").data("url"), "callback")]));
+		ok($.isFunction(window[param($.socket("echo").data("url"), "callback")]));
 	});
 	
-	testLongPollingTransport("echo", true);
+	testTransport("longpolljsonp");
 }
