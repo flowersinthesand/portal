@@ -415,10 +415,12 @@ asyncTest("connection's close event should be fired if opened socket's close eve
 			});
 		}
 	})
+	.open(function() {
+		this.close();
+	})
 	.close(function() {
 		result += "A";
-	})
-	.close();
+	});
 });
 
 module("Socket event", {
