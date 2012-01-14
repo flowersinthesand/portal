@@ -865,7 +865,6 @@
 				open: poll,
 				close: function() {
 					xhr.abort();
-					return true;
 				}
 			});
 		},
@@ -940,7 +939,6 @@
 				open: poll,
 				close: function() {
 					xhr.abort();
-					return true;
 				}
 			});
 		}
