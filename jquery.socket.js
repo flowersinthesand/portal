@@ -578,7 +578,7 @@
 			} : 
 			function(url, data) {
 				var $form = $("<form method='POST' enctype='text/plain' />"),
-					$iframe = $("<iframe name='socket-" + ++uuid + "'/>");
+					$iframe = $("<iframe name='socket-" + (++uuid) + "'/>");
 				
 				$form.attr({action: url, target: $iframe.attr("name")}).hide().appendTo("body")
 				.append($("<textarea name='data' />").val(data))
@@ -907,7 +907,7 @@
 		},
 		// Long Polling - JSONP
 		longpolljsonp: function(socket) {
-			var count = 1, url = socket.data("url"), callback = "socket_" + ++uuid,
+			var count = 1, url = socket.data("url"), callback = "socket_" + (++uuid),
 				xhr, called;
 			
 			url += (/\?/.test(url) ? "&" : "?") +  $.param({callback: callback, count: ""});
