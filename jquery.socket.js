@@ -658,12 +658,8 @@
 					xhr.send(null);
 				},
 				close: function() {
-					var readyState = xhr.readyState;
-					
 					aborted = true;
 					xhr.abort();
-					
-					return readyState > 2;
 				}
 			});
 		},
