@@ -19,7 +19,9 @@
 		// Reference to core prototype
 		hasOwn = Object.prototype.hasOwnProperty,
 		// Flags for the user agent
-		browser = $.extend(true, {}, $.browser);
+		browser = $.extend(true, {}, $.browser),
+		// UUID
+		uuid = $.now();
 	
 	// A resettable callback
 	function callbacks(flags) {
@@ -576,8 +578,7 @@
 			} : 
 			function(url, data) {
 				var $form = $("<form method='POST' enctype='text/plain' />"),
-				// TODO no depend on id
-					$iframe = $("<iframe name='" + socket.data("id") + "'/>");
+					$iframe = $("<iframe name='socket-" + ++uuid + "'/>");
 				
 				$form.attr({action: url, target: $iframe.attr("name")}).hide().appendTo("body")
 				.append($("<textarea name='data' />").val(data))
@@ -906,7 +907,7 @@
 		},
 		// Long Polling - JSONP
 		longpolljsonp: function(socket) {
-			var count = 1, url = socket.data("url"), callback = $.expando + "_" + socket.data("id").replace(/-/g, ""),
+			var count = 1, url = socket.data("url"), callback = "socket_" + ++uuid,
 				xhr, called;
 			
 			url += (/\?/.test(url) ? "&" : "?") +  $.param({callback: callback, count: ""});
