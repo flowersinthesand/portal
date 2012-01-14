@@ -17,7 +17,9 @@
 		// Transports
 		transports = {},
 		// Reference to core prototype
-		hasOwn = Object.prototype.hasOwnProperty;
+		hasOwn = Object.prototype.hasOwnProperty,
+		// Flags for the user agent
+		browser = $.extend(true, {}, $.browser);
 	
 	// A resettable callback
 	function callbacks(flags) {
@@ -396,6 +398,10 @@
 		return self.open();
 	}
 	
+	if (/android/.test(navigator.userAgent.toLowerCase())) {
+		browser.android = true;
+	}
+	
 	// Default options
 	$.extend(defaults, {
 		type: "ws sse stream longpoll".split(" "),
@@ -570,6 +576,7 @@
 			} : 
 			function(url, data) {
 				var $form = $("<form method='POST' enctype='text/plain' />"),
+				// TODO no depend on id
 					$iframe = $("<iframe name='" + socket.data("id") + "'/>");
 				
 				$form.attr({action: url, target: $iframe.attr("name")}).hide().appendTo("body")
@@ -603,7 +610,8 @@
 			var XMLHttpRequest = window.XMLHttpRequest, 
 				xhr, stop, aborted;
 			
-			if (!XMLHttpRequest || window.ActiveXObject || window.XDomainRequest || (socket.data("crossDomain") && !$.support.cors)) {
+			if (!XMLHttpRequest || (browser.android && browser.webkit) || 
+					window.ActiveXObject || window.XDomainRequest || (socket.data("crossDomain") && !$.support.cors)) {
 				return;
 			}
 			
@@ -626,7 +634,7 @@
 				switch (xhr.readyState) {
 				case 3:
 					if (xhr.status === 200) {
-						if ($.browser.opera && !stop) {
+						if (browser.opera && !stop) {
 							stop = iterate(onchunk);
 						} else {
 							onchunk();
