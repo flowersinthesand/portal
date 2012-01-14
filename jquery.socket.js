@@ -603,7 +603,7 @@
 			var XMLHttpRequest = window.XMLHttpRequest, 
 				xhr, stop, aborted;
 			
-			if (!XMLHttpRequest || (socket.data("crossDomain") && !$.support.cors)) {
+			if (!XMLHttpRequest || window.ActiveXObject || window.XDomainRequest || (socket.data("crossDomain") && !$.support.cors)) {
 				return;
 			}
 			

@@ -1206,15 +1206,15 @@ test("chunks for streaming should accord with the event stream format", function
 	deepEqual($.socket.defaults.read.call($.socket("url"), "data: A\r\n\r\ndata: A\r\ndata: B\rdata: C\n\r\ndata: \r\n"), ["A", "A\nB\nC", ""]);
 });
 
-function testTransport(transport) {
-	var url = "echo";
+function testTransport(transport, fn) {
+	var url = QUnit.urlParams.crossdomain ? "http://jquerysocket.com:8080/jquery-socket-test/echo" : "echo";
 	
-	if (QUnit.urlParams.crossdomain) {
-		if (/sse|streamiframe/.test(transport) || (/streamxhr|longpollxhr/.test(transport) && !$.support.cors)) {
-			return;
-		}
-		
-		url = "http://jquerysocket.com:8080/jquery-socket-test/" + url;
+	if (!$.socket.transports[transport]($.socket(url, {type: "test", enableXDR: true}).close(teardown).close())) {
+		return;
+	}
+	
+	if (fn) {
+		fn(url);
 	}
 	 
 	asyncTest("open method should work properly", function() {
@@ -1292,29 +1292,13 @@ if (!isLocal) {
 		teardown: teardown
 	});
 	
-	test("If the browser doesn't support WebSocket object, transport should be skipped", function() {
-		var WebSocket = window.WebSocket, MozWebSocket = window.MozWebSocket;
-		
-		window.WebSocket = window.MozWebSocket = undefined;
-		
-		$.socket("echo").close(function(reason) {
-			strictEqual(reason, "notransport");
-			start();
-		});
-		
-		window.WebSocket = WebSocket;
-		window.MozWebSocket = MozWebSocket;
-	});
-	
-	if (window.WebSocket || window.MozWebSocket) {
+	testTransport("ws", function(url) {
 		test("url should be converted to accord with WebSocket specification", function() {
-			ok(/^(?:ws|wss):\/\/.+/.test($.socket("echo").data("url")));
+			ok(/^(?:ws|wss):\/\/.+/.test($.socket(url).data("url")));
 		});
-		
-		testTransport("ws");
 		
 		asyncTest("WebSocket event should be able to be accessed by data('event')", function() {
-			$.socket("echo").open(function() {
+			$.socket(url).open(function() {
 				strictEqual(this.data("event").type, "open");
 				this.send("data");
 			})
@@ -1327,7 +1311,8 @@ if (!isLocal) {
 				start();
 			});
 		});
-	}
+		
+	});
 	
 	module("Transport HTTP Streaming", {
 		setup: function() {
@@ -1356,7 +1341,24 @@ if (!isLocal) {
 		strictEqual(result, "ABC");
 	});
 	
-	testTransport(window.XDomainRequest ? "streamxdr" : window.ActiveXObject ? "streamiframe" : "streamxhr");
+	$.each({
+		streamxdr: $.noop,
+		streamiframe: $.noop,
+		streamxhr: $.noop
+	}, function(transport, fn) {
+		var transportName = ({streamxdr: "XDomainRequest", streamiframe: "ActiveXObject('htmlfile')", streamxhr: "XMLHttpRequest"})[transport];
+		
+		module("Transport HTTP Streaming - " + transportName, {
+			setup: function() {
+				setup();
+				$.socket.defaults.type = transport;
+				$.socket.defaults.enableXDR = transport === "streamxdr";
+			},
+			teardown: teardown
+		});
+		
+		testTransport(transport, fn);
+	});
 
 	module("Transport Server-Sent Events", {
 		setup: function() {
@@ -1366,24 +1368,9 @@ if (!isLocal) {
 		teardown: teardown
 	});
 	
-	test("If the browser doesn't support EventSource object, transport should be skipped", function() {
-		var EventSource = window.EventSource;
-		
-		window.EventSource = undefined;
-		
-		$.socket("echo").close(function(reason) {
-			strictEqual(reason, "notransport");
-			start();
-		});
-		
-		window.EventSource = EventSource;
-	});
-	
-	if (window.EventSource) {
-		testTransport("sse", false);
-		
+	testTransport("sse", function(url) {
 		asyncTest("Server-Sent Events event should be able to be accessed by data('event')", function() {
-			$.socket("echo?close=true", {reconnect: false}).open(function() {
+			$.socket(url + "?close=true", {reconnect: false}).open(function() {
 				strictEqual(this.data("event").type, "open");
 				this.send("data");
 			})
@@ -1395,7 +1382,7 @@ if (!isLocal) {
 				start();
 			});
 		});
-	}
+	});
 
 	module("Transport Long Polling", {
 		setup: function() {
@@ -1423,40 +1410,26 @@ if (!isLocal) {
 		strictEqual(result, "ABC");
 	});
 	
-	module("Transport Long Polling - XMLHttpRequest", {
-		setup: function() {
-			setup();
-			$.socket.defaults.type = "longpollxhr";
-		},
-		teardown: teardown
+	$.each({
+		longpollxhr: $.noop,
+		longpollxdr: $.noop, 
+		longpolljsonp: function(url) {
+			test("window should have a function whose name is equals to data('url')'s callback parameter", function() {
+				ok($.isFunction(window[param($.socket(url).data("url"), "callback")]));
+			});
+		}
+	}, function(transport, fn) {
+		var transportName = ({longpollxhr: "XMLHttpRequest", longpollxdr: "XDomainRequest", longpolljsonp: "JSONP"})[transport];
+		
+		module("Transport HTTP Long Polling - " + transportName, {
+			setup: function() {
+				setup();
+				$.socket.defaults.type = transport;
+				$.socket.defaults.enableXDR = transport === "longpollxdr";
+			},
+			teardown: teardown
+		});
+		
+		testTransport(transport, fn);
 	});
-	
-	testTransport("longpollxhr");
-	
-	module("Transport Long Polling - XDomainRequest", {
-		setup: function() {
-			setup();
-			$.socket.defaults.type = "longpollxdr";
-			$.socket.defaults.enableXDR = true;
-		},
-		teardown: teardown
-	});
-	
-	if (window.XDomainRequest) {
-		testTransport("longpollxdr");
-	}
-	
-	module("Transport Long Polling - JSONP", {
-		setup: function() {
-			setup();
-			$.socket.defaults.type = "longpolljsonp";
-		},
-		teardown: teardown
-	});
-	
-	test("window should have a function whose name is equals to data('url')'s callback parameter", function() {
-		ok($.isFunction(window[param($.socket("echo").data("url"), "callback")]));
-	});
-	
-	testTransport("longpolljsonp");
 }
