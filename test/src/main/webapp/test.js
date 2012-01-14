@@ -1209,8 +1209,11 @@ test("chunks for streaming should accord with the event stream format", function
 });
 
 function testTransport(transport, fn) {
-	var url = QUnit.urlParams.crossdomain ? "http://jquerysocket.com:8080/jquery-socket-test/echo" : "echo";
+	var url = "/jquery-socket-test/echo";
 	
+	if (QUnit.urlParams.crossdomain) {
+		url = remoteURL + url;
+	}
 	if (!$.socket.transports[transport]($.socket(url, {type: "test", enableXDR: true}).close(teardown).close())) {
 		return;
 	}
