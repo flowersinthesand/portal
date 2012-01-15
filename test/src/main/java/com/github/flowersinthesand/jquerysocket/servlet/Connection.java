@@ -98,6 +98,7 @@ public class Connection {
 			writer.flush();
 		}
 		if (heartbeat > 0) {
+			ac.setTimeout(0);
 			resetHeartbeatTimer();
 		}
 		if (!events.isEmpty()) {
