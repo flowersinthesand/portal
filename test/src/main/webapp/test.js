@@ -1124,8 +1124,8 @@ if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKit
 	});
 }
 
-test("read handler should receive a chunk and return an array of data", function() {
-	$.socket.defaults.read = function(chunk) {
+test("chunkParser handler should receive a chunk and return an array of data", function() {
+	$.socket.defaults.chunkParser = function(chunk) {
 		var array = chunk.split("@@");
 		if (array.length > 1) {
 			array[0] = (this.data("data") || "") + array[0];
@@ -1142,9 +1142,9 @@ test("read handler should receive a chunk and return an array of data", function
 	};
 	
 	$.socket("url");
-	ok(!$.socket.defaults.read.call($.socket(), "A"));
-	deepEqual($.socket.defaults.read.call($.socket(), "A@@"), ["AA"]);
-	deepEqual($.socket.defaults.read.call($.socket(), "A@@B@@C"), ["A", "B", "C"]);
+	ok(!$.socket.defaults.chunkParser.call($.socket(), "A"));
+	deepEqual($.socket.defaults.chunkParser.call($.socket(), "A@@"), ["AA"]);
+	deepEqual($.socket.defaults.chunkParser.call($.socket(), "A@@B@@C"), ["A", "B", "C"]);
 });
 
 module("Protocol default", {
@@ -1205,7 +1205,7 @@ test("url should contain id, transport and heartbeat", function() {
 });
 
 test("chunks for streaming should accord with the event stream format", function() {
-	deepEqual($.socket.defaults.read.call($.socket("url"), "data: A\r\n\r\ndata: A\r\ndata: B\rdata: C\n\r\ndata: \r\n"), ["A", "A\nB\nC", ""]);
+	deepEqual($.socket.defaults.chunkParser.call($.socket("url"), "data: A\r\n\r\ndata: A\r\ndata: B\rdata: C\n\r\ndata: \r\n"), ["A", "A\nB\nC", ""]);
 });
 
 function testTransport(transport, fn) {
