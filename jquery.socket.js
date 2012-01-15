@@ -187,8 +187,8 @@
 				// Fire helper for transport
 				notify: function(data, chunk) {
 					if (chunk) {
-						data = self.options.read.call(self, data);
-						while (data && data.length) {
+						data = self.options.chunkParser.call(self, data);
+						while (data.length) {
 							self.notify(data.shift());
 						}
 						
@@ -436,24 +436,24 @@
 			// Attaches id and transport
 			return url + (/\?/.test(url) ? "&" : "?") + $.param({id: id, transport: transport, heartbeat: this.options.heartbeat || false});
 		},
-		read: function(chunk) {
-			var eol = /\r\n|\r|\n/g, lines = [], array = [], index = 0, 
-				match, data, i, line;
+		chunkParser: function(chunk) {
+			// Chunks are formatted according to the event stream format 
+			// http://www.w3.org/TR/eventsource/#parsing-an-event-stream
+			var reol = /\r\n|\r|\n/g, lines = [], data = this.data("data"), array = [], i = 0, 
+				match, line;
 			
 			// String.prototype.split is not reliable cross-browser
-			while (match = eol.exec(chunk)) {
-			    lines.push(chunk.substring(index, match.index));
-			    index = match.index + match[0].length;
+			while (match = reol.exec(chunk)) {
+			    lines.push(chunk.substring(i, match.index));
+			    i = match.index + match[0].length;
 			}
-			lines.push(chunk.length === index ? "" : chunk.substring(index));
+			lines.push(chunk.length === i ? "" : chunk.substring(i));
 			
-			data = this.data("data");
 			if (!data) {
 				data = [];
 				this.data("data", data);
 			}
 			
-			// Event stream format
 			for (i = 0; i < lines.length; i++) {
 				line = lines[i];
 				if (!line) {
@@ -461,15 +461,13 @@
 					data = [];
 					this.data("data", data);
 				} else if (/^data:\s/.test(line)) {
-					data.push(line.substring(6));
+					data.push(line.substring("data: ".length));
 				} else {
 					data[data.length - 1] += line;
 				}
 			}
 			
-			if (array.length) {
-				return array;
-			}
+			return array;
 		},
 		// TODO rename and test
 		enableXDR: false
