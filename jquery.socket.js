@@ -9,7 +9,7 @@
 (function($, undefined) {
 	
 	var // Socket events
-		socketEvents = "connecting open message close waiting".split(" "),
+		socketEvents = ["connecting", "open", "message", "close", "waiting"],
 		// Sockets
 		sockets = {},
 		// Default options
@@ -406,9 +406,8 @@
 	
 	// Default options
 	$.extend(defaults, {
-		type: "ws sse stream longpoll".split(" "),
+		type: ["ws", "sse", "stream", "longpoll"],
 		heartbeat: 200000,
-		// TODO rename
 		_heartbeat: 5000,
 		reconnectDelay: 500,
 		reconnect: function(delay, attempts) {
@@ -469,7 +468,6 @@
 			
 			return array;
 		},
-		// TODO rename and test
 		enableXDR: false
 	});
 	
