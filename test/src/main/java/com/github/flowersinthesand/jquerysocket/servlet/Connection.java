@@ -80,6 +80,7 @@ public class Connection {
 		}
 		
 		response.setContentType("text/" + (transport.equals("longpolljsonp") ? "javascript" : transport.equals("sse") ? "event-stream" : "plain"));
+		response.setCharacterEncoding("utf-8");
 		response.setHeader("Access-Control-Allow-Origin", "*");
 		
 		if (transport.equals("longpollxhr") || transport.equals("longpollxdr") || transport.equals("longpolljsonp")) {
