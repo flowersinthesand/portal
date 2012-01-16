@@ -202,8 +202,10 @@
 				open: function() {
 					var // From jQuery.ajax
 						rurl = /^([\w\+\.\-]+:)(?:\/\/([^\/?#:]*)(?::(\d+))?)?/, 
+						id = self.options.id.call(self),
 						candidates = $.makeArray(self.options.transport),
-						i, url, parts;
+						query = {id: id, heartbeat: self.options.heartbeat || false},
+						type, url, parts;
 					
 					// Cancels the scheduled connection
 					if (reconnectTimer) {
@@ -217,29 +219,30 @@
 					
 					// Resets temporal object and event helpers
 					temp = {};
-					for (i in events) {
-						events[i].reset();
+					for (type in events) {
+						events[type].reset();
 					}
 					
 					// Chooses transport
 					transport = undefined;
-					self.data("candidates", candidates);
+					self.data({id: id, candidates: candidates});
 					
 					while (candidates.length) {
-						i = candidates.shift();
-						url = self.options.url.call(self, self.url(), i);
+						type = query.transport = candidates.shift();
+						url = self.options.url.call(self, self.url(), query);
 						parts = rurl.exec(url.toLowerCase());
-						transport = transports[i] && transports[i](self
-							.data("url", url)
-							.data("crossDomain", !!(parts && 
+						transport = transports[type] && transports[type](self.data({
+							url: url,
+							crossDomain: !!(parts && 
 								// protocol and hostname
 								(parts[1] != location.protocol || parts[2] != location.hostname ||
 								// port
-								(parts[3] || (parts[1] === "http:" ? 80 : 443)) != (location.port || (location.protocol === "http:" ? 80 : 443))))));
+								(parts[3] || (parts[1] === "http:" ? 80 : 443)) != (location.port || (location.protocol === "http:" ? 80 : 443))))
+						}));
 						
 						if (transport) {
 							// Fires connecting event
-							self.data("transport", i).fire("connecting");
+							self.data("transport", type).fire("connecting");
 							transport.open();
 							break;
 						}
@@ -261,7 +264,9 @@
 							event = "message";
 						}
 						
-						transport.send(transport.noOutbound || isBinary(data) ? data : self.options.outbound.call(self, {type: event, data: data}));
+						transport.send(transport.noOutbound || isBinary(data) ? 
+							data : 
+							self.options.outbound.call(self, {socket: self.data("id"), type: event, data: data}));
 					}
 					
 					return this;
@@ -412,29 +417,26 @@
 			return attempts > 1 ? 2 * delay : 0;
 		},
 		_reconnect: 500,
+		id: function() {
+			// UUID logic from http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/2117523#2117523
+			return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+				var r = Math.random() * 16 | 0,
+					v = c === "x" ? r : (r & 0x3 | 0x8);
+				
+			    return v.toString(16);
+			});
+		},
+		url: function(url, query) {
+			return url + (/\?/.test(url) ? "&" : "?") + $.param(query);
+		},
 		inbound: function(data) {
 			return $.parseJSON(data);
 		},
 		outbound: function(event) {
-			event.socket = this.data("id");
 			return $.stringifyJSON(event);
 		},
-		// TODO rename
-		url: function(url, transport) {
-			// UUID logic from http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/2117523#2117523
-			var id = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
-					var r = Math.random() * 16 | 0,
-						v = c === "x" ? r : (r & 0x3 | 0x8);
-					
-				    return v.toString(16);
-				});
-			
-			// Stores the id
-			this.data("id", id);
-			
-			// Attaches id and transport
-			return url + (/\?/.test(url) ? "&" : "?") + $.param({id: id, transport: transport, heartbeat: this.options.heartbeat || false});
-		},
+		// TODO xdr or xdrURL? or rewriteURL? hmm...
+		enableXDR: false,
 		chunkParser: function(chunk) {
 			// Chunks are formatted according to the event stream format 
 			// http://www.w3.org/TR/eventsource/#parsing-an-event-stream
@@ -467,8 +469,7 @@
 			}
 			
 			return array;
-		},
-		enableXDR: false
+		}
 	});
 	
 	// Transports
