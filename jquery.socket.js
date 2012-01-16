@@ -73,12 +73,6 @@
 		return string === "[object Blob]" || string === "[object ArrayBuffer]";
 	}
 	
-	function isCrossDomain(url) {
-		// From jQuery.ajax
-		var parts = /^([\w\+\.\-]+:)(?:\/\/([^\/?#:]*)(?::(\d+))?)?/.exec(url.toLowerCase());
-		return !!(parts && (parts[1] != location.protocol || parts[2] != location.hostname || (parts[3] || (parts[1] === "http:" ? 80 : 443)) != (location.port || (location.protocol === "http:" ? 80 : 443))));
-	}
-	
 	function iterate(fn) {
 		var timeoutId;
 		
@@ -99,8 +93,7 @@
 		};
 	}
 		
-	// Socket is based on The WebSocket API 
-	// W3C Working Draft 29 September 2011 - http://www.w3.org/TR/2011/WD-websockets-20110929/
+	// Socket is based on The WebSocket API
 	function socket(url, options) {
 		var // Transport
 			transport,
@@ -128,7 +121,7 @@
 				},
 				// Final options object
 				options: $.extend(true, {}, defaults, options),
-				// Gets or sets a value
+				// Gets or sets a connection scope value
 				data: function(key, value) {
 					var ret = $(temp).data(key, value);
 					return (ret && ret[0]) === temp ? this : ret || null;
@@ -167,10 +160,10 @@
 				},
 				// Adds one time event handler 
 				one: function(type, fn) {
-					var proxy = function() {
-							self.off(type, proxy);
-							fn.apply(this, arguments);
-						};
+					function proxy() {
+						self.off(type, proxy);
+						fn.apply(this, arguments);
+					}
 					
 					return self.on(type, proxy);
 				},
@@ -207,8 +200,10 @@
 				},
 				// Establishes a connection
 				open: function() {
-					var types = $.makeArray(self.options.type),
-						i, url, type;
+					var // From jQuery.ajax
+						rurl = /^([\w\+\.\-]+:)(?:\/\/([^\/?#:]*)(?::(\d+))?)?/, 
+						candidates = $.makeArray(self.options.transport),
+						i, url, parts;
 					
 					// Cancels the scheduled connection
 					if (reconnectTimer) {
@@ -228,17 +223,23 @@
 					
 					// Chooses transport
 					transport = undefined;
-					self.data("transports", types);
+					self.data("candidates", candidates);
 					
-					while (types.length) {
-						type = types.shift();
-						url = self.options.url.call(self, self.url(), type);
-						self.data("url", url).data("crossDomain", isCrossDomain(url));
+					while (candidates.length) {
+						i = candidates.shift();
+						url = self.options.url.call(self, self.url(), i);
+						parts = rurl.exec(url.toLowerCase());
+						transport = transports[i] && transports[i](self
+							.data("url", url)
+							.data("crossDomain", !!(parts && 
+								// protocol and hostname
+								(parts[1] != location.protocol || parts[2] != location.hostname ||
+								// port
+								(parts[3] || (parts[1] === "http:" ? 80 : 443)) != (location.port || (location.protocol === "http:" ? 80 : 443))))));
 						
-						transport = transports[type] && transports[type](self);
 						if (transport) {
 							// Fires connecting event
-							self.data("transport", type).fire("connecting");
+							self.data("transport", i).fire("connecting");
 							transport.open();
 							break;
 						}
@@ -250,7 +251,7 @@
 					
 					return this;
 				},
-				// Transmits data using the connection
+				// Transmits event using the connection
 				send: function(event, data) {
 					if (state !== "opened") {
 						buffer.push(arguments);
@@ -260,15 +261,13 @@
 							event = "message";
 						}
 						
-						transport.send(self.data("transport") === "sub" || isBinary(data) ? data : self.options.outbound.call(self, {type: event, data: data}));
+						transport.send(transport.noOutbound || isBinary(data) ? data : self.options.outbound.call(self, {type: event, data: data}));
 					}
 					
 					return this;
 				},
 				// Disconnects the connection
 				close: function(reason) {
-					var hasFeedback;
-					
 					// Prevents reconnection
 					self.options.reconnect = false;
 					if (reconnectTimer) {
@@ -276,11 +275,11 @@
 					}
 					
 					if (transport) {
-						hasFeedback = transport.close();
+						transport.close();
 					}
 					
 					// Fires close event
-					if (!hasFeedback) {
+					if (reason || !transport || !transport.hasCloseFeedback) {
 						self.fire("close", [reason || "close"]);
 					}
 					
@@ -288,7 +287,7 @@
 				},
 				// Finds a sub socket communicating with this socket
 				find: function(name) {
-					return $.socket(url + "/" + name, {type: "sub", event: name, source: url});
+					return $.socket(url + "/" + name, {transport: "sub", event: name, source: url});
 				}
 			};
 		
@@ -347,7 +346,7 @@
 			}
 			
 			// Sets heartbeat timer
-			if (self.options.heartbeat > 0) {
+			if (self.options.heartbeat > self.options._heartbeat) {
 				setHeartbeatTimer();
 			}
 			
@@ -384,7 +383,7 @@
 			if (self.options.reconnect) {
 				self.one("close", function() {
 					reconnectTry = reconnectTry || 1;
-					reconnectDelay = self.options.reconnect.call(self, reconnectDelay || self.options.reconnectDelay, reconnectTry);
+					reconnectDelay = self.options.reconnect.call(self, reconnectDelay || self.options._reconnect, reconnectTry);
 					
 					if (reconnectDelay !== false) {
 						reconnectTimer = setTimeout(self.open, reconnectDelay);
@@ -406,13 +405,13 @@
 	
 	// Default options
 	$.extend(defaults, {
-		type: ["ws", "sse", "stream", "longpoll"],
-		heartbeat: 200000,
-		_heartbeat: 5000,
-		reconnectDelay: 500,
+		transport: ["ws", "sse", "stream", "longpoll"],
+		heartbeat: 20 * 1000,
+		_heartbeat: 5 * 1000,
 		reconnect: function(delay, attempts) {
 			return attempts > 1 ? 2 * delay : 0;
 		},
+		_reconnect: 500,
 		inbound: function(data) {
 			return $.parseJSON(data);
 		},
@@ -420,14 +419,15 @@
 			event.socket = this.data("id");
 			return $.stringifyJSON(event);
 		},
+		// TODO rename
 		url: function(url, transport) {
 			// UUID logic from http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/2117523#2117523
 			var id = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
-				var r = Math.random() * 16 | 0,
-					v = c === "x" ? r : (r & 0x3 | 0x8);
-				
-			    return v.toString(16);
-			});
+					var r = Math.random() * 16 | 0,
+						v = c === "x" ? r : (r & 0x3 | 0x8);
+					
+				    return v.toString(16);
+				});
 			
 			// Stores the id
 			this.data("id", id);
@@ -478,11 +478,12 @@
 			var event = socket.options.event,
 				source = $.socket(socket.options.source);
 			
-			socket.options.timeout = 0;
-			socket.options.reconnect = false;
-			
 			return {
+				noOutbound: true,
 				open: function() {
+					socket.options.timeout = 0;
+					socket.options.reconnect = false;
+					
 					if (!socket.options.init) {
 						socket.options.init = true;
 						
@@ -512,17 +513,19 @@
 		// WebSocket
 		ws: function(socket) {
 			var WebSocket = window.WebSocket || window.MozWebSocket,
-				ws, url, aborted;
+				ws, aborted;
 			
 			if (!WebSocket) {
 				return;
 			}
-			
-			url = decodeURI($('<a href="' + socket.data("url") + '"/>')[0].href.replace(/^http/, "ws"));
-			socket.data("url", url);
 
 			return {
+				hasCloseFeedback: true,
 				open: function() {
+					var url = decodeURI($('<a href="' + socket.data("url") + '"/>')[0].href.replace(/^http/, "ws"));
+					
+					socket.data("url", url);
+					
 					ws = new WebSocket(url);
 					ws.onopen = function(event) {
 						socket.data("event", event).fire("open");
@@ -600,56 +603,52 @@
 		},
 		// HTTP Streaming facade
 		stream: function(socket) {
-			socket.data("transports").unshift("streamxdr", "streamiframe", "streamxhr");
+			socket.data("candidates").unshift("streamxdr", "streamiframe", "streamxhr");
 		},
 		// HTTP Streaming - XMLHttpRequest
 		streamxhr: function(socket) {
 			var XMLHttpRequest = window.XMLHttpRequest, 
-				xhr, stop, aborted;
+				xhr, aborted;
 			
-			if (!XMLHttpRequest || (browser.android && browser.webkit) || 
-					window.ActiveXObject || window.XDomainRequest || (socket.data("crossDomain") && !$.support.cors)) {
+			if (!XMLHttpRequest || window.XDomainRequest || window.ActiveXObject || 
+					(browser.android && browser.webkit) || (socket.data("crossDomain") && !$.support.cors)) {
 				return;
 			}
 			
-			xhr = new XMLHttpRequest();
-			xhr.onreadystatechange = function() {
-				var index, length,
-					onchunk = function() {
-						index = socket.data("index");
-						length = xhr.responseText.length;
-						
-						if (!index) {
-							socket.fire("open");
-						} else if (length > index) {
-							socket.notify(xhr.responseText.substring(index, length), true);
-						}
-						
-						socket.data("index", length);
-					};
-				
-				switch (xhr.readyState) {
-				case 3:
-					if (xhr.status === 200) {
-						if (browser.opera && !stop) {
-							stop = iterate(onchunk);
-						} else {
-							onchunk();
-						}
-					}
-					break;
-				case 4:
-					if (stop) {
-						stop();
-					}
-					
-					socket.fire.apply(socket, ["close", [xhr.status === 200 ? "done" : aborted ? "close" : "error"]]);
-					break;
-				}
-			};
-			
 			return $.extend(transports.http(socket), {
 				open: function() {
+					var stop;
+					
+					xhr = new XMLHttpRequest();
+					xhr.onreadystatechange = function() {
+						function onprogress() {
+							var index = socket.data("index"),
+								length = xhr.responseText.length;
+							
+							if (!index) {
+								socket.fire("open");
+							} else if (length > index) {
+								socket.notify(xhr.responseText.substring(index, length), true);
+							}
+							
+							socket.data("index", length);
+						}
+						
+						if (xhr.readyState === 3 && xhr.status === 200) {
+							if (browser.opera && !stop) {
+								stop = iterate(onprogress);
+							} else {
+								onprogress();
+							}
+						} else if (xhr.readyState === 4) {
+							if (stop) {
+								stop();
+							}
+							
+							socket.fire.apply(socket, ["close", [xhr.status === 200 ? "done" : aborted ? "close" : "error"]]);
+						}
+					};
+					
 					xhr.open("GET", socket.data("url"));
 					xhr.send(null);
 				},
@@ -662,20 +661,21 @@
 		// HTTP Streaming - Iframe
 		streamiframe: function(socket) {
 			var ActiveXObject = window.ActiveXObject,
-				doc, stop, iframe, cdoc;
+				doc, stop;
 			
 			if (!ActiveXObject || socket.data("crossDomain")) {
 				return;
 			}
 			
-			doc = new ActiveXObject("htmlfile");
-			doc.open();
-			doc.close();
-			
-			iframe = doc.createElement("iframe");
-			
 			return $.extend(transports.http(socket), {
 				open: function() {
+					var iframe, cdoc;
+					
+					doc = new ActiveXObject("htmlfile");
+					doc.open();
+					doc.close();
+					
+					iframe = doc.createElement("iframe");
 					iframe.src = socket.data("url");
 					doc.body.appendChild(iframe);
 					
@@ -730,61 +730,62 @@
 		// HTTP Streaming - XDomainRequest
 		streamxdr: function(socket) {
 			var XDomainRequest = window.XDomainRequest,
-				xdr, url;
+				xdr;
 			
 			if (!XDomainRequest || !socket.options.enableXDR) {
 				return;
 			}
 			
-			function rewriteURL(url) {
-				// Maintaining session by rewriting URL
-				// http://stackoverflow.com/questions/6453779/maintaining-session-by-rewriting-url
-				var name, match, 
-					rewriters = {
-						JSESSIONID: function(sid) {
-							return url.replace(/;jsessionid=[^\?]*|(\?)|$/, ";jsessionid=" + sid + "$1");
-						},
-						PHPSESSID: function(sid) {
-							return url.replace(/\?PHPSESSID=[^&]*&?|\?|$/, "?PHPSESSID=" + sid + "&").replace(/&$/, "");
-						}
-					};
-				
-				for (name in rewriters) {
-					// Finds session id from cookie
-					match = new RegExp("(?:^|;\\s*)" + encodeURIComponent(name) + "=([^;]*)").exec(document.cookie);
-					if (match) {
-						return rewriters[name](match[1]);
-					}
-				}
-				
-				return url;
-			}
-			
-			url = rewriteURL(socket.data("url"));
-			socket.data("url", url);
-			
-			xdr = new XDomainRequest();
-			xdr.onprogress = function() {
-				var index = socket.data("index"), 
-					length = xdr.responseText.length;
-				
-				if (!index) {
-					socket.fire("open");
-				} else {
-					socket.notify(xdr.responseText.substring(index, length), true);
-				}
-				
-				socket.data("index", length);
-			};
-			xdr.onerror = function() {
-				socket.fire("close", ["error"]);
-			};
-			xdr.onload = function() {
-				socket.fire("close", ["done"]);
-			};
-			
 			return $.extend(transports.http(socket), {
 				open: function() {
+					function rewriteURL(url) {
+						// Maintaining session by rewriting URL
+						// http://stackoverflow.com/questions/6453779/maintaining-session-by-rewriting-url
+						var name, match, 
+							rewriters = {
+								JSESSIONID: function(sid) {
+									return url.replace(/;jsessionid=[^\?]*|(\?)|$/, ";jsessionid=" + sid + "$1");
+								},
+								PHPSESSID: function(sid) {
+									return url.replace(/\?PHPSESSID=[^&]*&?|\?|$/, "?PHPSESSID=" + sid + "&").replace(/&$/, "");
+								}
+							};
+						
+						for (name in rewriters) {
+							// Finds session id from cookie
+							match = new RegExp("(?:^|;\\s*)" + encodeURIComponent(name) + "=([^;]*)").exec(document.cookie);
+							if (match) {
+								return rewriters[name](match[1]);
+							}
+						}
+						
+						return url;
+					}
+					
+					var url = rewriteURL(socket.data("url"));
+					
+					socket.data("url", url);
+					
+					xdr = new XDomainRequest();
+					xdr.onprogress = function() {
+						var index = socket.data("index"), 
+							length = xdr.responseText.length;
+						
+						if (!index) {
+							socket.fire("open");
+						} else {
+							socket.notify(xdr.responseText.substring(index, length), true);
+						}
+						
+						socket.data("index", length);
+					};
+					xdr.onerror = function() {
+						socket.fire("close", ["error"]);
+					};
+					xdr.onload = function() {
+						socket.fire("close", ["done"]);
+					};
+					
 					xdr.open("GET", url);
 					xdr.send();
 				},
@@ -825,7 +826,7 @@
 		},
 		// Long Polling facade
 		longpoll: function(socket) {
-			socket.data("transports").unshift("longpollxhr", "longpollxdr", "longpolljsonp");
+			socket.data("candidates").unshift("longpollxhr", "longpollxdr", "longpolljsonp");
 		},
 		// Long Polling - XMLHttpRequest
 		longpollxhr: function(socket) {
@@ -839,7 +840,11 @@
 			url += (/\?/.test(url) ? "&" : "?") +  $.param({count: ""});
 			
 			function poll() {
-				xhr = $.ajax(socket.data("url", url + count++).data("url"), {type: "GET", dataType: "text", async: true, cache: true, timeout: 0})
+				var u = url + count++;
+				
+				socket.data("url", u);
+				
+				xhr = $.ajax(u, {type: "GET", dataType: "text", async: true, cache: true, timeout: 0})
 				.done(function(data) {
 					if (data) {
 						socket.notify(data);
@@ -872,6 +877,10 @@
 			url += (/\?/.test(url) ? "&" : "?") +  $.param({count: ""});
 			
 			function poll() {
+				var u = url + count++;
+				
+				socket.data("url", u);
+				
 				xdr = new XDomainRequest();
 				xdr.onload = function() {
 					if (xdr.responseText) {
@@ -885,7 +894,7 @@
 					socket.fire("close", ["error"]);
 				};
 				
-				xdr.open("GET", socket.data("url", url + count++).data("url"));
+				xdr.open("GET", u);
 				xdr.send();
 			}
 			
@@ -913,7 +922,11 @@
 			});
 			
 			function poll() {
-				xhr = $.ajax(socket.data("url", url + count++).data("url"), {dataType: "script", crossDomain: true, cache: true, timeout: 0})
+				var u = url + count++;
+				
+				socket.data("url", u);
+				
+				xhr = $.ajax(u, {dataType: "script", crossDomain: true, cache: true, timeout: 0})
 				.done(function() {
 					if (called) {
 						called = false;
