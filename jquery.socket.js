@@ -560,7 +560,6 @@
 				close: function() {
 					aborted = true;
 					ws.close();
-					return true;
 				}
 			};
 		},
