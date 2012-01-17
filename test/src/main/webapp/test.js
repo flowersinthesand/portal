@@ -1152,15 +1152,15 @@ test("chunkParser handler should receive a chunk and return an array of data", f
 			if (/@@$/.test(chunk)) {
 				array.pop();
 			}
-			
-			return array;
 		} else {
 			this.data("data", chunk);
 		}
+		
+		return array;
 	};
 	
 	$.socket("url");
-	ok(!$.socket.defaults.chunkParser.call($.socket(), "A"));
+	ok(!$.socket.defaults.chunkParser.call($.socket(), "A").length);
 	deepEqual($.socket.defaults.chunkParser.call($.socket(), "A@@"), ["AA"]);
 	deepEqual($.socket.defaults.chunkParser.call($.socket(), "A@@B@@C"), ["A", "B", "C"]);
 });
