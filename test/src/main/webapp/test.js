@@ -1371,7 +1371,15 @@ if (!isLocal) {
 	});
 	
 	$.each({
-		streamxdr: $.noop,
+		streamxdr: function(url) {
+			test("xdrURL which is false should stop streamxdr transport", function() {
+				$.socket.defaults.xdrURL = false;
+				$.socket(url).close(function(reason) {
+					strictEqual(reason, "notransport");
+					start();
+				});
+			});
+		},
 		streamiframe: $.noop,
 		streamxhr: $.noop
 	}, function(transport, fn) {
@@ -1443,7 +1451,15 @@ if (!isLocal) {
 	
 	$.each({
 		longpollxhr: $.noop,
-		longpollxdr: $.noop, 
+		longpollxdr: function(url) {
+			test("xdrURL which is false should stop longpollxdr transport", function() {
+				$.socket.defaults.xdrURL = false;
+				$.socket(url).close(function(reason) {
+					strictEqual(reason, "notransport");
+					start();
+				});
+			});
+		}, 
 		longpolljsonp: function(url) {
 			test("window should have a function whose name is equals to data('url')'s callback parameter", function() {
 				ok($.isFunction(window[param($.socket(url).data("url"), "callback")]));
