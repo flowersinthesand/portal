@@ -18,8 +18,6 @@
 		transports = {},
 		// Reference to core prototype
 		hasOwn = Object.prototype.hasOwnProperty,
-		// Flags for the user agent
-		browser = $.extend(true, {}, $.browser),
 		// UUID
 		uuid = $.now();
 	
@@ -405,7 +403,7 @@
 	}
 	
 	if (/android/.test(navigator.userAgent.toLowerCase())) {
-		browser.android = true;
+		$.browser.android = true;
 	}
 	
 	// Default options
@@ -624,7 +622,7 @@
 				xhr, aborted;
 			
 			if (!XMLHttpRequest || window.XDomainRequest || window.ActiveXObject || 
-					(browser.android && browser.webkit) || (socket.data("crossDomain") && !$.support.cors)) {
+					($.browser.android && $.browser.webkit) || (socket.data("crossDomain") && !$.support.cors)) {
 				return;
 			}
 			
@@ -648,7 +646,7 @@
 						}
 						
 						if (xhr.readyState === 3 && xhr.status === 200) {
-							if (browser.opera && !stop) {
+							if ($.browser.opera && !stop) {
 								stop = iterate(onprogress);
 							} else {
 								onprogress();
