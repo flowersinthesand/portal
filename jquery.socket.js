@@ -435,8 +435,20 @@
 		outbound: function(event) {
 			return $.stringifyJSON(event);
 		},
-		// TODO xdr or xdrURL? or rewriteURL? hmm...
-		enableXDR: false,
+		xdrURL: function(url) {
+			// Maintaining session by rewriting URL
+			// http://stackoverflow.com/questions/6453779/maintaining-session-by-rewriting-url
+			var match = /(?:^|;\s*)(JSESSIONID|PHPSESSID)=([^;]*)/.exec(document.cookie);
+			
+			switch (match && match[1]) {
+			case "JSESSIONID":
+				return url.replace(/;jsessionid=[^\?]*|(\?)|$/, ";jsessionid=" + match[2] + "$1");
+			case "PHPSESSID":
+				return url.replace(/\?PHPSESSID=[^&]*&?|\?|$/, "?PHPSESSID=" + match[2] + "&").replace(/&$/, "");
+			default:
+				return url;
+			}
+		},
 		chunkParser: function(chunk) {
 			// Chunks are formatted according to the event stream format 
 			// http://www.w3.org/TR/eventsource/#parsing-an-event-stream
@@ -568,12 +580,12 @@
 			send = !socket.data("crossDomain") || (socket.data("crossDomain") && $.support.cors) ? 
 			function(url, data) {
 				$.ajax(url, {type: "POST", data: "data=" + data, async: true, timeout: 0}).always(post);
-			} : window.XDomainRequest && socket.options.enableXDR ? 
+			} : window.XDomainRequest && socket.options.xdrURL ? 
 			function(url, data) {
 				var xdr = new window.XDomainRequest();
 				
 				xdr.onload = post;
-				xdr.open("POST", url);
+				xdr.open("POST", socket.options.xdrURL.call(socket, url));
 				xdr.send("data=" + data);
 			} : 
 			function(url, data) {
@@ -733,37 +745,13 @@
 			var XDomainRequest = window.XDomainRequest,
 				xdr;
 			
-			if (!XDomainRequest || !socket.options.enableXDR) {
+			if (!XDomainRequest || !socket.options.xdrURL) {
 				return;
 			}
 			
 			return $.extend(transports.http(socket), {
 				open: function() {
-					function rewriteURL(url) {
-						// Maintaining session by rewriting URL
-						// http://stackoverflow.com/questions/6453779/maintaining-session-by-rewriting-url
-						var name, match, 
-							rewriters = {
-								JSESSIONID: function(sid) {
-									return url.replace(/;jsessionid=[^\?]*|(\?)|$/, ";jsessionid=" + sid + "$1");
-								},
-								PHPSESSID: function(sid) {
-									return url.replace(/\?PHPSESSID=[^&]*&?|\?|$/, "?PHPSESSID=" + sid + "&").replace(/&$/, "");
-								}
-							};
-						
-						for (name in rewriters) {
-							// Finds session id from cookie
-							match = new RegExp("(?:^|;\\s*)" + encodeURIComponent(name) + "=([^;]*)").exec(document.cookie);
-							if (match) {
-								return rewriters[name](match[1]);
-							}
-						}
-						
-						return url;
-					}
-					
-					var url = rewriteURL(socket.data("url"));
+					var url = socket.options.xdrURL.call(socket, socket.data("url"));
 					
 					socket.data("url", url);
 					
@@ -871,14 +859,14 @@
 			var XDomainRequest = window.XDomainRequest, count = 1, url = socket.data("url"), 
 				xdr;
 			
-			if (!XDomainRequest || !socket.options.enableXDR) {
+			if (!XDomainRequest || !socket.options.xdrURL) {
 				return;
 			}
 			
 			url += (/\?/.test(url) ? "&" : "?") +  $.param({count: ""});
 			
 			function poll() {
-				var u = url + count++;
+				var u = socket.options.xdrURL.call(socket, url + count++);
 				
 				socket.data("url", u);
 				

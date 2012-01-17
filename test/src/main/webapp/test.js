@@ -1129,6 +1129,19 @@ if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKit
 	});
 }
 
+test("xdrURL handler should receive data('url') and return a new url containing session id", function() {
+	$.socket.defaults.xdrURL = function(url) {
+		strictEqual(url, this.data("url"));
+		
+		return "modified";
+	};
+	$.socket.transports.test = function(socket) {
+		socket.data("url", socket.options.xdrURL.call(socket, socket.data("url")));
+	};
+	
+	strictEqual($.socket("url").data("url"), "modified");
+});
+
 test("chunkParser handler should receive a chunk and return an array of data", function() {
 	$.socket.defaults.chunkParser = function(chunk) {
 		var array = chunk.split("@@");
@@ -1193,6 +1206,29 @@ test("a raw data sent by the server should be a JSON string representing a event
 	});
 });
 
+test("xdrURL handler should be able to handle JSESSIONID and PHPSESSID in cookies", function() {
+	$.each({
+		JSESSIONID: {
+			"url": "url;jsessionid=JSESSIONID", 
+			"url?x=y": "url;jsessionid=JSESSIONID?x=y", 
+			"url;jsessionid=xx": "url;jsessionid=JSESSIONID", 
+			"url;jsessionid=xx?x=y": "url;jsessionid=JSESSIONID?x=y"
+		},
+		PHPSESSID: {
+			"url": "url?PHPSESSID=PHPSESSID", 
+			"url?x=y": "url?PHPSESSID=PHPSESSID&x=y", 
+			"url?PHPSESSID=xx": "url?PHPSESSID=PHPSESSID", 
+			"url?PHPSESSID=xx&x=y": "url?PHPSESSID=PHPSESSID&x=y"
+		}
+	}, function(name, data) {
+		document.cookie = name + "=" + name;
+		$.each(data, function(url, expected) {
+			strictEqual($.socket.defaults.xdrURL.call($.socket("url"), url), expected);
+		});
+		document.cookie = name + "=" + ";expires=Thu, 01 Jan 1970 00:00:00 GMT";
+	});
+});
+
 test("chunks for streaming should accord with the event stream format", function() {
 	deepEqual($.socket.defaults.chunkParser.call($.socket("url"), "data: A\r\n\r\ndata: A\r\ndata: B\rdata: C\n\r\ndata: \r\n"), ["A", "A\nB\nC", ""]);
 });
@@ -1203,7 +1239,7 @@ function testTransport(transport, fn) {
 	if (QUnit.urlParams.crossdomain) {
 		url = remoteURL + url;
 	}
-	if (!$.socket.transports[transport]($.socket(url, {transport: "test", enableXDR: true}).close(teardown).close())) {
+	if (!$.socket.transports[transport]($.socket(url, {transport: "test"}).close(teardown).close())) {
 		return;
 	}
 	
@@ -1312,7 +1348,6 @@ if (!isLocal) {
 		setup: function() {
 			setup();
 			$.socket.defaults.transport = "stream";
-			$.socket.defaults.enableXDR = true;
 		},
 		teardown: teardown
 	});
@@ -1346,7 +1381,9 @@ if (!isLocal) {
 			setup: function() {
 				setup();
 				$.socket.defaults.transport = transport;
-				$.socket.defaults.enableXDR = transport === "streamxdr";
+				if (transport !== "streamxdr") {
+					$.socket.defaults.xdrURL = false;
+				}
 			},
 			teardown: teardown
 		});
@@ -1419,7 +1456,9 @@ if (!isLocal) {
 			setup: function() {
 				setup();
 				$.socket.defaults.transport = transport;
-				$.socket.defaults.enableXDR = transport === "longpollxdr";
+				if (transport !== "longpollxdr") {
+					$.socket.defaults.xdrURL = false;
+				}
 			},
 			teardown: teardown
 		});
