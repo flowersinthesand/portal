@@ -411,8 +411,9 @@
 	// Default options
 	$.extend(defaults, {
 		transport: ["ws", "sse", "stream", "longpoll"],
-		heartbeat: 20 * 1000,
-		_heartbeat: 5 * 1000,
+		timeout: 5000,
+		heartbeat: 20000,
+		_heartbeat: 5000,
 		reconnect: function(delay, attempts) {
 			return attempts > 1 ? 2 * delay : 0;
 		},
