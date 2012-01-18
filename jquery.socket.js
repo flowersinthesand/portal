@@ -13,9 +13,9 @@
 		// Sockets
 		sockets = {},
 		// Default options
-		defaults = {},
+		defaults,
 		// Transports
-		transports = {},
+		transports,
 		// Reference to core prototype
 		hasOwn = Object.prototype.hasOwnProperty,
 		// UUID
@@ -412,7 +412,7 @@
 	}
 	
 	// Default options
-	$.extend(defaults, {
+	defaults = {
 		transport: ["ws", "sse", "stream", "longpoll"],
 		timeout: 5000,
 		heartbeat: 20000,
@@ -486,10 +486,10 @@
 			
 			return array;
 		}
-	});
+	};
 	
 	// Transports
-	$.extend(transports, {
+	transports = {
 		// Sub socket implementation
 		sub: function(socket) {
 			var event = socket.options.event,
@@ -939,7 +939,7 @@
 				}
 			});
 		}
-	});
+	};
 	
 	// Closes all socket when the document is unloaded 
 	$(window).on("unload.socket", function() {
