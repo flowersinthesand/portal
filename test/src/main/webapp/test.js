@@ -142,7 +142,7 @@ asyncTest("open method should establish a connection", function() {
 		ok(true);
 		start();
 	})
-	.one("close", function() {
+	.close(function() {
 		this.options.server = function(request) {
 			request.accept();
 		};
@@ -324,6 +324,7 @@ asyncTest("request's accept method should return connection object and fire open
 
 asyncTest("request's reject method should fire close event whose the reason attribute is error", function() {
 	$.socket("url", {
+		reconnect: false,
 		server: function(request) {
 			ok(!request.reject());
 		}
@@ -331,7 +332,7 @@ asyncTest("request's reject method should fire close event whose the reason attr
 	.open(function() {
 		ok(false);
 	})
-	.one("close", function(reason) {
+	.close(function(reason) {
 		strictEqual(reason, "error");
 		start();
 	});
@@ -355,6 +356,7 @@ asyncTest("connection's send method should fire socket's message event", functio
 
 asyncTest("connection's close method should fire socket's close event whose the reason attribute is done", function() {
 	$.socket("url", {
+		reconnect: false,
 		server: function(request) {
 			var connection = request.accept();
 			connection.on("open", function() {
@@ -363,7 +365,7 @@ asyncTest("connection's close method should fire socket's close event whose the 
 			});
 		}
 	})
-	.one("close", function(reason) {
+	.close(function(reason) {
 		strictEqual(reason, "done");
 		start();
 	});
@@ -525,7 +527,7 @@ asyncTest("close event's reason should be 'close' if the socket's close method h
 });
 
 asyncTest("close event's reason should be 'timeout' if the socket has been timed out", function() {
-	$.socket("url", {timeout: 10})
+	$.socket("url", {reconnect: false, timeout: 10})
 	.close(function(reason) {
 		strictEqual(reason, "timeout");
 		start();
@@ -534,11 +536,12 @@ asyncTest("close event's reason should be 'timeout' if the socket has been timed
 
 asyncTest("close event's reason should be 'error' if the socket has been closed due to not specific error", function() {
 	$.socket("url", {
+		reconnect: false,
 		server: function(request) {
 			request.reject();
 		}
 	})
-	.one("close", function(reason) {
+	.close(function(reason) {
 		strictEqual(reason, "error");
 		start();
 	});
@@ -546,13 +549,14 @@ asyncTest("close event's reason should be 'error' if the socket has been closed 
 
 asyncTest("close event's reason should be 'done' if the socket has been closed normally", function() {
 	$.socket("url", {
+		reconnect: false,
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.close();
 			});
 		}
 	})
-	.one("close", function(reason) {
+	.close(function(reason) {
 		strictEqual(reason, "done");
 		start();
 	});
@@ -876,14 +880,14 @@ asyncTest("reconnect handler which returns false should stop reconnection", 1, f
 
 asyncTest("in case of manual reconnection connecting event should be fired", function() {
 	$.socket("url", {
+		reconnect: false,
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.close();
 			});
-		},
-		reconnect: false
+		}
 	})
-	.one("close", function() {
+	.close(function() {
 		$.socket().open().connecting(function() {
 			ok(true);
 			start();
@@ -927,6 +931,7 @@ asyncTest("connection should be closed when the server makes no response to a he
 	};
 	
 	$.socket("url", {
+		reconnect: false,
 		server: function(request) {
 			request.accept();
 		}
@@ -1283,7 +1288,7 @@ function testTransport(transport, fn) {
 	});
 	
 	asyncTest("close event whose the reason attribute is done should be fired when the server disconnects a connection cleanly", function() {
-		$.socket(url + "?close=true").one("close", function(reason) {
+		$.socket(url + "?close=true", {reconnect: false}).close(function(reason) {
 			strictEqual(reason, "done");
 			start();
 		});
