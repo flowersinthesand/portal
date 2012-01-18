@@ -369,7 +369,10 @@
 			
 			state = "closed";
 			
-			// Clears heartbeat timer
+			// Clears timers
+			if (timeoutTimer) {
+				clearTimeout(timeoutTimer);
+			}
 			if (heartbeatTimer) {
 				clearTimeout(heartbeatTimer);
 			}
