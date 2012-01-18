@@ -1144,24 +1144,11 @@ test("xdrURL handler should receive data('url') and return a new url containing 
 
 test("chunkParser handler should receive a chunk and return an array of data", function() {
 	$.socket.defaults.chunkParser = function(chunk) {
-		var array = chunk.split("@@");
-		if (array.length > 1) {
-			array[0] = (this.data("data") || "") + array[0];
-			this.data("data", "");
-			
-			if (/@@$/.test(chunk)) {
-				array.pop();
-			}
-		} else {
-			this.data("data", chunk);
-		}
-		
-		return array;
+		return chunk.split("@@");
 	};
 	
 	$.socket("url");
-	ok(!$.socket.defaults.chunkParser.call($.socket(), "A").length);
-	deepEqual($.socket.defaults.chunkParser.call($.socket(), "A@@"), ["AA"]);
+	deepEqual($.socket.defaults.chunkParser.call($.socket(), "A"), ["A"]);
 	deepEqual($.socket.defaults.chunkParser.call($.socket(), "A@@B@@C"), ["A", "B", "C"]);
 });
 
