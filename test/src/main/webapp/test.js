@@ -1223,11 +1223,22 @@ test("chunks for streaming should accord with the event stream format", function
 function testTransport(transport, fn) {
 	var url = "/jquery-socket-test/echo";
 	
-	if (QUnit.urlParams.crossdomain) {
-		url = remoteURL + url;
-	}
-	if (!$.socket.transports[transport]($.socket(url, {transport: "test"}).close(teardown).close())) {
+	if ((transport === "ws" && !window.WebSocket) || 
+		(transport === "sse" && !window.EventSource) || 
+		(transport === "streamxhr" && (!window.XMLHttpRequest || window.ActiveXObject || window.XDomainRequest || ($.browser.android && $.browser.webkit))) || 
+		(transport === "streamiframe" && !window.ActiveXObject) || 
+		(transport === "streamxdr" && !window.XDomainRequest) ||
+		(transport === "longpollxhr" && !$.support.ajax) ||
+		(transport === "longpollxdr" && !window.XDomainRequest)) {
 		return;
+	}
+	
+	if (QUnit.urlParams.crossdomain) {
+		if (/sse|streamiframe/.test(transport) || (/streamxhr|longpollxhr/.test(transport) && !$.support.cors)) {
+			return;
+		}
+		
+		url = remoteURL + url;
 	}
 	
 	if (fn) {
