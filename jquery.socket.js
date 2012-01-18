@@ -272,9 +272,11 @@
 				// Disconnects the connection
 				close: function(reason) {
 					// Prevents reconnection
-					self.options.reconnect = false;
-					if (reconnectTimer) {
-						clearTimeout(reconnectTimer);
+					if (!reason) {
+						self.options.reconnect = false;
+						if (reconnectTimer) {
+							clearTimeout(reconnectTimer);
+						}
 					}
 					
 					if (transport) {
