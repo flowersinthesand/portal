@@ -89,6 +89,11 @@
 							connectionEvent.on("heartbeat", function() {
 								resetHeartbeatTimer();
 								connection.send("heartbeat", null);
+							})
+							.on("close", function() {
+								if (heartbeatTimer) {
+									clearTimeout(heartbeatTimer);
+								}
 							});
 						}
 						
