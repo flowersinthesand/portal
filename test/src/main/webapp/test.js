@@ -887,7 +887,7 @@ asyncTest("in case of manual reconnection connecting event should be fired", fun
 			});
 		}
 	})
-	.close(function() {
+	.one("close", function() {
 		$.socket().open().connecting(function() {
 			ok(true);
 			start();
