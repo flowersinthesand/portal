@@ -208,7 +208,7 @@
 						rurl = /^([\w\+\.\-]+:)(?:\/\/([^\/?#:]*)(?::(\d+))?)?/, 
 						candidates = $.makeArray(self.options.transport),
 						query = {id: id, heartbeat: self.options.heartbeat || false},
-						type, url, parts;
+						type, u, parts;
 					
 					// Cancels the scheduled connection
 					if (reconnectTimer) {
@@ -226,23 +226,27 @@
 					self.data("candidates", candidates);
 					
 					while (candidates.length) {
-						type = query.transport = candidates.shift();
-						url = self.options.url.call(self, self.url(), query);
-						parts = rurl.exec(url.toLowerCase());
-						transport = transports[type] && transports[type](self.data({
-							url: url,
-							crossDomain: !!(parts && 
-								// protocol and hostname
-								(parts[1] != location.protocol || parts[2] != location.hostname ||
-								// port
-								(parts[3] || (parts[1] === "http:" ? 80 : 443)) != (location.port || (location.protocol === "http:" ? 80 : 443))))
-						}));
+						type = candidates.shift();
 						
-						if (transport) {
-							// Fires connecting event
-							self.data("transport", type).fire("connecting");
-							transport.open();
-							break;
+						if (transports[type]) {
+							query.transport = type;
+							u = self.options.url.call(self, url, query);
+							parts = rurl.exec(u.toLowerCase());
+							transport = transports[type](self.data({
+								url: u,
+								crossDomain: !!(parts && 
+									// protocol and hostname
+									(parts[1] != location.protocol || parts[2] != location.hostname ||
+									// port
+									(parts[3] || (parts[1] === "http:" ? 80 : 443)) != (location.port || (location.protocol === "http:" ? 80 : 443))))
+							}));
+							
+							if (transport) {
+								// Fires connecting event
+								self.data("transport", type).fire("connecting");
+								transport.open();
+								break;
+							}
 						}
 					}
 					
