@@ -210,11 +210,6 @@
 						clearTimeout(reconnectTimer);
 					}
 					
-					// Cancels the heartbeat timer
-					if (heartbeatTimer) {
-						clearTimeout(heartbeatTimer);
-					}
-					
 					// Resets temporal object and event helpers
 					temp = {};
 					for (type in events) {
