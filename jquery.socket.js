@@ -93,7 +93,9 @@
 		
 	// Socket is based on The WebSocket API
 	function socket(url, options) {
-		var // Transport
+		var // Socket id,
+			id,
+			// Transport
 			transport,
 			// Timeout
 			timeoutTimer,
@@ -113,7 +115,11 @@
 			temp = {},
 			// Socket object
 			self = {
-				// Original URL
+				// Returns the socket id
+				id: function() {
+					return id;
+				},
+				// Returns the given URL
 				url: function() {
 					return url;
 				},
@@ -200,7 +206,6 @@
 				open: function() {
 					var // From jQuery.ajax
 						rurl = /^([\w\+\.\-]+:)(?:\/\/([^\/?#:]*)(?::(\d+))?)?/, 
-						id = self.options.id.call(self),
 						candidates = $.makeArray(self.options.transport),
 						query = {id: id, heartbeat: self.options.heartbeat || false},
 						type, url, parts;
@@ -218,7 +223,7 @@
 					
 					// Chooses transport
 					transport = undefined;
-					self.data({id: id, candidates: candidates});
+					self.data("candidates", candidates);
 					
 					while (candidates.length) {
 						type = query.transport = candidates.shift();
@@ -259,7 +264,7 @@
 						
 						transport.send(transport.noOutbound || isBinary(data) ? 
 							data : 
-							self.options.outbound.call(self, {socket: self.data("id"), type: event, data: data}));
+							self.options.outbound.call(self, {socket: id, type: event, data: data}));
 					}
 					
 					return this;
@@ -290,6 +295,8 @@
 					return $.socket(url + "/" + name, {transport: "sub", event: name, source: url});
 				}
 			};
+		
+		id = self.options.id.call(self);
 		
 		$.each(socketEvents, function(i, type) {
 			// Creates event helper
@@ -426,6 +433,7 @@
 			});
 		},
 		url: function(url, query) {
+			query._ = $.now();			
 			return url + (/\?/.test(url) ? "&" : "?") + $.param(query);
 		},
 		inbound: function(data) {
