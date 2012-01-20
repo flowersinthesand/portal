@@ -207,7 +207,7 @@
 					
 					// Cancels the scheduled connection
 					if (reconnectTimer) {
-						clearTimeout(reconnectTimer);
+						reconnectTimer = clearTimeout(reconnectTimer);
 					}
 					
 					// Resets temporal object and event helpers
@@ -270,7 +270,7 @@
 					if (!reason) {
 						self.options.reconnect = false;
 						if (reconnectTimer) {
-							clearTimeout(reconnectTimer);
+							reconnectTimer = clearTimeout(reconnectTimer);
 						}
 					}
 					
@@ -342,7 +342,7 @@
 			
 			// Clears timeout timer
 			if (timeoutTimer) {
-				clearTimeout(timeoutTimer);
+				timeoutTimer = clearTimeout(timeoutTimer);
 			}
 			
 			// Sets heartbeat timer
@@ -368,10 +368,10 @@
 			
 			// Clears timers
 			if (timeoutTimer) {
-				clearTimeout(timeoutTimer);
+				timeoutTimer = clearTimeout(timeoutTimer);
 			}
 			if (heartbeatTimer) {
-				clearTimeout(heartbeatTimer);
+				heartbeatTimer = clearTimeout(heartbeatTimer);
 			}
 			
 			// Disables event whose order is lower than close event
