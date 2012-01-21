@@ -437,7 +437,7 @@
 			});
 		},
 		url: function(url, query) {
-			query._ = $.now();			
+			query._ = $.now();
 			return url + (/\?/.test(url) ? "&" : "?") + $.param(query);
 		},
 		inbound: function(data) {
@@ -542,7 +542,7 @@
 			if (!WebSocket) {
 				return;
 			}
-
+			
 			return {
 				hasCloseFeedback: true,
 				open: function() {
@@ -722,7 +722,7 @@
 						stop = iterate(function() {
 							var clone = response.cloneNode(true), 
 								text;
-
+							
 							clone.appendChild(cdoc.createTextNode("."));
 							text = clone.innerText;
 							text = text.substring(0, text.length - 1);
@@ -731,7 +731,7 @@
 								response.innerText = "";
 								socket.notify(text, true);
 							}
-	
+							
 							if (cdoc.readyState === "complete") {
 								socket.fire("close", ["done"]);
 								return false;

@@ -1409,7 +1409,7 @@ if (!isLocal) {
 		
 		testTransport(transport, fn);
 	});
-
+	
 	module("Transport Server-Sent Events", {
 		setup: function() {
 			setup();
@@ -1433,7 +1433,7 @@ if (!isLocal) {
 			});
 		});
 	});
-
+	
 	module("Transport Long Polling", {
 		setup: function() {
 			setup();
