@@ -1167,7 +1167,7 @@ test("effective url should contain id, transport and heartbeat as query string p
 	
 	strictEqual(param(url, "id"), $.socket().id());
 	strictEqual(param(url, "transport"), $.socket().data("transport"));
-	strictEqual(param(url, "heartbeat"), "" + ($.socket().options.heartbeat || false));
+	strictEqual(param(url, "heartbeat"), String($.socket().options.heartbeat || false));
 });
 
 test("a final data to be sent to the server should be a JSON string representing a event object", function() {
