@@ -206,7 +206,7 @@
 				open: function() {
 					var candidates = $.makeArray(self.options.transport),
 						query = {id: id, heartbeat: self.options.heartbeat || false},
-						type, u;
+						type;
 					
 					// Cancels the scheduled connection
 					if (reconnectTimer) {
@@ -228,8 +228,7 @@
 						
 						if (transports[type]) {
 							query.transport = type;
-							u = self.options.url.call(self, url, query);
-							transport = transports[type](self.data("url", u));
+							transport = transports[type](self.data("url", self.options.url.call(self, url, query)));
 							
 							if (transport) {
 								// Fires connecting event
