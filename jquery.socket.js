@@ -204,11 +204,9 @@
 				},
 				// Establishes a connection
 				open: function() {
-					var // From jQuery.ajax
-						rurl = /^([\w\+\.\-]+:)(?:\/\/([^\/?#:]*)(?::(\d+))?)?/, 
-						candidates = $.makeArray(self.options.transport),
+					var candidates = $.makeArray(self.options.transport),
 						query = {id: id, heartbeat: self.options.heartbeat || false},
-						type, u, parts;
+						type, u;
 					
 					// Cancels the scheduled connection
 					if (reconnectTimer) {
@@ -231,15 +229,7 @@
 						if (transports[type]) {
 							query.transport = type;
 							u = self.options.url.call(self, url, query);
-							parts = rurl.exec(u.toLowerCase());
-							transport = transports[type](self.data({
-								url: u,
-								crossDomain: !!(parts && 
-									// protocol and hostname
-									(parts[1] != location.protocol || parts[2] != location.hostname ||
-									// port
-									(parts[3] || (parts[1] === "http:" ? 80 : 443)) != (location.port || (location.protocol === "http:" ? 80 : 443))))
-							}));
+							transport = transports[type](self.data("url", u));
 							
 							if (transport) {
 								// Fires connecting event
@@ -298,9 +288,16 @@
 				find: function(name) {
 					return $.socket(url + "/" + name, {transport: "sub", event: name, source: url});
 				}
-			};
+			},
+			// From jQuery.ajax
+			parts = /^([\w\+\.\-]+:)(?:\/\/([^\/?#:]*)(?::(\d+))?)?/.exec(url.toLowerCase());
 		
 		id = self.options.id.call(self);
+		self.options.crossDomain = !!(parts && 
+			// protocol and hostname
+			(parts[1] != location.protocol || parts[2] != location.hostname ||
+			// port
+			(parts[3] || (parts[1] === "http:" ? 80 : 443)) != (location.port || (location.protocol === "http:" ? 80 : 443))));
 		
 		$.each(socketEvents, function(i, type) {
 			// Creates event helper
@@ -587,7 +584,7 @@
 				}
 			}
 			
-			send = !socket.data("crossDomain") || (socket.data("crossDomain") && $.support.cors) ? 
+			send = !socket.options.crossDomain || (socket.options.crossDomain && $.support.cors) ? 
 			function(url, data) {
 				$.ajax(url, {type: "POST", data: "data=" + data, async: true, timeout: 0}).always(post);
 			} : window.XDomainRequest && socket.options.xdrURL ? 
@@ -634,7 +631,7 @@
 				xhr, aborted;
 			
 			if (!XMLHttpRequest || window.XDomainRequest || window.ActiveXObject || 
-					($.browser.android && $.browser.webkit) || (socket.data("crossDomain") && !$.support.cors)) {
+					($.browser.android && $.browser.webkit) || (socket.options.crossDomain && !$.support.cors)) {
 				return;
 			}
 			
@@ -686,7 +683,7 @@
 			var ActiveXObject = window.ActiveXObject,
 				doc, stop;
 			
-			if (!ActiveXObject || socket.data("crossDomain")) {
+			if (!ActiveXObject || socket.options.crossDomain) {
 				return;
 			}
 			
@@ -798,7 +795,7 @@
 			var EventSource = window.EventSource,
 				es;
 			
-			if (!EventSource || socket.data("crossDomain")) {
+			if (!EventSource || socket.options.crossDomain) {
 				return;
 			}
 			
@@ -832,7 +829,7 @@
 			var count = 1, url = socket.data("url"),
 				xhr;
 			
-			if (!$.support.ajax || (socket.data("crossDomain") && !$.support.cors)) {
+			if (!$.support.ajax || (socket.options.crossDomain && !$.support.cors)) {
 				return;
 			}
 			
