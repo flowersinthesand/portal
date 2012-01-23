@@ -501,8 +501,7 @@
 			return {
 				noOutbound: true,
 				open: function() {
-					socket.options.timeout = 0;
-					socket.options.reconnect = false;
+					socket.options.timeout = socket.options.heartbeat = socket.options.reconnect = false;
 					
 					if (!socket.options.init) {
 						socket.options.init = true;
