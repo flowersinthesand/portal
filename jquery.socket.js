@@ -255,9 +255,7 @@
 							event = "message";
 						}
 						
-						transport.send(transport.noOutbound || isBinary(data) ? 
-							data : 
-							self.options.outbound.call(self, {socket: id, type: event, data: data}));
+						transport.send(isBinary(data) ? data : self.options.outbound.call(self, {socket: id, type: event, data: data}));
 					}
 					
 					return this;
@@ -499,9 +497,11 @@
 				source = $.socket(socket.options.source);
 			
 			return {
-				noOutbound: true,
 				open: function() {
 					socket.options.timeout = socket.options.heartbeat = socket.options.reconnect = false;
+					socket.options.outbound = function(event) {
+						return event.data;
+					};
 					
 					if (!socket.options.init) {
 						socket.options.init = true;
