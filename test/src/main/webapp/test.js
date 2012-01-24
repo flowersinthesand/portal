@@ -1236,7 +1236,7 @@ test("chunks for streaming should accord with the event stream format", function
 function testTransport(transport, fn) {
 	var url = "/jquery-socket-test/echo";
 	
-	if ((transport === "ws" && !window.WebSocket) || 
+	if ((transport === "ws" && !window.WebSocket && !window.MozWebSocket) || 
 		(transport === "sse" && !window.EventSource) || 
 		(transport === "streamxhr" && (!window.XMLHttpRequest || window.ActiveXObject || window.XDomainRequest || ($.browser.android && $.browser.webkit))) || 
 		(transport === "streamiframe" && !window.ActiveXObject) || 
