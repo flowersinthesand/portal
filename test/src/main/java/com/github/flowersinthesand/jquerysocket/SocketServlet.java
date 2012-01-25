@@ -2,8 +2,6 @@ package com.github.flowersinthesand.jquerysocket;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -14,30 +12,27 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 @SuppressWarnings("serial")
-public abstract class SocketServlet extends HttpServlet {
-
-	protected ConcurrentMap<String, Socket> sockets = new ConcurrentHashMap<String, Socket>();
-
+public abstract class SocketServlet extends HttpServlet implements SocketAcceptor {
+	
+	protected Sockets sockets = new Sockets();
+	
+	@Override
+	public void init() throws ServletException {
+		sockets.setAcceptor(this);
+	}
+	
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		boolean pollIntermission = sockets.containsKey(request.getParameter("id"));
+		boolean hasOldSocket = sockets.has(request.getParameter("id"));
 		
-		final ServletSocket socket = pollIntermission ? (ServletSocket) sockets.get(request.getParameter("id")) : new ServletSocket();
+		final Socket socket = hasOldSocket ? sockets.get(request.getParameter("id")) : new ServletSocket();
 		socket.data().put("request", request);
 		socket.data().put("response", response);
 		socket.open();
 		
-		if (pollIntermission) {
-			return;
+		if (!hasOldSocket) {
+			sockets.add(socket);
 		}
-		
-		sockets.put(socket.id(), socket.on("close", new Socket.EventHandler<Object>() {
-			@Override
-			public void handle(Object data) {
-				sockets.remove(socket.id());
-			}
-		}));
-		doSocketConnect(request, socket);
 	}
 	
 	@Override
@@ -47,11 +42,9 @@ public abstract class SocketServlet extends HttpServlet {
 		String json = request.getReader().readLine().substring("data=".length());
 		Map<String, Object> event = new Gson().fromJson(json, new TypeToken<Map<String, Object>>() {}.getType());
 		
-		if (sockets.containsKey(event.get("socket"))) {
-			sockets.get(event.get("socket")).fire((String) event.get("type"), event.get("data"));
+		if (sockets.has((String) event.get("socket"))) {
+			sockets.get((String) event.get("socket")).fire((String) event.get("type"), event.get("data"));
 		}
 	}
-	
-	public abstract void doSocketConnect(HttpServletRequest request, Socket socket);
 	
 }

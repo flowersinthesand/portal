@@ -22,7 +22,7 @@ public class EchoServlet extends JettySocketServlet {
 	private static final long serialVersionUID = 4437311371784508862L;
 
 	@Override
-	public void doSocketConnect(HttpServletRequest request, final Socket socket) {
+	public void doSocketConnect(final Socket socket) {
 		socket.on("message", new Socket.EventHandler<Object>() {
 			@Override
 			public void handle(Object data) {
@@ -30,6 +30,7 @@ public class EchoServlet extends JettySocketServlet {
 			}
 		});
 
+		HttpServletRequest request = (HttpServletRequest) socket.data().get("request");
 		if (Boolean.valueOf(request.getParameter("close"))) {
 			new Timer().schedule(new TimerTask() {
 				@Override
