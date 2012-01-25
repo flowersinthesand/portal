@@ -1,5 +1,7 @@
 package com.github.flowersinthesand.jquerysocket;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -24,6 +26,10 @@ public class Sockets {
 
 	public Socket get(String id) {
 		return instances.get(id);
+	}
+	
+	public List<Socket> getAll() {
+		return new ArrayList<Socket>(instances.values());
 	}
 
 	public void remove(String id) {
