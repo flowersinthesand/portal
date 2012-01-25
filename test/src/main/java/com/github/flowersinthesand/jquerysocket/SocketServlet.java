@@ -23,8 +23,8 @@ public abstract class SocketServlet extends HttpServlet {
 		boolean pollIntermission = sockets.containsKey(request.getParameter("id"));
 		
 		final ServletSocket socket = pollIntermission ? (ServletSocket) sockets.get(request.getParameter("id")) : new ServletSocket();
-		socket.setRequest(request);
-		socket.setResponse(response);
+		socket.data().put("request", request);
+		socket.data().put("response", response);
 		socket.open();
 		
 		if (pollIntermission) {

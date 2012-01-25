@@ -13,12 +13,16 @@ import com.google.gson.reflect.TypeToken;
 
 public class JettySocket extends AbstractSocket {
 
-	private HttpServletRequest request;
 	private WebSocket webSocket;
 	private Connection connection;
 
 	@Override
 	public Socket open() {
+		HttpServletRequest request = (HttpServletRequest) data.get("request");
+		
+		data.put("id", request.getParameter("id"));
+		data.put("heartbeat", request.getParameter("heartbeat"));
+		
 		webSocket = new WebSocket.OnTextMessage() {
 			@Override
 			public void onOpen(Connection c) {
@@ -56,17 +60,7 @@ public class JettySocket extends AbstractSocket {
 		connection.close();
 		return this;
 	}
-
-	public HttpServletRequest getRequest() {
-		return request;
-	}
-
-	public void setRequest(HttpServletRequest request) {
-		this.request = request;
-		params.put("id", request.getParameter("id"));
-		params.put("heartbeat", request.getParameter("heartbeat"));
-	}
-
+	
 	public WebSocket getWebSocket() {
 		return webSocket;
 	}

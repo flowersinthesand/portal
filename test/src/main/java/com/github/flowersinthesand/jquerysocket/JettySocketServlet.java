@@ -25,8 +25,8 @@ public abstract class JettySocketServlet extends WebSocketServlet {
 		boolean pollIntermission = sockets.containsKey(request.getParameter("id"));
 		
 		final ServletSocket socket = pollIntermission ? (ServletSocket) sockets.get(request.getParameter("id")) : new ServletSocket();
-		socket.setRequest(request);
-		socket.setResponse(response);
+		socket.data().put("request", request);
+		socket.data().put("response", response);
 		socket.open();
 		
 		if (pollIntermission) {
@@ -57,7 +57,7 @@ public abstract class JettySocketServlet extends WebSocketServlet {
 	@Override
 	public WebSocket doWebSocketConnect(HttpServletRequest request, String protocol) {
 		final JettySocket socket = new JettySocket();
-		socket.setRequest(request);
+		socket.data().put("request", request);
 		socket.open();
 
 		sockets.put(socket.id(), socket.on("close", new Socket.EventHandler<Object>() {

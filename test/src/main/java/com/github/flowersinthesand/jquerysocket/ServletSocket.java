@@ -17,13 +17,18 @@ import com.google.gson.Gson;
 
 public class ServletSocket extends AbstractSocket {
 
-	private HttpServletRequest request;
-	private HttpServletResponse response;
+	private String transport;
 	private AsyncContext asyncContext;
 	private Timer longPollTimer;
 
 	@Override
-	public Socket open() {		
+	public Socket open() {
+		HttpServletRequest request = (HttpServletRequest) data.get("request");
+		
+		data.put("id", request.getParameter("id"));
+		data.put("transport", request.getParameter("transport"));
+		data.put("heartbeat", request.getParameter("heartbeat"));
+		
 		asyncContext = request.startAsync();
 		asyncContext.addListener(new AsyncListener() {
 			public void onComplete(AsyncEvent event) throws IOException {
@@ -61,12 +66,13 @@ public class ServletSocket extends AbstractSocket {
 		});
 
 		try {
-			new Long(params.get("heartbeat"));
+			new Long((String) data.get("heartbeat"));
 			asyncContext.setTimeout(0);
 		} catch (Exception e) {
 		}
 
-		String transport = params.get("transport");
+		transport = (String) data.get("transport");
+		HttpServletResponse response = (HttpServletResponse) data.get("response");
 		
 		response.setContentType("text/" + (transport.equals("longpolljsonp") ? "javascript" : transport.equals("sse") ? "event-stream" : "plain"));
 		response.setCharacterEncoding("utf-8");
@@ -74,7 +80,7 @@ public class ServletSocket extends AbstractSocket {
 		
 		if (transport.equals("longpollxhr") || transport.equals("longpollxdr") || transport.equals("longpolljsonp")) {
 			if (transport.equals("longpolljsonp")) {
-				params.put("jsonpCallback", request.getParameter("callback"));
+				data.put("jsonpCallback", request.getParameter("callback"));
 			}
 			if (longPollTimer != null) {
 				longPollTimer.cancel();
@@ -110,12 +116,11 @@ public class ServletSocket extends AbstractSocket {
 	}
 	
 	@Override
-	protected void transmit(String data) throws IOException {
+	protected void transmit(String dat) throws IOException {
 		PrintWriter writer = asyncContext.getResponse().getWriter();
-		writer.print(format(data));
+		writer.print(format(dat));
 		writer.flush();
 
-		String transport = params.get("transport");
 		if (transport.equals("longpollxhr") || transport.equals("longpollxdr") || transport.equals("longpolljsonp")) {
 			asyncContext.complete();
 			asyncContext = null;
@@ -123,13 +128,12 @@ public class ServletSocket extends AbstractSocket {
 	}
 
 	protected String format(String string) {
-		String transport = params.get("transport");
 		StringBuilder builder = new StringBuilder();
 
 		if ("longpollxhr".equals(transport) || "longpollxdr".equals(transport)) {
 			builder.append(string);
 		} else if ("longpolljsonp".equals(transport)) {
-			builder.append(params.get("jsonpCallback")).append("(").append(new Gson().toJson(string)).append(")");
+			builder.append(data.get("jsonpCallback")).append("(").append(new Gson().toJson(string)).append(")");
 		} else if (transport.equals("streamiframe") || transport.equals("streamxdr") || transport.equals("streamxhr") || transport.equals("sse")) {
 			for (String data : string.split("\r\n|\r|\n")) {
 				builder.append("data: ").append(data).append("\n");
@@ -155,24 +159,5 @@ public class ServletSocket extends AbstractSocket {
 		
 		return this;
 	}
-
-	public HttpServletRequest getRequest() {
-		return request;
-	}
-
-	public void setRequest(HttpServletRequest request) {
-		this.request = request;
-		params.put("id", request.getParameter("id"));
-		params.put("transport", request.getParameter("transport"));
-		params.put("heartbeat", request.getParameter("heartbeat"));
-	}
-
-	public HttpServletResponse getResponse() {
-		return response;
-	}
-
-	public void setResponse(HttpServletResponse response) {
-		this.response = response;
-	}
-
+	
 }

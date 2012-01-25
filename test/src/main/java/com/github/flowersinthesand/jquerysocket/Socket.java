@@ -1,5 +1,7 @@
 package com.github.flowersinthesand.jquerysocket;
 
+import java.util.Map;
+
 //TODO move to jquery-socket-servlet
 public interface Socket {
 
@@ -20,6 +22,8 @@ public interface Socket {
 	Socket send(String type, Object data);
 
 	Socket close();
+	
+	Map<String, Object> data();
 
 	interface EventHandler<T> {
 		void handle(T data);

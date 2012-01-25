@@ -16,7 +16,7 @@ public abstract class AbstractSocket implements Socket {
 	@SuppressWarnings("rawtypes")
 	protected ConcurrentHashMap<String, ConcurrentLinkedQueue<Socket.EventHandler>> events = new ConcurrentHashMap<String, ConcurrentLinkedQueue<EventHandler>>();
 	protected CopyOnWriteArrayList<Map<String, Object>> buffer = new CopyOnWriteArrayList<Map<String, Object>>();
-	protected Map<String, String> params = new LinkedHashMap<String, String>();
+	protected Map<String, Object> data = new LinkedHashMap<String, Object>();
 
 	public AbstractSocket() {
 		final Socket socket = this;
@@ -39,9 +39,9 @@ public abstract class AbstractSocket implements Socket {
 			private Timer heartbeatTimer;
 
 			@Override
-			public void handle(Object data) {
+			public void handle(Object _) {
 				try {
-					heartbeat = new Long(params.get("heartbeat"));
+					heartbeat = new Long((String) data.get("heartbeat"));
 					setHeartbeatTimer();
 					
 					socket.on("heartbeat", new Socket.EventHandler<Object>() {
@@ -76,7 +76,7 @@ public abstract class AbstractSocket implements Socket {
 	
 	@Override
 	public String id() {
-		return params.get("id");
+		return (String) data.get("id");
 	}
 
 	@Override
@@ -153,6 +153,11 @@ public abstract class AbstractSocket implements Socket {
 	protected abstract boolean sendable();
 	
 	protected abstract void transmit(String data) throws IOException;
+	
+	@Override
+	public Map<String, Object> data() {
+		return data;
+	}
 	
 	@Override
 	public String toString() {
