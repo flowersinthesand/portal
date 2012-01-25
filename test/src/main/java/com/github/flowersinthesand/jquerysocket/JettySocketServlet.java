@@ -26,16 +26,20 @@ public abstract class JettySocketServlet extends WebSocketServlet implements Soc
 	
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		boolean hasOldSocket = sockets.has(request.getParameter("id"));
+		if (sockets.has(request.getParameter("id"))) {
+			Socket socket = sockets.get(request.getParameter("id")) ;
+			socket.data().put("request", request);
+			socket.data().put("response", response);
+			socket.open();
+			return;
+		}
 		
-		final Socket socket = hasOldSocket ? sockets.get(request.getParameter("id")) : new ServletSocket();
+		final Socket socket = new ServletSocket();
 		socket.data().put("request", request);
 		socket.data().put("response", response);
 		socket.open();
 		
-		if (!hasOldSocket) {
-			sockets.add(socket);
-		}
+		sockets.add(socket);
 	}
 	
 	@Override
