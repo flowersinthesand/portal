@@ -191,12 +191,8 @@ test("find method should find a sub socket", function() {
 
 test("data method should set and get a value", function() {
 	strictEqual($.socket("url").data("string", "value"), $.socket());
-	strictEqual($.socket("url").data({number: 1, fn: $.noop}), $.socket());
-	
 	strictEqual($.socket("url").data("boolean"), null);
 	strictEqual($.socket("url").data("string"), "value");
-	strictEqual($.socket("url").data("number"), 1);
-	strictEqual($.socket("url").data().fn, $.noop);
 });
 
 test("data method should be reset when open method has been called", function() {

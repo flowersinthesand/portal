@@ -127,8 +127,13 @@
 				options: $.extend(true, {}, defaults, options),
 				// Gets or sets a connection scope value
 				data: function(key, value) {
-					var ret = $(temp).data(key, value);
-					return (ret && ret[0]) === temp ? this : ret || null;
+					if (value === undefined) {
+						return temp[key] || null;
+					}
+					
+					temp[key] = value;
+					
+					return this;
 				},
 				// Returns the state
 				state: function() {
