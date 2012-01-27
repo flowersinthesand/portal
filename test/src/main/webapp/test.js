@@ -196,7 +196,7 @@ test("data method should set and get a value", function() {
 });
 
 test("data method should be reset when open method has been called", function() {
-	notStrictEqual($.socket("url").data(), $.socket("url").open().data());
+	ok(!$.socket("url").data("key", "value").open().data("key"));
 });
 
 module("Transport", {
