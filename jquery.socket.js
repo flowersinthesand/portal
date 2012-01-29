@@ -210,7 +210,7 @@
 				// Establishes a connection
 				open: function() {
 					var candidates = $.makeArray(self.options.transport),
-						query = {id: id, heartbeat: self.options.heartbeat || false},
+						params = {id: id, heartbeat: self.options.heartbeat || false},
 						type;
 					
 					// Cancels the scheduled connection
@@ -233,8 +233,8 @@
 						type = candidates.shift();
 						
 						if (transports[type]) {
-							query.transport = type;
-							transport = transports[type](self.data("url", self.options.url.call(self, url, query)));
+							params.transport = type;
+							transport = transports[type](self.data("url", self.options.url.call(self, url, params)));
 							
 							if (transport) {
 								// Fires connecting event
@@ -440,9 +440,9 @@
 			    return v.toString(16);
 			});
 		},
-		url: function(url, query) {
-			query._ = $.now();
-			return url + (/\?/.test(url) ? "&" : "?") + $.param(query);
+		url: function(url, params) {
+			params._ = $.now();
+			return url + (/\?/.test(url) ? "&" : "?") + $.param(params);
 		},
 		inbound: function(data) {
 			return $.parseJSON(data);

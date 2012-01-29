@@ -962,10 +962,10 @@ test("url used for connection should be exposed by data('url')", function() {
 	ok($.socket("url").data("url"));
 });
 
-test("url handler should receive the original url and the query object and return a url to be used to establish a connection", function() {
-	$.socket.defaults.url = function(url, query) {
+test("url handler should receive the original url and the parameters object and return a url to be used to establish a connection", function() {
+	$.socket.defaults.url = function(url, params) {
 		strictEqual(url, "url");
-		deepEqual(query, {id: this.id(), heartbeat: this.options.heartbeat || false, transport: "test"});
+		deepEqual(params, {id: this.id(), heartbeat: this.options.heartbeat || false, transport: "test"});
 		
 		return "modified";
 	};
