@@ -63,14 +63,6 @@ module("Socket object", {
 	teardown: teardown
 });
 
-test("id method should return the socket id", function() {
-	ok($.socket("url").id());
-});
-
-test("url method should return the given url", function() {
-	strictEqual($.socket("url").url(), "url");
-});
-
 test("options property should include the given options", function() {
 	$.socket("url", {version: $.fn.jquery});
 	strictEqual($.socket("url", {version: $.fn.jquery}).options.version, $.fn.jquery);
@@ -955,7 +947,7 @@ test("id handler should return a unique id within the server", function() {
 		return "flowersinthesand";
 	};
 	
-	strictEqual($.socket("url").id(), "flowersinthesand");
+	strictEqual($.socket("url").options._id, "flowersinthesand");
 });
 
 test("url used for connection should be exposed by data('url')", function() {
@@ -965,7 +957,7 @@ test("url used for connection should be exposed by data('url')", function() {
 test("url handler should receive the original url and the parameters object and return a url to be used to establish a connection", function() {
 	$.socket.defaults.url = function(url, params) {
 		strictEqual(url, "url");
-		deepEqual(params, {id: this.id(), heartbeat: this.options.heartbeat || false, transport: "test"});
+		deepEqual(params, {id: this.options._id, heartbeat: this.options.heartbeat || false, transport: "test"});
 		
 		return "modified";
 	};
@@ -975,7 +967,7 @@ test("url handler should receive the original url and the parameters object and 
 
 asyncTest("outbound handler should receive a event object and return a final data to be sent to the server", function() {
 	$.socket.defaults.outbound = function(event) {
-		deepEqual(event, {socket: this.id(), type: "message", data: "data"});
+		deepEqual(event, {socket: this.options._id, type: "message", data: "data"});
 		return $.stringifyJSON(event);
 	};
 	
@@ -1059,17 +1051,17 @@ asyncTest("event object should contain a event type and optional data property",
 		var self = this;
 		
 		outbound = function(event) {
-			deepEqual(event, {socket: self.id(), type: "message", data: {key: "value"}});
+			deepEqual(event, {socket: self.options._id, type: "message", data: {key: "value"}});
 		};
 		this.send({key: "value"});
 		
 		outbound = function(event) {
-			deepEqual(event, {socket: self.id(), type: "chat", data: "data"});
+			deepEqual(event, {socket: self.options._id, type: "chat", data: "data"});
 		};
 		this.send("chat", "data");
 		
 		outbound = function(event) {
-			deepEqual(event, {socket: self.id(), type: "news", data: "data"});
+			deepEqual(event, {socket: self.options._id, type: "news", data: "data"});
 		};
 		this.find("news").send("data");
 		
@@ -1161,7 +1153,7 @@ module("Protocol default", {
 test("effective url should contain id, transport and heartbeat as query string parameters", function() {
 	var url = $.socket("url").data("url");
 	
-	strictEqual(param(url, "id"), $.socket().id());
+	strictEqual(param(url, "id"), $.socket().options._id);
 	strictEqual(param(url, "transport"), $.socket().data("transport"));
 	strictEqual(param(url, "heartbeat"), String($.socket().options.heartbeat || false));
 });
@@ -1174,7 +1166,7 @@ test("a final data to be sent to the server should be a JSON string representing
 			},
 			send: function(data) {
 				try {
-					deepEqual($.parseJSON(data), {type: "message", data: "data", socket: socket.id()});
+					deepEqual($.parseJSON(data), {type: "message", data: "data", socket: socket.options._id});
 				} catch (e) {
 					ok(false);
 				}

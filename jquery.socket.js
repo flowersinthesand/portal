@@ -115,14 +115,6 @@
 			temp = {},
 			// Socket object
 			self = {
-				// Returns the socket id
-				id: function() {
-					return id;
-				},
-				// Returns the given URL
-				url: function() {
-					return url;
-				},
 				// Final options object
 				options: $.extend(true, {}, defaults, options),
 				// Gets or sets a connection scope value
@@ -296,7 +288,8 @@
 			// From jQuery.ajax
 			parts = /^([\w\+\.\-]+:)(?:\/\/([^\/?#:]*)(?::(\d+))?)?/.exec(url.toLowerCase());
 		
-		id = self.options.id.call(self);
+		self.options._url = url;
+		id = self.options._id = self.options.id.call(self);
 		self.options.crossDomain = !!(parts && 
 			// protocol and hostname
 			(parts[1] != location.protocol || parts[2] != location.hostname ||
@@ -586,7 +579,7 @@
 			
 			function post() {
 				if (queue.length) {
-					send(socket.url(), queue.shift());
+					send(socket.options._url, queue.shift());
 				} else {
 					sending = false;
 				}
