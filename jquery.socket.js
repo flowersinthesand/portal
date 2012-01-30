@@ -559,7 +559,7 @@
 						socket.data("event", event).fire("close", ["error"]);
 					};
 					ws.onclose = function(event) {
-						socket.data("event", event).fire.call(socket, "close", [event.wasClean ? "done" : aborted ? "close" : "error"]);
+						socket.data("event", event).fire.call(socket, "close", [aborted ? "close" : event.wasClean  ? "done" : "error"]);
 					};
 				},
 				send: function(data) {
@@ -666,7 +666,7 @@
 								stop();
 							}
 							
-							socket.fire.call(socket, "close", [xhr.status === 200 ? "done" : aborted ? "close" : "error"]);
+							socket.fire.call(socket, "close", [aborted ? "close" : xhr.status === 200  ? "done" : "error"]);
 						}
 					};
 					
