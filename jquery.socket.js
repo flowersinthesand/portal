@@ -454,7 +454,7 @@
 			case "PHPSESSID":
 				return url.replace(/\?PHPSESSID=[^&]*&?|\?|$/, "?PHPSESSID=" + match[2] + "&").replace(/&$/, "");
 			default:
-				return url;
+				return false;
 			}
 		},
 		chunkParser: function(chunk) {
@@ -588,7 +588,7 @@
 			send = !socket.options.crossDomain || (socket.options.crossDomain && $.support.cors) ? 
 			function(url, data) {
 				$.ajax(url, {type: "POST", data: "data=" + data, async: true, timeout: 0}).always(post);
-			} : window.XDomainRequest && socket.options.xdrURL ? 
+			} : window.XDomainRequest && socket.options.xdrURL && (socket.options.xdrURL.call(socket, "") !== false) ? 
 			function(url, data) {
 				var xdr = new window.XDomainRequest();
 				
@@ -753,7 +753,7 @@
 			var XDomainRequest = window.XDomainRequest,
 				xdr;
 			
-			if (!XDomainRequest || !socket.options.xdrURL) {
+			if (!XDomainRequest || !socket.options.xdrURL || (socket.options.xdrURL.call(socket, "") === false)) {
 				return;
 			}
 			
@@ -867,7 +867,7 @@
 			var XDomainRequest = window.XDomainRequest, count = 1, url = socket.data("url"), 
 				xdr;
 			
-			if (!XDomainRequest || !socket.options.xdrURL) {
+			if (!XDomainRequest || !socket.options.xdrURL || (socket.options.xdrURL.call(socket, "") === false)) {
 				return;
 			}
 			

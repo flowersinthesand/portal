@@ -1378,6 +1378,15 @@ if (!isLocal) {
 					start();
 				});
 			});
+			test("xdrURL which returns false should stop streamxdr transport", function() {
+				$.socket.defaults.xdrURL = function() {
+					return false;
+				};
+				$.socket(url).close(function(reason) {
+					strictEqual(reason, "notransport");
+					start();
+				});
+			});
 		},
 		streamiframe: $.noop,
 		streamxhr: $.noop
@@ -1388,9 +1397,9 @@ if (!isLocal) {
 			setup: function() {
 				setup();
 				$.socket.defaults.transport = transport;
-				if (transport !== "streamxdr") {
-					$.socket.defaults.xdrURL = false;
-				}
+				$.socket.defaults.xdrURL = transport !== "streamxdr" ? false : function(url) {
+					return url;
+				};
 			},
 			teardown: teardown
 		});
@@ -1458,6 +1467,15 @@ if (!isLocal) {
 					start();
 				});
 			});
+			test("xdrURL which is false should stop longpollxdr transport", function() {
+				$.socket.defaults.xdrURL = function() {
+					return false;
+				};
+				$.socket(url).close(function(reason) {
+					strictEqual(reason, "notransport");
+					start();
+				});
+			});
 		}, 
 		longpolljsonp: function(url) {
 			test("window should have a function whose name is equals to data('url')'s callback parameter", function() {
@@ -1471,9 +1489,9 @@ if (!isLocal) {
 			setup: function() {
 				setup();
 				$.socket.defaults.transport = transport;
-				if (transport !== "longpollxdr") {
-					$.socket.defaults.xdrURL = false;
-				}
+				$.socket.defaults.xdrURL = transport !== "longpollxdr" ? false : function(url) {
+					return url;
+				};
 			},
 			teardown: teardown
 		});
