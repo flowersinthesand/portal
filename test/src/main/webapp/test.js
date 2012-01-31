@@ -1229,13 +1229,13 @@ function testTransport(transport, fn) {
 		(transport === "streamxhr" && (!window.XMLHttpRequest || window.ActiveXObject || window.XDomainRequest || ($.browser.android && $.browser.webkit))) || 
 		(transport === "streamiframe" && !window.ActiveXObject) || 
 		(transport === "streamxdr" && !window.XDomainRequest) ||
-		(transport === "longpollxhr" && !$.support.ajax) ||
+		(transport === "longpollajax" && !$.support.ajax) ||
 		(transport === "longpollxdr" && !window.XDomainRequest)) {
 		return;
 	}
 	
 	if (QUnit.urlParams.crossdomain) {
-		if (/sse|streamiframe/.test(transport) || (/streamxhr|longpollxhr/.test(transport) && !$.support.cors)) {
+		if (/sse|streamiframe/.test(transport) || (/streamxhr|longpollajax/.test(transport) && !$.support.cors)) {
 			return;
 		}
 		
@@ -1442,7 +1442,7 @@ if (!isLocal) {
 	test("longpoll transport should execute real transports", function() {
 		var result = "";
 		
-		$.socket.transports.longpollxhr = function() {
+		$.socket.transports.longpollajax = function() {
 			result += "A";
 		};
 		$.socket.transports.longpollxdr = function() {
@@ -1458,7 +1458,7 @@ if (!isLocal) {
 	});
 	
 	$.each({
-		longpollxhr: $.noop,
+		longpollajax: $.noop,
 		longpollxdr: function(url) {
 			test("xdrURL which is false should stop longpollxdr transport", function() {
 				$.socket.defaults.xdrURL = false;
@@ -1483,7 +1483,7 @@ if (!isLocal) {
 			});
 		}
 	}, function(transport, fn) {
-		var transportName = ({longpollxhr: "XMLHttpRequest", longpollxdr: "XDomainRequest", longpolljsonp: "JSONP"})[transport];
+		var transportName = ({longpollajax: "AJAX", longpollxdr: "XDomainRequest", longpolljsonp: "JSONP"})[transport];
 		
 		module("Transport HTTP Long Polling - " + transportName, {
 			setup: function() {

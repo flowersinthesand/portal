@@ -823,10 +823,10 @@
 		},
 		// Long Polling facade
 		longpoll: function(socket) {
-			socket.data("candidates").unshift("longpollxhr", "longpollxdr", "longpolljsonp");
+			socket.data("candidates").unshift("longpollajax", "longpollxdr", "longpolljsonp");
 		},
-		// Long Polling - XMLHttpRequest
-		longpollxhr: function(socket) {
+		// Long Polling - AJAX
+		longpollajax: function(socket) {
 			var count = 1, url = socket.data("url"),
 				xhr;
 			

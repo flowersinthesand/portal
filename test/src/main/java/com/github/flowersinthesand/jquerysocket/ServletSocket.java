@@ -51,7 +51,7 @@ public class ServletSocket extends AbstractSocket {
 				asyncContext = null;
 				
 				String tp = event.getAsyncContext().getRequest().getParameter("transport");
-				if (tp.equals("longpollxhr") || tp.equals("longpollxdr") || tp.equals("longpolljsonp")) {
+				if (tp.equals("longpollajax") || tp.equals("longpollxdr") || tp.equals("longpolljsonp")) {
 					longPollTimer = new Timer();
 					longPollTimer.schedule(new TimerTask() {
 						@Override
@@ -78,7 +78,7 @@ public class ServletSocket extends AbstractSocket {
 		response.setCharacterEncoding("utf-8");
 		response.setHeader("Access-Control-Allow-Origin", "*");
 		
-		if (transport.equals("longpollxhr") || transport.equals("longpollxdr") || transport.equals("longpolljsonp")) {
+		if (transport.equals("longpollajax") || transport.equals("longpollxdr") || transport.equals("longpolljsonp")) {
 			if (transport.equals("longpolljsonp")) {
 				data.put("jsonpCallback", request.getParameter("callback"));
 			}
@@ -121,7 +121,7 @@ public class ServletSocket extends AbstractSocket {
 		writer.print(format(dat));
 		writer.flush();
 
-		if (transport.equals("longpollxhr") || transport.equals("longpollxdr") || transport.equals("longpolljsonp")) {
+		if (transport.equals("longpollajax") || transport.equals("longpollxdr") || transport.equals("longpolljsonp")) {
 			asyncContext.complete();
 			asyncContext = null;
 		}
@@ -130,7 +130,7 @@ public class ServletSocket extends AbstractSocket {
 	protected String format(String string) {
 		StringBuilder builder = new StringBuilder();
 
-		if ("longpollxhr".equals(transport) || "longpollxdr".equals(transport)) {
+		if ("longpollajax".equals(transport) || "longpollxdr".equals(transport)) {
 			builder.append(string);
 		} else if ("longpolljsonp".equals(transport)) {
 			builder.append(data.get("jsonpCallback")).append("(").append(new Gson().toJson(string)).append(")");
