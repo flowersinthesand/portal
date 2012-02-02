@@ -556,7 +556,7 @@
 						socket.data("event", event).notify(event.data);
 					};
 					ws.onerror = function(event) {
-						socket.data("event", event).fire("close", ["error"]);
+						socket.data("event", event).fire("close", [aborted ? "close" : "error"]);
 					};
 					ws.onclose = function(event) {
 						socket.data("event", event).fire.call(socket, "close", [aborted ? "close" : event.wasClean  ? "done" : "error"]);
