@@ -420,8 +420,8 @@
 		timeout: 5000,
 		heartbeat: 20000,
 		_heartbeat: 5000,
-		reconnect: function(delay, attempts) {
-			return attempts > 1 ? 2 * delay : 0;
+		reconnect: function(lastDelay, attempts) {
+			return attempts > 1 ? 2 * lastDelay : 0;
 		},
 		_reconnect: 500,
 		id: function() {
