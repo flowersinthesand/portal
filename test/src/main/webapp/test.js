@@ -942,7 +942,7 @@ module("Reply", {
 	teardown: teardown
 });
 
-asyncTest("socket should send a reply event if the server waits the reply", function() {
+asyncTest("socket should send a reply event if the server requires to reply", function() {
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
