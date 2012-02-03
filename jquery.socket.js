@@ -105,6 +105,9 @@
 			state,
 			// Event helpers
 			events = {},
+			eventId = 0, 
+			// Reply callbacks
+			replyCallbacks = {},
 			// Buffer
 			buffer = [],
 			// Reconnection
@@ -195,6 +198,10 @@
 					for (i = 0; i < events.length; i++) {
 						event = events[i];
 						self.fire(event.type, [event.data]);
+						
+						if (event.reply) {
+							self.send("reply", {id: event.id, data: self.data("reply")}).data("reply", null);
+						}
 					}
 					
 					return this;
@@ -244,16 +251,19 @@
 					return this;
 				},
 				// Transmits event using the connection
-				send: function(event, data) {
+				send: function(event, data, callback) {
 					if (state !== "opened") {
 						buffer.push(arguments);
 					} else if (transport) {
-						if (data === undefined) {
+						if (data === undefined || $.isFunction(data)) {
+							callback = data;
 							data = event;
 							event = "message";
 						}
 						
-						transport.send(isBinary(data) ? data : self.options.outbound.call(self, {socket: id, type: event, data: data}));
+						eventId++;
+						replyCallbacks[eventId] = callback;
+						transport.send(isBinary(data) ? data : self.options.outbound.call(self, {id: eventId, socket: id, reply: !!callback, type: event, data: data}));
 					}
 					
 					return this;
@@ -405,6 +415,12 @@
 		})
 		.waiting(function() {
 			state = "waiting";
+		})
+		.on("reply", function(reply) {
+			if (replyCallbacks[reply.id]) {
+				replyCallbacks[reply.id].call(self, reply.data);
+				delete replyCallbacks[reply.id];
+			}
 		});
 		
 		return self.open();

@@ -14,50 +14,23 @@
 	$.socket.transports.test = function(socket) {
 		var // Is it accepted?
 			accepted,
-			// Connection event helper
-			connectionEvent;
+			// Connection object for the server
+			connection;
 		
 		return {
 			open: function() {
-				var // Heartbeat
+				var // Event id
+					eventId = 0,
+					// Reply callbacks
+					callbacks = {},
+					// Heartbeat
 					heartbeat,
 					heartbeatTimer,
-					// Connection object for the server
-					connection = {
-						send: function(event, data) {
-							setTimeout(function() {
-								if (accepted) {
-									if (data === undefined) {
-										data = event;
-										event = "message";
-									}
-									
-									socket.notify(isBinary(data) ? data : $.stringifyJSON({type: event, data: data}));
-								}
-							}, 5);
-							return this;
-						},
-						close: function() {
-							setTimeout(function() {
-								if (accepted) {
-									socket.fire("close", ["done"]);
-									connectionEvent.triggerHandler("close", [1000, null]);
-								}
-							}, 5);
-							return this;
-						},
-						on: function(type, fn) {
-							connectionEvent.on(type, function() {
-								fn.apply(connection, Array.prototype.slice.call(arguments, 1));
-							});
-							return this;
-						}
-					},
 					// Request object for the server
 					request = {
 						accept: function() {
 							accepted = true;
-							connectionEvent = connectionEvent || $({});
+							connection.event = connection.event || $({});
 							return connection;
 						},
 						reject: function() {
@@ -65,17 +38,45 @@
 						}
 					};
 				
-				function resetHeartbeatTimer() {
-					if (heartbeatTimer) {
-						clearTimeout(heartbeatTimer);
-					}
-					
-					heartbeatTimer = setTimeout(function() {
-						socket.close("error");
-					}, heartbeat);
-				}
+				connection = {
+					event: null,
+					send: function(event, data, callback) {
+						setTimeout(function() {
+							if (accepted) {
+								if (data === undefined || $.isFunction(data)) {
+									callback = data;
+									data = event;
+									event = "message";
+								}
+								
+								eventId++;
+								callbacks[eventId] = callback;
+								socket.notify(isBinary(data) ? data : $.stringifyJSON({id: eventId, reply: !!callback, type: event, data: data}));
+							}
+						}, 5);
+						return this;
+					},
+					close: function() {
+						setTimeout(function() {
+							if (accepted) {
+								socket.fire("close", ["done"]);
+								connection.event.triggerHandler("close", [1000, null]);
+							}
+						}, 5);
+						return this;
+					},
+					on: function(type, fn) {
+						connection.event.on(type, function() {
+							var result = fn.apply(connection, Array.prototype.slice.call(arguments, 1));
+							if (result !== undefined) {
+								connection.reply = result;
+							}
+						});
+						return this;
+					},
+					reply: null
+				};
 				
-				accepted = connectionEvent = undefined;
 				if (socket.options.server) {
 					socket.options.server(request);
 				}
@@ -85,9 +86,18 @@
 					case true:
 						heartbeat = param(socket.data("url"), "heartbeat");
 						if (heartbeat > 0) {
-							resetHeartbeatTimer();
-							connectionEvent.on("heartbeat", function() {
-								resetHeartbeatTimer();
+							heartbeatTimer = setTimeout(function() {
+								socket.close("error");
+							}, heartbeat);
+							
+							connection.on("heartbeat", function() {
+								if (heartbeatTimer) {
+									clearTimeout(heartbeatTimer);
+								}
+								
+								heartbeatTimer = setTimeout(function() {
+									socket.close("error");
+								}, heartbeat);
 								connection.send("heartbeat", null);
 							})
 							.on("close", function() {
@@ -98,7 +108,13 @@
 						}
 						
 						socket.fire("open");
-						connectionEvent.triggerHandler("open");
+						connection.on("reply", function(reply) {
+							if (callbacks[reply.id]) {
+								callbacks[reply.id].call(connection, reply.data);
+								delete callbacks[reply.id];
+							}
+						});
+						connection.event.triggerHandler("open");
 						break;
 					case false:
 						socket.fire("close", ["error"]);
@@ -110,14 +126,19 @@
 				setTimeout(function() {
 					if (accepted) {
 						var event = isBinary(data) ? {type: "message", data: data} : $.parseJSON(data);
-						connectionEvent.triggerHandler(event.type, [event.data]);
+						connection.event.triggerHandler(event.type, [event.data]);
+						
+						if (event.reply) {
+							connection.send("reply", {id: event.id, data: connection.reply});
+							connection.reply = null;
+						}
 					}
 				}, 5);
 			},
 			close: function() {
 				setTimeout(function() {
 					if (accepted) {
-						connectionEvent.triggerHandler("close");
+						connection.event.triggerHandler("close");
 					}
 				}, 5);
 			}

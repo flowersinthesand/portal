@@ -937,6 +937,60 @@ asyncTest("connection should be closed when the server makes no response to a he
 	});
 });
 
+module("Reply", {
+	setup: setup,
+	teardown: teardown
+});
+
+asyncTest("socket should send a reply event if the server waits the reply", function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("open", function() {
+				this.send("data", function() {
+					ok(true);
+					start();
+				});
+			});
+		}
+	});
+});
+
+asyncTest("reply event's data should be an object whose id property is an event id and data property is .data('reply')", 2, function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("open", function() {
+				this.send("data", function(reply) {
+					ok(!$.socket().data("reply"));
+					start();
+				});
+			})
+			.on("reply", function(data) {
+				deepEqual(data, {id: 1, data: "data"});
+			});
+		}
+	})
+	.message(function(data) {
+		this.data("reply", data);
+	});
+});
+
+asyncTest("socket should require the server to reply if a reply callback is provided", 2, function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("Account.register", function(data) {				
+				return data.name;
+			});
+		}
+	})
+	.send("data", function() {
+		ok(true);
+	})
+	.send("Account.register", {name: "Donghwan Kim", location: "South Korea"}, function(reply) {
+		strictEqual(reply, "Donghwan Kim");
+		start();
+	});
+});
+
 module("Protocol", {
 	setup: setup,
 	teardown: teardown
@@ -967,7 +1021,7 @@ test("url handler should receive the original url and the parameters object and 
 
 asyncTest("outbound handler should receive a event object and return a final data to be sent to the server", function() {
 	$.socket.defaults.outbound = function(event) {
-		deepEqual(event, {socket: this.options._id, type: "message", data: "data"});
+		deepEqual(event, {id: 1, socket: this.options._id, reply: false, type: "message", data: "data"});
 		return $.stringifyJSON(event);
 	};
 	
@@ -984,7 +1038,7 @@ asyncTest("outbound handler should receive a event object and return a final dat
 
 asyncTest("inbound handler should receive a raw data from the server and return a event object", function() {
 	$.socket.defaults.inbound = function(data) {
-		deepEqual($.parseJSON(data), {type: "message", data: "data"});
+		deepEqual($.parseJSON(data), {id: 1, reply: false, type: "message", data: "data"});
 		return $.parseJSON(data);
 	};
 	
@@ -1027,10 +1081,16 @@ asyncTest("inbound handler should be able to return an array of event object", f
 	});
 });
 
-asyncTest("event object should contain a event type and optional data property", function() {
-	var outbound;
+asyncTest("event object should contain a event type and optional id, reply, socket, and data property", function() {
+	var inbound, outbound;
 	
 	$.socket.defaults.inbound = function(event) {
+		event = $.parseJSON(event);
+		if (inbound) {
+			inbound(event);
+			inbound = null;
+		}
+		
 		return event;
 	};
 	$.socket.defaults.outbound = function(event) {
@@ -1048,37 +1108,32 @@ asyncTest("event object should contain a event type and optional data property",
 		}
 	})
 	.open(function() {
-		var self = this;
+		var self = this, id = self.options._id;
 		
 		outbound = function(event) {
-			deepEqual(event, {socket: self.options._id, type: "message", data: {key: "value"}});
+			deepEqual(event, {id: 1, socket: id, reply: false, type: "message", data: {key: "value"}});
 		};
 		this.send({key: "value"});
 		
 		outbound = function(event) {
-			deepEqual(event, {socket: self.options._id, type: "chat", data: "data"});
+			deepEqual(event, {id: 2, socket: id, reply: false, type: "chat", data: "data"});
 		};
 		this.send("chat", "data");
 		
 		outbound = function(event) {
-			deepEqual(event, {socket: self.options._id, type: "news", data: "data"});
+			deepEqual(event, {id: 3, socket: id, reply: true, type: "news", data: "data"});
 		};
-		this.find("news").send("data");
+		this.send("news", "data", $.noop);
 		
-		this.one("message", function(data) {
-			deepEqual(data, {key: "value"});
-		})
-		.notify({type: "message", data: {key: "value"}});
+		inbound = function(event) {
+			deepEqual(event, {type: "message", data: {key: "value"}});
+		};
+		this.notify($.stringifyJSON({type: "message", data: {key: "value"}}));
 		
-		this.one("chat", function(data) {
-			strictEqual(data, "data");
-		})
-		.notify({type: "chat", data: "data"});
-		
-		this.find("news").one("message", function(data) {
-			strictEqual(data, "data");
-		})
-		.notify({type: "news", data: "data"});
+		inbound = function(event) {
+			deepEqual(event, {type: "chat", data: "data"});
+		};
+		this.notify($.stringifyJSON({type: "chat", data: "data"}));
 		
 		start();
 	});
@@ -1166,7 +1221,7 @@ test("a final data to be sent to the server should be a JSON string representing
 			},
 			send: function(data) {
 				try {
-					deepEqual($.parseJSON(data), {type: "message", data: "data", socket: socket.options._id});
+					deepEqual($.parseJSON(data), {id: 1, socket: socket.options._id, reply: false, type: "message", data: "data"});
 				} catch (e) {
 					ok(false);
 				}
