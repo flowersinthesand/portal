@@ -200,7 +200,7 @@
 						self.fire(event.type, [event.data]);
 						
 						if (event.reply) {
-							self.send("reply", {id: event.id, data: self.data("reply")}).data("reply", null);
+							self.send("reply", {id: "" + event.id, data: self.data("reply")}).data("reply", null);
 						}
 					}
 					
@@ -263,7 +263,7 @@
 						
 						eventId++;
 						replyCallbacks[eventId] = callback;
-						transport.send(isBinary(data) ? data : self.options.outbound.call(self, {id: eventId, socket: id, reply: !!callback, type: event, data: data}));
+						transport.send(isBinary(data) ? data : self.options.outbound.call(self, {id: "" + eventId, socket: id, reply: !!callback, type: event, data: data}));
 					}
 					
 					return this;

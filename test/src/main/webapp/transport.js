@@ -129,7 +129,7 @@
 						connection.event.triggerHandler(event.type, [event.data]);
 						
 						if (event.reply) {
-							connection.send("reply", {id: event.id, data: connection.reply});
+							connection.send("reply", {id: "" + event.id, data: connection.reply});
 							connection.reply = null;
 						}
 					}
