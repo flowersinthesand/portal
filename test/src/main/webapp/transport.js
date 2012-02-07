@@ -51,7 +51,7 @@
 								
 								eventId++;
 								callbacks[eventId] = callback;
-								socket.notify(isBinary(data) ? data : $.stringifyJSON({id: eventId, reply: !!callback, type: event, data: data}));
+								socket.notify(isBinary(data) ? data : $.stringifyJSON({id: "" + eventId, reply: !!callback, type: event, data: data}));
 							}
 						}, 5);
 						return this;
@@ -89,22 +89,6 @@
 							heartbeatTimer = setTimeout(function() {
 								socket.close("error");
 							}, heartbeat);
-							
-							connection.on("heartbeat", function() {
-								if (heartbeatTimer) {
-									clearTimeout(heartbeatTimer);
-								}
-								
-								heartbeatTimer = setTimeout(function() {
-									socket.close("error");
-								}, heartbeat);
-								connection.send("heartbeat", null);
-							})
-							.on("close", function() {
-								if (heartbeatTimer) {
-									clearTimeout(heartbeatTimer);
-								}
-							});
 						}
 						
 						socket.fire("open");
@@ -112,6 +96,20 @@
 							if (callbacks[reply.id]) {
 								callbacks[reply.id].call(connection, reply.data);
 								delete callbacks[reply.id];
+							}
+						})
+						.on("heartbeat", function() {
+							if (heartbeatTimer) {
+								clearTimeout(heartbeatTimer);
+								heartbeatTimer = setTimeout(function() {
+									socket.close("error");
+								}, heartbeat);
+								connection.send("heartbeat", null);
+							}
+						})
+						.on("close", function() {
+							if (heartbeatTimer) {
+								clearTimeout(heartbeatTimer);
 							}
 						});
 						connection.event.triggerHandler("open");
