@@ -765,10 +765,7 @@
 					});
 				},
 				close: function() {
-					if (stop) {
-						stop();
-					}
-					
+					stop();
 					doc.execCommand("Stop");
 				}
 			});
