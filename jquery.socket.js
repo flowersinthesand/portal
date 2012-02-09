@@ -233,7 +233,7 @@
 						
 						if (transports[type]) {
 							params.transport = type;
-							transport = transports[type](self.data("url", self.options.url.call(self, url, params)));
+							transport = transports[type](self.data("url", self.options.url.call(self, url, params)), self.options);
 							
 							if (transport) {
 								// Fires connecting event
@@ -511,19 +511,19 @@
 	// Transports
 	transports = {
 		// Sub socket implementation
-		sub: function(socket) {
-			var event = socket.options.event,
-				source = $.socket(socket.options.source);
+		sub: function(socket, options) {
+			var event = options.event,
+				source = $.socket(options.source);
 			
 			return {
 				open: function() {
-					socket.options.timeout = socket.options.heartbeat = socket.options.reconnect = false;
-					socket.options.outbound = function(event) {
+					options.timeout = options.heartbeat = options.reconnect = false;
+					options.outbound = function(event) {
 						return event.data;
 					};
 					
-					if (!socket.options.init) {
-						socket.options.init = true;
+					if (!options.init) {
+						options.init = true;
 						
 						source.open(function() {
 							if (socket.state() === "closed") {
@@ -588,28 +588,28 @@
 			};
 		},
 		// HTTP Support
-		http: function(socket) {
+		http: function(socket, options) {
 			var send,
 				sending,
 				queue = [];
 			
 			function post() {
 				if (queue.length) {
-					send(socket.options._url, queue.shift());
+					send(options._url, queue.shift());
 				} else {
 					sending = false;
 				}
 			}
 			
-			send = !socket.options.crossDomain || (socket.options.crossDomain && $.support.cors) ? 
+			send = !options.crossDomain || (options.crossDomain && $.support.cors) ? 
 			function(url, data) {
 				$.ajax(url, {type: "POST", data: "data=" + data, async: true, timeout: 0}).always(post);
-			} : window.XDomainRequest && socket.options.xdrURL && (socket.options.xdrURL.call(socket, "") !== false) ? 
+			} : window.XDomainRequest && options.xdrURL && (options.xdrURL.call(socket, "") !== false) ? 
 			function(url, data) {
 				var xdr = new window.XDomainRequest();
 				
 				xdr.onload = post;
-				xdr.open("POST", socket.options.xdrURL.call(socket, url));
+				xdr.open("POST", options.xdrURL.call(socket, url));
 				xdr.send("data=" + data);
 			} : 
 			function(url, data) {
@@ -643,12 +643,12 @@
 			socket.data("candidates").unshift("streamxdr", "streamiframe", "streamxhr");
 		},
 		// HTTP Streaming - XMLHttpRequest
-		streamxhr: function(socket) {
+		streamxhr: function(socket, options) {
 			var XMLHttpRequest = window.XMLHttpRequest, 
 				xhr, aborted;
 			
 			if (!XMLHttpRequest || window.XDomainRequest || window.ActiveXObject || 
-					($.browser.android && $.browser.webkit) || (socket.options.crossDomain && !$.support.cors)) {
+					($.browser.android && $.browser.webkit) || (options.crossDomain && !$.support.cors)) {
 				return;
 			}
 			
@@ -696,11 +696,11 @@
 			});
 		},
 		// HTTP Streaming - Iframe
-		streamiframe: function(socket) {
+		streamiframe: function(socket, options) {
 			var ActiveXObject = window.ActiveXObject,
 				doc, stop;
 			
-			if (!ActiveXObject || socket.options.crossDomain) {
+			if (!ActiveXObject || options.crossDomain) {
 				return;
 			}
 			
@@ -765,17 +765,17 @@
 			});
 		},
 		// HTTP Streaming - XDomainRequest
-		streamxdr: function(socket) {
+		streamxdr: function(socket, options) {
 			var XDomainRequest = window.XDomainRequest,
 				xdr;
 			
-			if (!XDomainRequest || !socket.options.xdrURL || (socket.options.xdrURL.call(socket, "") === false)) {
+			if (!XDomainRequest || !options.xdrURL || (options.xdrURL.call(socket, "") === false)) {
 				return;
 			}
 			
 			return $.extend(transports.http(socket), {
 				open: function() {
-					var url = socket.options.xdrURL.call(socket, socket.data("url"));
+					var url = options.xdrURL.call(socket, socket.data("url"));
 					
 					socket.data("url", url);
 					
@@ -808,11 +808,11 @@
 			});
 		},
 		// Server-Sent Events
-		sse: function(socket) {
+		sse: function(socket, options) {
 			var EventSource = window.EventSource,
 				es;
 			
-			if (!EventSource || socket.options.crossDomain) {
+			if (!EventSource || options.crossDomain) {
 				return;
 			}
 			
@@ -842,11 +842,11 @@
 			socket.data("candidates").unshift("longpollajax", "longpollxdr", "longpolljsonp");
 		},
 		// Long Polling - AJAX
-		longpollajax: function(socket) {
+		longpollajax: function(socket, options) {
 			var count = 1, url = socket.data("url"),
 				xhr;
 			
-			if (!$.support.ajax || (socket.options.crossDomain && !$.support.cors)) {
+			if (!$.support.ajax || (options.crossDomain && !$.support.cors)) {
 				return;
 			}
 			
@@ -879,18 +879,18 @@
 			});
 		},
 		// Long Polling - XDomainRequest
-		longpollxdr: function(socket) {
+		longpollxdr: function(socket, options) {
 			var XDomainRequest = window.XDomainRequest, count = 1, url = socket.data("url"), 
 				xdr;
 			
-			if (!XDomainRequest || !socket.options.xdrURL || (socket.options.xdrURL.call(socket, "") === false)) {
+			if (!XDomainRequest || !options.xdrURL || (options.xdrURL.call(socket, "") === false)) {
 				return;
 			}
 			
 			url += (/\?/.test(url) ? "&" : "?") +  $.param({count: ""});
 			
 			function poll() {
-				var u = socket.options.xdrURL.call(socket, url + count++);
+				var u = options.xdrURL.call(socket, url + count++);
 				
 				socket.data("url", u);
 				

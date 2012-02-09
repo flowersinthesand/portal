@@ -196,11 +196,12 @@ module("Transport", {
 	teardown: teardown
 });
 
-test("transport function should receive the socket", function() {
+test("transport function should receive the socket and the options", function() {
 	var soc;
 	
-	$.socket.transports.subway = function(socket) {
+	$.socket.transports.subway = function(socket, options) {
 		ok(socket);
+		ok(options);
 		soc = socket;
 	};
 	

@@ -11,7 +11,7 @@
 	}
 	
 	// The server-side view of the socket handling
-	$.socket.transports.test = function(socket) {
+	$.socket.transports.test = function(socket, options) {
 		var // Is it accepted?
 			accepted,
 			// Connection object for the server
@@ -77,8 +77,8 @@
 					reply: null
 				};
 				
-				if (socket.options.server) {
-					socket.options.server(request);
+				if (options.server) {
+					options.server(request);
 				}
 				
 				setTimeout(function() {
