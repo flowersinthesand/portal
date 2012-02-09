@@ -965,7 +965,7 @@ asyncTest("reply event's data should be an object whose id property is an event 
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
-				this.send("data", function(reply) {
+				this.send("data", function() {
 					ok(!$.socket().data("reply"));
 					start();
 				});
