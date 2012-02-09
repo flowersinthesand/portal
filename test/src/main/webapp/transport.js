@@ -60,7 +60,7 @@
 						setTimeout(function() {
 							if (accepted) {
 								socket.fire("close", ["done"]);
-								connection.event.triggerHandler("close", [1000, null]);
+								connection.event.triggerHandler("close");
 							}
 						}, 5);
 						return this;
@@ -87,7 +87,7 @@
 						heartbeat = param(socket.data("url"), "heartbeat");
 						if (heartbeat > 0) {
 							heartbeatTimer = setTimeout(function() {
-								socket.close("error");
+								socket.fire("close", ["error"]);
 							}, heartbeat);
 						}
 						
@@ -102,7 +102,7 @@
 							if (heartbeatTimer) {
 								clearTimeout(heartbeatTimer);
 								heartbeatTimer = setTimeout(function() {
-									socket.close("error");
+									socket.fire("close", ["error"]);
 								}, heartbeat);
 								connection.send("heartbeat", null);
 							}
