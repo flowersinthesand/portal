@@ -292,7 +292,17 @@
 				},
 				// Finds a sub socket communicating with this socket
 				find: function(name) {
-					return $.socket(url + "/" + name, {transport: "sub", event: name, source: url});
+					return $.socket(url + "/" + name, {
+						transport: "sub", 
+						event: name, 
+						source: url,
+						timeout: false,
+						heartbeat: false,
+						reconnect: false,
+						outbound: function(event) {
+							return event.data;
+						}
+					});
 				}
 			},
 			// From jQuery.ajax
@@ -517,11 +527,6 @@
 			
 			return {
 				open: function() {
-					options.timeout = options.heartbeat = options.reconnect = false;
-					options.outbound = function(event) {
-						return event.data;
-					};
-					
 					if (!options.init) {
 						options.init = true;
 						
