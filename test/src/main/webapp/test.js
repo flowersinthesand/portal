@@ -63,9 +63,8 @@ module("Socket object", {
 	teardown: teardown
 });
 
-test("options property should include the given options", function() {
-	$.socket("url", {version: $.fn.jquery});
-	strictEqual($.socket("url", {version: $.fn.jquery}).options.version, $.fn.jquery);
+test("option method should get the given option value", function() {
+	strictEqual($.socket("url", {version: $.fn.jquery}).option("version"), $.fn.jquery);
 });
 
 test("on method should add a event handler", 5, function() {
@@ -132,17 +131,23 @@ $.each(["connecting", "open", "message", "close", "waiting"], function(i, name) 
 	});
 });
 
-asyncTest("open method should establish a connection", function() {
-	$.socket("url", {reconnect: false})
-	.open(function() {
-		ok(true);
-		start();
+asyncTest("open method should establish a connection", 1, function() {
+	var latch;
+	
+	$.socket("url", {
+		reconnect: false,
+		server: function(request) {
+			request.accept();
+		}
 	})
 	.close(function() {
-		this.options.server = function(request) {
-			request.accept();
-		};
-		this.open();
+		if (!latch) {
+			latch = true;
+			this.open().open(function() {
+				strictEqual("opened", this.state());
+				start();
+			});
+		}
 	})
 	.close();
 });
@@ -1002,7 +1007,7 @@ test("id handler should return a unique id within the server", function() {
 		return "flowersinthesand";
 	};
 	
-	strictEqual($.socket("url").options._id, "flowersinthesand");
+	strictEqual($.socket("url").option("id"), "flowersinthesand");
 });
 
 test("url used for connection should be exposed by data('url')", function() {
@@ -1012,7 +1017,7 @@ test("url used for connection should be exposed by data('url')", function() {
 test("url handler should receive the original url and the parameters object and return a url to be used to establish a connection", function() {
 	$.socket.defaults.url = function(url, params) {
 		strictEqual(url, "url");
-		deepEqual(params, {id: this.options._id, heartbeat: this.options.heartbeat || false, transport: "test"});
+		deepEqual(params, {id: this.option("id"), heartbeat: this.option("heartbeat") || false, transport: "test"});
 		
 		return "modified";
 	};
@@ -1022,7 +1027,7 @@ test("url handler should receive the original url and the parameters object and 
 
 asyncTest("outbound handler should receive a event object and return a final data to be sent to the server", function() {
 	$.socket.defaults.outbound = function(event) {
-		deepEqual(event, {id: "1", socket: this.options._id, reply: false, type: "message", data: "data"});
+		deepEqual(event, {id: "1", socket: this.option("id"), reply: false, type: "message", data: "data"});
 		return $.stringifyJSON(event);
 	};
 	
@@ -1109,7 +1114,7 @@ asyncTest("event object should contain a event type and optional id, reply, sock
 		}
 	})
 	.open(function() {
-		var self = this, id = self.options._id;
+		var self = this, id = self.option("id");
 		
 		outbound = function(event) {
 			deepEqual(event, {id: "1", socket: id, reply: false, type: "message", data: {key: "value"}});
@@ -1184,8 +1189,8 @@ test("xdrURL handler should receive data('url') and return a new url containing 
 		
 		return "modified";
 	};
-	$.socket.transports.test = function(socket) {
-		socket.data("url", socket.options.xdrURL.call(socket, socket.data("url")));
+	$.socket.transports.test = function(socket, options) {
+		socket.data("url", options.xdrURL.call(socket, socket.data("url")));
 	};
 	
 	strictEqual($.socket("url").data("url"), "modified");
@@ -1209,9 +1214,9 @@ module("Protocol default", {
 test("effective url should contain id, transport and heartbeat as query string parameters", function() {
 	var url = $.socket("url").data("url");
 	
-	strictEqual(param(url, "id"), $.socket().options._id);
+	strictEqual(param(url, "id"), $.socket().option("id"));
 	strictEqual(param(url, "transport"), $.socket().data("transport"));
-	strictEqual(param(url, "heartbeat"), String($.socket().options.heartbeat || false));
+	strictEqual(param(url, "heartbeat"), String($.socket().option("heartbeat") || false));
 });
 
 test("a final data to be sent to the server should be a JSON string representing a event object", function() {
@@ -1222,7 +1227,7 @@ test("a final data to be sent to the server should be a JSON string representing
 			},
 			send: function(data) {
 				try {
-					deepEqual($.parseJSON(data), {id: "1", socket: socket.options._id, reply: false, type: "message", data: "data"});
+					deepEqual($.parseJSON(data), {id: "1", socket: socket.option("id"), reply: false, type: "message", data: "data"});
 				} catch (e) {
 					ok(false);
 				}

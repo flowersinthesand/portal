@@ -93,7 +93,9 @@
 		
 	// Socket is based on The WebSocket API
 	function socket(url, options) {
-		var // Socket id,
+		var	// Final options object
+			opts = $.extend(true, {}, defaults, options),
+			// Socket id,
 			id,
 			// Transport
 			transport,
@@ -118,8 +120,10 @@
 			temp = {},
 			// Socket object
 			self = {
-				// Final options object
-				options: $.extend(true, {}, defaults, options),
+				// Gets a option
+				option: function(key) {
+					return opts[({id: "_id", url: "_url"})[key] || key] || null;
+				},
 				// Gets or sets a connection scope value
 				data: function(key, value) {
 					if (value === undefined) {
@@ -184,7 +188,7 @@
 				// Fire helper for transport
 				notify: function(data, chunk) {
 					if (chunk) {
-						data = self.options.chunkParser.call(self, data);
+						data = opts.chunkParser.call(self, data);
 						while (data.length) {
 							self.notify(data.shift());
 						}
@@ -192,7 +196,7 @@
 						return this;
 					}
 					
-					var events = isBinary(data) ? [{type: "message", data: data}] : $.makeArray(self.options.inbound.call(self, data)),
+					var events = isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data)),
 						i, event;
 					
 					for (i = 0; i < events.length; i++) {
@@ -208,8 +212,8 @@
 				},
 				// Establishes a connection
 				open: function() {
-					var candidates = $.makeArray(self.options.transport),
-						params = {id: id, heartbeat: self.options.heartbeat || false},
+					var candidates = $.makeArray(opts.transport),
+						params = {id: id, heartbeat: opts.heartbeat || false},
 						type;
 					
 					// Cancels the scheduled connection
@@ -233,7 +237,7 @@
 						
 						if (transports[type]) {
 							params.transport = type;
-							transport = transports[type](self.data("url", self.options.url.call(self, url, params)), self.options);
+							transport = transports[type](self.data("url", opts.url.call(self, url, params)), opts);
 							
 							if (transport) {
 								// Fires connecting event
@@ -263,7 +267,7 @@
 						
 						eventId++;
 						replyCallbacks[eventId] = callback;
-						transport.send(isBinary(data) ? data : self.options.outbound.call(self, {id: "" + eventId, socket: id, reply: !!callback, type: event, data: data}));
+						transport.send(isBinary(data) ? data : opts.outbound.call(self, {id: "" + eventId, socket: id, reply: !!callback, type: event, data: data}));
 					}
 					
 					return this;
@@ -272,7 +276,7 @@
 				close: function(reason) {
 					// Prevents reconnection
 					if (!reason) {
-						self.options.reconnect = false;
+						opts.reconnect = false;
 						if (reconnectTimer) {
 							clearTimeout(reconnectTimer);
 							reconnectTimer = null;
@@ -308,9 +312,9 @@
 			// From jQuery.ajax
 			parts = /^([\w\+\.\-]+:)(?:\/\/([^\/?#:]*)(?::(\d+))?)?/.exec(url.toLowerCase());
 		
-		self.options._url = url;
-		id = self.options._id = self.options.id.call(self);
-		self.options.crossDomain = !!(parts && 
+		opts._url = url;
+		id = opts._id = opts.id.call(self);
+		opts.crossDomain = !!(parts && 
 			// protocol and hostname
 			(parts[1] != location.protocol || parts[2] != location.hostname ||
 			// port
@@ -342,10 +346,10 @@
 			}
 			
 			// Sets timeout timer
-			if (self.options.timeout > 0) {
+			if (opts.timeout > 0) {
 				timeoutTimer = setTimeout(function() {
 					self.close("timeout");
-				}, self.options.timeout);
+				}, opts.timeout);
 			}
 		})
 		.open(function() {
@@ -359,8 +363,8 @@
 					
 					heartbeatTimer = setTimeout(function() {
 						self.close("error");
-					}, self.options._heartbeat);
-				}, self.options.heartbeat - self.options._heartbeat);
+					}, opts._heartbeat);
+				}, opts.heartbeat - opts._heartbeat);
 			}
 			
 			state = "opened";
@@ -372,7 +376,7 @@
 			}
 			
 			// Sets heartbeat timer
-			if (self.options.heartbeat > self.options._heartbeat) {
+			if (opts.heartbeat > opts._heartbeat) {
 				setHeartbeatTimer();
 			}
 			
@@ -411,10 +415,10 @@
 			}
 			
 			// Handles reconnection
-			if (self.options.reconnect) {
+			if (opts.reconnect) {
 				self.one("close", function() {
 					reconnectTry = reconnectTry || 1;
-					reconnectDelay = self.options.reconnect.call(self, reconnectDelay || self.options._reconnect, reconnectTry);
+					reconnectDelay = opts.reconnect.call(self, reconnectDelay || opts._reconnect, reconnectTry);
 					
 					if (reconnectDelay !== false) {
 						reconnectTimer = setTimeout(self.open, reconnectDelay);
@@ -657,7 +661,7 @@
 				return;
 			}
 			
-			return $.extend(transports.http(socket), {
+			return $.extend(transports.http(socket, options), {
 				open: function() {
 					var stop;
 					
@@ -709,7 +713,7 @@
 				return;
 			}
 			
-			return $.extend(transports.http(socket), {
+			return $.extend(transports.http(socket, options), {
 				open: function() {
 					var iframe, cdoc;
 					
@@ -778,7 +782,7 @@
 				return;
 			}
 			
-			return $.extend(transports.http(socket), {
+			return $.extend(transports.http(socket, options), {
 				open: function() {
 					var url = options.xdrURL.call(socket, socket.data("url"));
 					
@@ -821,7 +825,7 @@
 				return;
 			}
 			
-			return $.extend(transports.http(socket), {
+			return $.extend(transports.http(socket, options), {
 				open: function() {
 					es = new EventSource(socket.data("url"));
 					es.onopen = function(event) {
@@ -876,7 +880,7 @@
 				});
 			}
 			
-			return $.extend(transports.http(socket), {
+			return $.extend(transports.http(socket, options), {
 				open: poll,
 				close: function() {
 					xhr.abort();
@@ -916,7 +920,7 @@
 				xdr.send();
 			}
 			
-			return $.extend(transports.http(socket), {
+			return $.extend(transports.http(socket, options), {
 				open: poll,
 				close: function() {
 					xdr.abort();
@@ -924,7 +928,7 @@
 			});
 		},
 		// Long Polling - JSONP
-		longpolljsonp: function(socket) {
+		longpolljsonp: function(socket, options) {
 			var count = 1, url = socket.data("url"), callback = "socket_" + (++uuid),
 				xhr, called;
 			
@@ -958,7 +962,7 @@
 				});
 			}
 			
-			return $.extend(transports.http(socket), {
+			return $.extend(transports.http(socket, options), {
 				open: poll,
 				close: function() {
 					xhr.abort();
