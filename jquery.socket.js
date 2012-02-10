@@ -418,7 +418,7 @@
 			if (opts.reconnect) {
 				self.one("close", function() {
 					reconnectTry = reconnectTry || 1;
-					reconnectDelay = opts.reconnect.call(self, reconnectDelay || opts._reconnect, reconnectTry);
+					reconnectDelay = opts.reconnect.call(self, reconnectDelay, reconnectTry);
 					
 					if (reconnectDelay !== false) {
 						reconnectTimer = setTimeout(self.open, reconnectDelay);
@@ -451,9 +451,8 @@
 		heartbeat: 20000,
 		_heartbeat: 5000,
 		reconnect: function(lastDelay, attempts) {
-			return attempts > 1 ? 2 * lastDelay : 0;
+			return 2 * (lastDelay || 250);
 		},
-		_reconnect: 500,
 		id: function() {
 			// UUID logic from http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/2117523#2117523
 			return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {

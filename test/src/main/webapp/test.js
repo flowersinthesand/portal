@@ -1,7 +1,15 @@
 var original = $.extend(true, {}, $.socket);
 
 function setup() {
-	$.socket.defaults.transport = "test";
+	var reconnect = $.socket.defaults.reconnect;
+	
+	$.extend($.socket.defaults, {
+		transport: "test",
+		reconnect: function() {
+			var delay = reconnect.apply(this, arguments);
+			return $.isNumeric(delay) ? delay * (this.data("transport") === "test" ? 0.01 : 1) : delay;
+		}
+	});
 }
 
 function teardown() {
@@ -769,7 +777,6 @@ asyncTest("event handlers should be registered once even though the source socke
 module("Reconnection", {
 	setup: function() {
 		setup();
-		$.socket.defaults._reconnect = 10;
 	},
 	teardown: teardown
 });
@@ -818,12 +825,12 @@ asyncTest("reconnect handler should receive last delay and the number of attempt
 		server: function(request) {
 			request[reconnectCount-- ? "reject" : "accept"]();
 		},
-		_reconnect: 20,
-		reconnect: function(delay, attempts) {
-			strictEqual(delay, nextDelay + attempts - 1);
+		reconnect: function(lastDelay, attempts) {
+			lastDelay = lastDelay || 20;
+			strictEqual(lastDelay, nextDelay + attempts - 1);
 			strictEqual(attempts + reconnectCount, 4);
 			
-			return delay + 1;
+			return lastDelay + 1;
 		}
 	})
 	.waiting(function() {
