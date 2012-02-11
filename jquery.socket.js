@@ -849,7 +849,7 @@
 		},
 		// Long Polling - AJAX
 		longpollajax: function(socket, options) {
-			var count = 1, url = socket.data("url"),
+			var count = 0, url = socket.data("url"),
 				xhr;
 			
 			if (!$.support.ajax || (options.crossDomain && !$.support.cors)) {
@@ -859,14 +859,18 @@
 			url += (/\?/.test(url) ? "&" : "?") +  $.param({count: ""});
 			
 			function poll() {
-				var u = url + count++;
-				
+				count++;
+				var u = url + count;
 				socket.data("url", u);
 				
 				xhr = $.ajax(u, {type: "GET", dataType: "text", async: true, cache: true, timeout: 0})
 				.done(function(data) {
 					if (data) {
-						socket.notify(data);
+						if (count === 1) {
+							socket.fire("open");
+						} else {
+							socket.notify(data);
+						}
 						poll();
 					} else {
 						socket.fire("close", ["done"]);
@@ -886,7 +890,7 @@
 		},
 		// Long Polling - XDomainRequest
 		longpollxdr: function(socket, options) {
-			var XDomainRequest = window.XDomainRequest, count = 1, url = socket.data("url"), 
+			var XDomainRequest = window.XDomainRequest, count = 0, url = socket.data("url"), 
 				xdr;
 			
 			if (!XDomainRequest || !options.xdrURL || (options.xdrURL.call(socket, "") === false)) {
@@ -896,14 +900,18 @@
 			url += (/\?/.test(url) ? "&" : "?") +  $.param({count: ""});
 			
 			function poll() {
-				var u = options.xdrURL.call(socket, url + count++);
-				
+				count++;
+				var u = options.xdrURL.call(socket, url + count);
 				socket.data("url", u);
 				
 				xdr = new XDomainRequest();
 				xdr.onload = function() {
 					if (xdr.responseText) {
-						socket.notify(xdr.responseText);
+						if (count === 1) {
+							socket.fire("open");
+						} else {
+							socket.notify(xdr.responseText);
+						}
 						poll();
 					} else {
 						socket.fire("close", ["done"]);
@@ -926,7 +934,7 @@
 		},
 		// Long Polling - JSONP
 		longpolljsonp: function(socket, options) {
-			var count = 1, url = socket.data("url"), callback = "socket_" + (++uuid),
+			var count = 0, url = socket.data("url"), callback = "socket_" + (++uuid),
 				xhr, called;
 			
 			url += (/\?/.test(url) ? "&" : "?") +  $.param({callback: callback, count: ""});
@@ -934,15 +942,19 @@
 			// Attaches callback
 			window[callback] = function(data) {
 				called = true;
-				socket.notify(data);
+				if (count === 1) {
+					socket.fire("open");
+				} else {
+					socket.notify(data);
+				}
 			};
 			socket.one("close", function() {
 				window[callback] = undefined;
 			});
 			
 			function poll() {
-				var u = url + count++;
-				
+				count++;
+				var u = url + count;
 				socket.data("url", u);
 				
 				xhr = $.ajax(u, {dataType: "script", crossDomain: true, cache: true, timeout: 0})
