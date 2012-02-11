@@ -949,7 +949,7 @@
 				}
 			};
 			socket.one("close", function() {
-				window[callback] = undefined;
+				window[callback] = $.noop;
 			});
 			
 			function poll() {
