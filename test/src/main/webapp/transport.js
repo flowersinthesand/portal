@@ -18,6 +18,7 @@
 			connection;
 		
 		return {
+			feedback: true,
 			open: function() {
 				var // Event id
 					eventId = 0,
@@ -30,8 +31,35 @@
 					request = {
 						accept: function() {
 							accepted = true;
-							connection.event = connection.event || $({});
-							return connection;
+							return connection.on("open", function() {
+								socket.fire("open");
+								heartbeat = param(socket.data("url"), "heartbeat");
+								if (heartbeat > 0) {
+									heartbeatTimer = setTimeout(function() {
+										socket.fire("close", ["error"]);
+									}, heartbeat);
+								}
+							})
+							.on("heartbeat", function() {
+								if (heartbeatTimer) {
+									clearTimeout(heartbeatTimer);
+									heartbeatTimer = setTimeout(function() {
+										socket.fire("close", ["error"]);
+									}, heartbeat);
+									connection.send("heartbeat", null);
+								}
+							})
+							.on("reply", function(reply) {
+								if (callbacks[reply.id]) {
+									callbacks[reply.id].call(connection, reply.data);
+									delete callbacks[reply.id];
+								}
+							})
+							.on("close", function() {
+								if (heartbeatTimer) {
+									clearTimeout(heartbeatTimer);
+								}
+							});
 						},
 						reject: function() {
 							accepted = false;
@@ -39,7 +67,7 @@
 					};
 				
 				connection = {
-					event: null,
+					event: $({}),
 					send: function(event, data, callback) {
 						setTimeout(function() {
 							if (accepted) {
@@ -84,34 +112,6 @@
 				setTimeout(function() {
 					switch (accepted) {
 					case true:
-						heartbeat = param(socket.data("url"), "heartbeat");
-						if (heartbeat > 0) {
-							heartbeatTimer = setTimeout(function() {
-								socket.fire("close", ["error"]);
-							}, heartbeat);
-						}
-						
-						socket.fire("open");
-						connection.on("reply", function(reply) {
-							if (callbacks[reply.id]) {
-								callbacks[reply.id].call(connection, reply.data);
-								delete callbacks[reply.id];
-							}
-						})
-						.on("heartbeat", function() {
-							if (heartbeatTimer) {
-								clearTimeout(heartbeatTimer);
-								heartbeatTimer = setTimeout(function() {
-									socket.fire("close", ["error"]);
-								}, heartbeat);
-								connection.send("heartbeat", null);
-							}
-						})
-						.on("close", function() {
-							if (heartbeatTimer) {
-								clearTimeout(heartbeatTimer);
-							}
-						});
 						connection.event.triggerHandler("open");
 						break;
 					case false:
@@ -135,6 +135,7 @@
 			},
 			close: function() {
 				setTimeout(function() {
+					socket.fire("close", ["close"]);
 					if (accepted) {
 						connection.event.triggerHandler("close");
 					}

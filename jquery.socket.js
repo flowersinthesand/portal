@@ -288,7 +288,7 @@
 					}
 					
 					// Fires close event
-					if (reason || !transport || !transport.hasCloseFeedback) {
+					if (reason || !transport || !transport.feedback) {
 						self.fire("close", [reason || "close"]);
 					}
 					
@@ -529,6 +529,7 @@
 				source = $.socket(options.source);
 			
 			return {
+				feedback: true,
 				open: function() {
 					if (!options.init) {
 						options.init = true;
@@ -566,7 +567,7 @@
 			}
 			
 			return {
-				hasCloseFeedback: true,
+				feedback: true,
 				open: function() {
 					var url = decodeURI($('<a href="' + socket.data("url") + '"/>')[0].href.replace(/^http/, "ws"));
 					
