@@ -45,25 +45,13 @@ test("jQuery.socket(url) should return a socket object which is mapped to the gi
 	
 	ok(socket);
 	strictEqual(socket, $.socket("url"));
-	
-	notStrictEqual(Object.prototype.toString, $.socket("toString"));
 });
 
 test("jQuery.socket() should return the first socket object", function() {
-	var first, second;
-	
-	Object.prototype.property = 1;
-	strictEqual(null, $.socket());
-	delete Object.prototype.property;
-	
-	first = $.socket("first", {});
+	var first = $.socket("first", {}), second = $.socket("second", {});
 	
 	strictEqual(first, $.socket());
-	
-	second = $.socket("second", {});
-	
 	notStrictEqual(second, $.socket());
-	strictEqual(first, $.socket());
 });
 
 module("Socket object", {

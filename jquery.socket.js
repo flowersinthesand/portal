@@ -1,4 +1,95 @@
 /*
+ * jQuery stringifyJSON
+ * http://github.com/flowersinthesand/jquery-stringifyJSON
+ * 
+ * Copyright 2011, Donghwan Kim 
+ * Licensed under the Apache License, Version 2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
+// This plugin is heavily based on Douglas Crockford's reference implementation
+(function($) {
+	
+	var escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g, 
+		meta = {
+			'\b' : '\\b',
+			'\t' : '\\t',
+			'\n' : '\\n',
+			'\f' : '\\f',
+			'\r' : '\\r',
+			'"' : '\\"',
+			'\\' : '\\\\'
+		};
+	
+	function quote(string) {
+		return '"' + string.replace(escapable, function(a) {
+			var c = meta[a];
+			return typeof c === "string" ? c : "\\u" + ("0000" + a.charCodeAt(0).toString(16)).slice(-4);
+		}) + '"';
+	}
+	
+	function f(n) {
+		return n < 10 ? "0" + n : n;
+	}
+	
+	function str(key, holder) {
+		var i, v, len, partial, value = holder[key], type = typeof value;
+				
+		if (value && typeof value === "object" && typeof value.toJSON === "function") {
+			value = value.toJSON(key);
+			type = typeof value;
+		}
+		
+		switch (type) {
+		case "string":
+			return quote(value);
+		case "number":
+			return isFinite(value) ? String(value) : "null";
+		case "boolean":
+			return String(value);
+		case "object":
+			if (!value) {
+				return "null";
+			}
+			
+			switch (Object.prototype.toString.call(value)) {
+			case "[object Date]":
+				return isFinite(value.valueOf()) ? '"' + value.getUTCFullYear() + "-" + f(value.getUTCMonth() + 1) + "-" + f(value.getUTCDate()) + "T" + 
+						f(value.getUTCHours()) + ":" + f(value.getUTCMinutes()) + ":" + f(value.getUTCSeconds()) + "Z" + '"' : "null";
+			case "[object Array]":
+				len = value.length;
+				partial = [];
+				for (i = 0; i < len; i++) {
+					partial.push(str(i, value) || "null");
+				}
+				
+				return "[" + partial.join(",") + "]";
+			default:
+				partial = [];
+				for (i in value) {
+					if (Object.prototype.hasOwnProperty.call(value, i)) {
+						v = str(i, value);
+						if (v) {
+							partial.push(quote(i) + ":" + v);
+						}
+					}
+				}
+				
+				return "{" + partial.join(",") + "}";
+			}
+		}
+	}
+	
+	$.stringifyJSON = function(value) {
+		if (window.JSON && window.JSON.stringify) {
+			return window.JSON.stringify(value);
+		}
+		
+		return str("", {"": value});
+	};
+	
+}(jQuery));
+
+/*
  * jQuery Socket
  * http://github.com/flowersinthesand/jquery-socket
  * 
@@ -16,8 +107,6 @@
 		defaults,
 		// Transports
 		transports,
-		// Reference to core prototype
-		hasOwn = Object.prototype.hasOwnProperty,
 		// UUID
 		uuid = $.now();
 	
@@ -90,8 +179,12 @@
 			clearTimeout(timeoutId);
 		};
 	}
+	
+	function queryOrAmpersand(string) {
+		return /\?/.test(string) ? "&" : "?";
+	}
 		
-	// Socket is based on The WebSocket API
+	// Socket function
 	function socket(url, options) {
 		var	// Final options object
 			opts = $.extend(true, {}, defaults, options),
@@ -267,13 +360,19 @@
 						
 						eventId++;
 						replyCallbacks[eventId] = callback;
-						transport.send(isBinary(data) ? data : opts.outbound.call(self, {id: "" + eventId, socket: id, reply: !!callback, type: event, data: data}));
+						transport.send(isBinary(data) ? data : opts.outbound.call(self, {
+							id: "" + eventId, 
+							socket: id,  
+							type: event, 
+							data: data,
+							reply: !!callback
+						}));
 					}
 					
 					return this;
 				},
 				// Disconnects the connection
-				close: function(reason) {
+				close: function(/* internal */ reason) {
 					// Prevents reconnection
 					if (!reason) {
 						opts.reconnect = false;
@@ -313,7 +412,7 @@
 			parts = /^([\w\+\.\-]+:)(?:\/\/([^\/?#:]*)(?::(\d+))?)?/.exec(url.toLowerCase());
 		
 		opts._url = url;
-		id = opts._id = opts.id.call(self);
+		opts._id = id = opts.id.call(self);
 		opts.crossDomain = !!(parts && 
 			// protocol and hostname
 			(parts[1] != location.protocol || parts[2] != location.hostname ||
@@ -450,7 +549,7 @@
 		timeout: 5000,
 		heartbeat: 20000,
 		_heartbeat: 5000,
-		reconnect: function(lastDelay, attempts) {
+		reconnect: function(lastDelay) {
 			return 2 * (lastDelay || 250);
 		},
 		id: function() {
@@ -464,14 +563,10 @@
 		},
 		url: function(url, params) {
 			params._ = $.now();
-			return url + (/\?/.test(url) ? "&" : "?") + $.param(params);
+			return url + queryOrAmpersand(url) + $.param(params);
 		},
-		inbound: function(data) {
-			return $.parseJSON(data);
-		},
-		outbound: function(event) {
-			return $.stringifyJSON(event);
-		},
+		inbound: $.parseJSON,
+		outbound: $.stringifyJSON,
 		xdrURL: function(url) {
 			// Maintaining session by rewriting URL
 			// http://stackoverflow.com/questions/6453779/maintaining-session-by-rewriting-url
@@ -647,11 +742,11 @@
 				}
 			};
 		},
-		// HTTP Streaming facade
+		// Streaming facade
 		stream: function(socket) {
 			socket.data("candidates").unshift("streamxdr", "streamiframe", "streamxhr");
 		},
-		// HTTP Streaming - XMLHttpRequest
+		// Streaming - XMLHttpRequest
 		streamxhr: function(socket, options) {
 			var XMLHttpRequest = window.XMLHttpRequest, 
 				xhr, aborted;
@@ -704,7 +799,7 @@
 				}
 			});
 		},
-		// HTTP Streaming - Iframe
+		// Streaming - Iframe
 		streamiframe: function(socket, options) {
 			var ActiveXObject = window.ActiveXObject,
 				doc, stop;
@@ -770,7 +865,7 @@
 				}
 			});
 		},
-		// HTTP Streaming - XDomainRequest
+		// Streaming - XDomainRequest
 		streamxdr: function(socket, options) {
 			var XDomainRequest = window.XDomainRequest,
 				xdr;
@@ -856,11 +951,9 @@
 				return;
 			}
 			
-			url += (/\?/.test(url) ? "&" : "?") +  $.param({count: ""});
-			
 			function poll() {
 				count++;
-				var u = url + count;
+				var u = url + queryOrAmpersand(url) + $.param({count: count});
 				socket.data("url", u);
 				
 				xhr = $.ajax(u, {type: "GET", dataType: "text", async: true, cache: true, timeout: 0})
@@ -897,11 +990,9 @@
 				return;
 			}
 			
-			url += (/\?/.test(url) ? "&" : "?") +  $.param({count: ""});
-			
 			function poll() {
 				count++;
-				var u = options.xdrURL.call(socket, url + count);
+				var u = options.xdrURL.call(socket, url + queryOrAmpersand(url) + $.param({count: count}));
 				socket.data("url", u);
 				
 				xdr = new XDomainRequest();
@@ -937,8 +1028,6 @@
 			var count = 0, url = socket.data("url"), callback = "socket_" + (++uuid),
 				xhr, called;
 			
-			url += (/\?/.test(url) ? "&" : "?") +  $.param({callback: callback, count: ""});
-			
 			// Attaches callback
 			window[callback] = function(data) {
 				called = true;
@@ -954,7 +1043,7 @@
 			
 			function poll() {
 				count++;
-				var u = url + count;
+				var u = url + queryOrAmpersand(url) + $.param({callback: callback, count: count});
 				socket.data("url", u);
 				
 				xhr = $.ajax(u, {dataType: "script", crossDomain: true, cache: true, timeout: 0})
@@ -1000,7 +1089,7 @@
 		// Returns the first socket in the document
 		if (!url) {
 			for (i in sockets) {
-				if (hasOwn.call(sockets, i)) {
+				if (sockets[i]) {
 					return sockets[i];
 				}
 			}
@@ -1008,7 +1097,7 @@
 		}
 		
 		// Socket to which the given url is mapped
-		if (hasOwn.call(sockets, url)) {
+		if (sockets[url]) {
 			return sockets[url];
 		}
 		
@@ -1020,94 +1109,3 @@
 	$.socket.transports = transports;
 	
 })(jQuery);
-
-/*
- * jQuery stringifyJSON
- * http://github.com/flowersinthesand/jquery-stringifyJSON
- * 
- * Copyright 2011, Donghwan Kim 
- * Licensed under the Apache License, Version 2.0
- * http://www.apache.org/licenses/LICENSE-2.0
- */
-// This plugin is heavily based on Douglas Crockford's reference implementation
-(function($) {
-	
-	var escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g, 
-		meta = {
-			'\b' : '\\b',
-			'\t' : '\\t',
-			'\n' : '\\n',
-			'\f' : '\\f',
-			'\r' : '\\r',
-			'"' : '\\"',
-			'\\' : '\\\\'
-		};
-	
-	function quote(string) {
-		return '"' + string.replace(escapable, function(a) {
-			var c = meta[a];
-			return typeof c === "string" ? c : "\\u" + ("0000" + a.charCodeAt(0).toString(16)).slice(-4);
-		}) + '"';
-	}
-	
-	function f(n) {
-		return n < 10 ? "0" + n : n;
-	}
-	
-	function str(key, holder) {
-		var i, v, len, partial, value = holder[key], type = typeof value;
-				
-		if (value && typeof value === "object" && typeof value.toJSON === "function") {
-			value = value.toJSON(key);
-			type = typeof value;
-		}
-		
-		switch (type) {
-		case "string":
-			return quote(value);
-		case "number":
-			return isFinite(value) ? String(value) : "null";
-		case "boolean":
-			return String(value);
-		case "object":
-			if (!value) {
-				return "null";
-			}
-			
-			switch (Object.prototype.toString.call(value)) {
-			case "[object Date]":
-				return isFinite(value.valueOf()) ? '"' + value.getUTCFullYear() + "-" + f(value.getUTCMonth() + 1) + "-" + f(value.getUTCDate()) + "T" + 
-						f(value.getUTCHours()) + ":" + f(value.getUTCMinutes()) + ":" + f(value.getUTCSeconds()) + "Z" + '"' : "null";
-			case "[object Array]":
-				len = value.length;
-				partial = [];
-				for (i = 0; i < len; i++) {
-					partial.push(str(i, value) || "null");
-				}
-				
-				return "[" + partial.join(",") + "]";
-			default:
-				partial = [];
-				for (i in value) {
-					if (Object.prototype.hasOwnProperty.call(value, i)) {
-						v = str(i, value);
-						if (v) {
-							partial.push(quote(i) + ":" + v);
-						}
-					}
-				}
-				
-				return "{" + partial.join(",") + "}";
-			}
-		}
-	}
-	
-	$.stringifyJSON = function(value) {
-		if (window.JSON && window.JSON.stringify) {
-			return window.JSON.stringify(value);
-		}
-		
-		return str("", {"": value});
-	};
-	
-}(jQuery));
