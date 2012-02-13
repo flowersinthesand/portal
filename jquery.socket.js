@@ -209,21 +209,21 @@
 			reconnectTimer,
 			reconnectDelay,
 			reconnectTry,
-			// Temporal object
-			temp = {},
+			// Map of the connection-scoped values
+			connection = {},
 			// Socket object
 			self = {
-				// Gets a option
+				// Finds the value of an option
 				option: function(key) {
 					return opts[({id: "_id", url: "_url"})[key] || key] || null;
 				},
-				// Gets or sets a connection scope value
+				// Gets or sets a connection-scoped value
 				data: function(key, value) {
 					if (value === undefined) {
-						return temp[key] || null;
+						return connection[key] || null;
 					}
 					
-					temp[key] = value;
+					connection[key] = value;
 					
 					return this;
 				},
@@ -259,7 +259,8 @@
 					
 					return this;
 				},
-				// Adds one time event handler 
+				// Adds one time event handler
+				// TODO the given handler should be able to delete by .off()
 				one: function(type, fn) {
 					function proxy() {
 						self.off(type, proxy);
@@ -279,8 +280,8 @@
 					return this;
 				},
 				// Fire helper for transport
-				notify: function(data, chunk) {
-					if (chunk) {
+				notify: function(data, isChunk) {
+					if (isChunk) {
 						data = opts.chunkParser.call(self, data);
 						while (data.length) {
 							self.notify(data.shift());
@@ -294,10 +295,11 @@
 					
 					for (i = 0; i < events.length; i++) {
 						event = events[i];
+						connection.reply = null;
 						self.fire(event.type, [event.data]);
 						
 						if (event.reply) {
-							self.send("reply", {id: "" + event.id, data: self.data("reply")}).data("reply", null);
+							self.send("reply", {id: "" + event.id, data: connection.reply});
 						}
 					}
 					
@@ -306,7 +308,6 @@
 				// Establishes a connection
 				open: function() {
 					var candidates = $.makeArray(opts.transport),
-						params = {id: id, heartbeat: opts.heartbeat || false},
 						type;
 					
 					// Cancels the scheduled connection
@@ -315,26 +316,27 @@
 						reconnectTimer = null;
 					}
 					
-					// Resets temporal object and event helpers
-					temp = {};
+					// Resets the connection scope and event helpers
+					connection = {};
 					for (type in events) {
 						events[type].reset();
 					}
 					
 					// Chooses transport
 					transport = undefined;
-					self.data("candidates", candidates);
+					connection.candidates = candidates;
 					
 					while (candidates.length) {
 						type = candidates.shift();
 						
 						if (transports[type]) {
-							params.transport = type;
-							transport = transports[type](self.data("url", opts.url.call(self, url, params)), opts);
+							connection.url = opts.url.call(self, url, {id: id, transport: type, heartbeat: opts.heartbeat || false});
+							transport = transports[type](self, opts);
 							
+							// Fires the connecting event and connects
 							if (transport) {
-								// Fires connecting event
-								self.data("transport", type).fire("connecting");
+								connection.transport = type;
+								self.fire("connecting");
 								transport.open();
 								break;
 							}
@@ -349,9 +351,11 @@
 				},
 				// Transmits event using the connection
 				send: function(event, data, callback) {
+					// Defers sending an event until the state become opened
 					if (state !== "opened") {
 						buffer.push(arguments);
-					} else if (transport) {
+					} else {
+						// Standardize .send(data) and .send(data, callback) into .send(event, data, callback)
 						if (data === undefined || $.isFunction(data)) {
 							callback = data;
 							data = event;
@@ -362,7 +366,7 @@
 						replyCallbacks[eventId] = callback;
 						transport.send(isBinary(data) ? data : opts.outbound.call(self, {
 							id: "" + eventId, 
-							socket: id,  
+							socket: id, 
 							type: event, 
 							data: data,
 							reply: !!callback
@@ -386,7 +390,7 @@
 						transport.close();
 					}
 					
-					// Fires close event
+					// Fires the close event immediately for transport which doesn't give feedback on disconnection
 					if (reason || !transport || !transport.feedback) {
 						self.fire("close", [reason || "close"]);
 					}
@@ -439,7 +443,7 @@
 		self.connecting(function() {
 			state = "connecting";
 			
-			// Increases the amount of reconnection attempts
+			// Increases the number of reconnection attempts
 			if (reconnectTry) {
 				reconnectTry++;
 			}
@@ -479,7 +483,7 @@
 				setHeartbeatTimer();
 			}
 			
-			// Disables connecting event
+			// Disables the connecting event
 			events.connecting.disable();
 			
 			// Initializes variables related with reconnection
@@ -553,7 +557,8 @@
 			return 2 * (lastDelay || 250);
 		},
 		id: function() {
-			// UUID logic from http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/2117523#2117523
+			// Generates a random UUID 
+			// Logic borrowed from http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/2117523#2117523
 			return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
 				var r = Math.random() * 16 | 0,
 					v = c === "x" ? r : (r & 0x3 | 0x8);
@@ -562,6 +567,7 @@
 			});
 		},
 		url: function(url, params) {
+			// Adds the current timestamp for this request not to be cached 
 			params._ = $.now();
 			return url + queryOrAmpersand(url) + $.param(params);
 		},
@@ -583,7 +589,7 @@
 		},
 		chunkParser: function(chunk) {
 			// Chunks are formatted according to the event stream format 
-			// http://www.w3.org/TR/eventsource/#parsing-an-event-stream
+			// http://www.w3.org/TR/eventsource/#event-stream-interpretation
 			var reol = /\r\n|\r|\n/g, lines = [], data = this.data("data"), array = [], i = 0, 
 				match, line;
 			
@@ -599,15 +605,19 @@
 				this.data("data", data);
 			}
 			
+			// Processes the data field only
 			for (i = 0; i < lines.length; i++) {
 				line = lines[i];
 				if (!line) {
+					// Finish
 					array.push(data.join("\n"));
 					data = [];
 					this.data("data", data);
 				} else if (/^data:\s/.test(line)) {
+					// A single data field
 					data.push(line.substring("data: ".length));
 				} else {
+					// A fragment of a data field
 					data[data.length - 1] += line;
 				}
 			}
@@ -664,6 +674,7 @@
 			return {
 				feedback: true,
 				open: function() {
+					// Makes an absolute url whose scheme is ws or wss
 					var url = decodeURI($('<a href="' + socket.data("url") + '"/>')[0].href.replace(/^http/, "ws"));
 					
 					socket.data("url", url);
@@ -705,14 +716,16 @@
 				}
 			}
 			
+			// The Content-Type is not application/x-www-form-urlencoded but text/plain on account of XDomainRequest
+			// See the fourth at http://blogs.msdn.com/b/ieinternals/archive/2010/05/13/xdomainrequest-restrictions-limitations-and-workarounds.aspx
 			send = !options.crossDomain || (options.crossDomain && $.support.cors) ? 
 			function(url, data) {
-				$.ajax(url, {type: "POST", data: "data=" + data, async: true, timeout: 0}).always(post);
+				$.ajax(url, {type: "POST", contentType: "text/plain", data: "data=" + data, async: true, timeout: 0}).always(post);
 			} : window.XDomainRequest && options.xdrURL && (options.xdrURL.call(socket, "") !== false) ? 
 			function(url, data) {
 				var xdr = new window.XDomainRequest();
 				
-				xdr.onload = post;
+				xdr.onload = xdr.onerror = post;
 				xdr.open("POST", options.xdrURL.call(socket, url));
 				xdr.send("data=" + data);
 			} : 
@@ -776,6 +789,7 @@
 						}
 						
 						if (xhr.readyState === 3 && xhr.status === 200) {
+							// Despite the change in response, Opera doesn't fire the readystatechange event
 							if ($.browser.opera && !stop) {
 								stop = iterate(onprogress);
 							} else {
@@ -841,6 +855,8 @@
 							var clone = response.cloneNode(true), 
 								text;
 							
+							// Adds a character not CR and LF to circumvent an Internet Explorer bug
+							// If the contents of an element ends with one or more CR or LF, Internet Explorer ignores them in the innerText property 
 							clone.appendChild(cdoc.createTextNode("."));
 							text = clone.innerText;
 							text = text.substring(0, text.length - 1);
@@ -938,11 +954,11 @@
 				}
 			});
 		},
-		// Long Polling facade
+		// Long polling facade
 		longpoll: function(socket) {
 			socket.data("candidates").unshift("longpollajax", "longpollxdr", "longpolljsonp");
 		},
-		// Long Polling - AJAX
+		// Long polling - AJAX
 		longpollajax: function(socket, options) {
 			var count = 0, url = socket.data("url"),
 				xhr;
@@ -981,7 +997,7 @@
 				}
 			});
 		},
-		// Long Polling - XDomainRequest
+		// Long polling - XDomainRequest
 		longpollxdr: function(socket, options) {
 			var XDomainRequest = window.XDomainRequest, count = 0, url = socket.data("url"), 
 				xdr;
@@ -1023,7 +1039,7 @@
 				}
 			});
 		},
-		// Long Polling - JSONP
+		// Long polling - JSONP
 		longpolljsonp: function(socket, options) {
 			var count = 0, url = socket.data("url"), callback = "socket_" + (++uuid),
 				xhr, called;
@@ -1038,6 +1054,7 @@
 				}
 			};
 			socket.one("close", function() {
+				// Assings an empty function for browsers which are not able to cancel a request made from script tag
 				window[callback] = $.noop;
 			});
 			
@@ -1080,6 +1097,7 @@
 			}
 		}
 		
+		// To run the test suite
 		sockets = {};
 	});
 	
