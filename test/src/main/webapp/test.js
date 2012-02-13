@@ -59,7 +59,7 @@ module("Socket object", {
 	teardown: teardown
 });
 
-test("option method should get the given option value", function() {
+test("option method should find the value of an option", function() {
 	strictEqual($.socket("url", {version: $.fn.jquery}).option("version"), $.fn.jquery);
 });
 
@@ -182,7 +182,7 @@ test("find method should find a sub socket", function() {
 	ok($.socket("url").find("chat"));
 });
 
-test("data method should set and get a value", function() {
+test("data method should set and get a connection-scoped value", function() {
 	strictEqual($.socket("url").data("string", "value"), $.socket());
 	strictEqual($.socket("url").data("boolean"), null);
 	strictEqual($.socket("url").data("string"), "value");
@@ -943,52 +943,39 @@ module("Reply", {
 	teardown: teardown
 });
 
-asyncTest("socket should send a reply event if the server requires to reply", function() {
+asyncTest("socket should reply if the server requires to reply", 2, function() {
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
-				this.send("data", function() {
-					ok(true);
+				this.send("data", function(reply) {
+					strictEqual(reply, "Heaven Shall Burn");
 					start();
+				})
+				.on("reply", function(data) {
+					deepEqual(data, {id: "1", data: "Heaven Shall Burn"});
 				});
-			});
-		}
-	});
-});
-
-asyncTest("reply event's data should be an object whose id property is an event id and data property is .data('reply')", 2, function() {
-	$.socket("url", {
-		server: function(request) {
-			request.accept().on("open", function() {
-				this.send("data", function() {
-					ok(!$.socket().data("reply"));
-					start();
-				});
-			})
-			.on("reply", function(data) {
-				deepEqual(data, {id: "1", data: "data"});
 			});
 		}
 	})
-	.message(function(data) {
-		this.data("reply", data);
+	.message(function() {
+		return "Heaven Shall Burn";
 	});
 });
 
 asyncTest("socket should require the server to reply if a reply callback is provided", 2, function() {
 	$.socket("url", {
 		server: function(request) {
-			request.accept().on("Account.register", function(data) {				
-				return data.name;
+			request.accept().on("message", function() {
+				return "Caliban";
 			});
 		}
 	})
-	.send("data", function() {
-		ok(true);
-	})
-	.send("Account.register", {name: "Donghwan Kim", location: "South Korea"}, function(reply) {
-		strictEqual(reply, "Donghwan Kim");
+	.send("data", function(reply) {
+		strictEqual(reply, "Caliban");
 		start();
+	})
+	.on("reply", function(data) {
+		deepEqual(data, {id: "1", data: "Caliban"});
 	});
 });
 

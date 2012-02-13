@@ -110,7 +110,7 @@
 		// UUID
 		uuid = $.now();
 	
-	// A resettable callback
+	// TODO reimplement
 	function callbacks(flags) {
 		var list = [],
 			wrapper = {},
@@ -146,6 +146,22 @@
 				}
 				
 				return wrapped.remove.apply(this, args);
+			},
+			fireWith: function(context, args) {
+				var i, ret, answer = null;
+				
+				if (!flags) {
+					for (i = 0; i < list.length; i++) {
+						ret = list[i].apply(context, args);
+						if (ret !== undefined) {
+							answer = ret;
+						}
+					}
+				} else {
+					wrapped.fireWith.call(this, context, args);
+				}
+				
+				return answer;
 			},
 			reset: function() {
 				wrapped.disable();
@@ -274,7 +290,7 @@
 					var event = events[type];
 					
 					if (event) {
-						event.fireWith(self, args);
+						connection.result = event.fireWith(self, args);
 					}
 					
 					return this;
@@ -295,11 +311,11 @@
 					
 					for (i = 0; i < events.length; i++) {
 						event = events[i];
-						connection.reply = null;
+						connection.result = null;
 						self.fire(event.type, [event.data]);
 						
 						if (event.reply) {
-							self.send("reply", {id: "" + event.id, data: connection.reply});
+							self.send("reply", {id: "" + event.id, data: connection.result});
 						}
 					}
 					
