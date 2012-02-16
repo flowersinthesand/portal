@@ -315,7 +315,9 @@
 						self.fire(event.type, [event.data]);
 						
 						if (event.reply) {
-							self.send("reply", {id: "" + event.id, data: connection.result});
+							$.when(connection.result).done(function(result) {
+								self.send("reply", {id: "" + event.id, data: result});
+							});
 						}
 					}
 					

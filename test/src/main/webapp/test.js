@@ -962,6 +962,31 @@ asyncTest("socket should reply if the server requires to reply", 2, function() {
 	});
 });
 
+asyncTest("socket should be able to handle a deferred object as reply data", 2, function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("open", function() {
+				this.send("data", function(reply) {
+					strictEqual(reply, "Heaven Shall Burn");
+					start();
+				})
+				.on("reply", function(data) {
+					deepEqual(data, {id: "1", data: "Heaven Shall Burn"});
+				});
+			});
+		}
+	})
+	.message(function() {
+		var deferred = $.Deferred();
+		
+		setTimeout(function() {
+			deferred.resolve("Heaven Shall Burn");
+		}, 10);
+		
+		return deferred;
+	});
+});
+
 asyncTest("socket should require the server to reply if a reply callback is provided", 2, function() {
 	$.socket("url", {
 		server: function(request) {
