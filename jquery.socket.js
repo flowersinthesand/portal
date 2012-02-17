@@ -987,26 +987,25 @@
 			}
 			
 			function poll() {
-				count++;
-				var u = url + queryOrAmpersand(url) + $.param({count: count});
-				socket.data("url", u);
-				
-				xhr = $.ajax(u, {type: "GET", dataType: "text", async: true, cache: true, timeout: 0})
-				.done(function(data) {
-					if (data) {
-						if (count === 1) {
-							socket.fire("open");
+				var u = url + queryOrAmpersand(url) + $.param({count: ++count}),
+					done = function(data) {
+						if (data) {
+							if (count === 1) {
+								socket.fire("open");
+							} else {
+								socket.notify(data);
+							}
+							poll();
 						} else {
-							socket.notify(data);
+							socket.fire("close", ["done"]);
 						}
-						poll();
-					} else {
-						socket.fire("close", ["done"]);
-					}
-				})
-				.fail(function(jqXHR, reason) {
-					socket.fire("close", [reason === "abort" ? "close" : "error"]);
-				});
+					},
+					fail = function(jqXHR, reason) {
+						socket.fire("close", [reason === "abort" ? "close" : "error"]);
+					};
+				
+				socket.data("url", u);
+				xhr = $.ajax(u, {type: "GET", dataType: "text", async: true, cache: true, timeout: 0}).then(done, fail);
 			}
 			
 			return $.extend(transports.http(socket, options), {
@@ -1026,27 +1025,28 @@
 			}
 			
 			function poll() {
-				count++;
-				var u = options.xdrURL.call(socket, url + queryOrAmpersand(url) + $.param({count: count}));
-				socket.data("url", u);
+				var u = options.xdrURL.call(socket, url + queryOrAmpersand(url) + $.param({count: ++count})),
+					done = function() {
+						if (xdr.responseText) {
+							if (count === 1) {
+								socket.fire("open");
+							} else {
+								socket.notify(xdr.responseText);
+							}
+							poll();
+						} else {
+							socket.fire("close", ["done"]);
+						}
+					},
+					fail = function() {
+						socket.fire("close", ["error"]);
+					};
 				
 				xdr = new XDomainRequest();
-				xdr.onload = function() {
-					if (xdr.responseText) {
-						if (count === 1) {
-							socket.fire("open");
-						} else {
-							socket.notify(xdr.responseText);
-						}
-						poll();
-					} else {
-						socket.fire("close", ["done"]);
-					}
-				};
-				xdr.onerror = function() {
-					socket.fire("close", ["error"]);
-				};
+				xdr.onload = done;
+				xdr.onerror = fail;
 				
+				socket.data("url", u);
 				xdr.open("GET", u);
 				xdr.send();
 			}
@@ -1078,22 +1078,21 @@
 			});
 			
 			function poll() {
-				count++;
-				var u = url + queryOrAmpersand(url) + $.param({callback: callback, count: count});
-				socket.data("url", u);
+				var u = url + queryOrAmpersand(url) + $.param({callback: callback, count: ++count}),
+					done = function() {
+						if (called) {
+							called = false;
+							poll();
+						} else {
+							socket.fire("close", ["done"]);
+						}
+					},
+					fail = function(jqXHR, reason) {
+						socket.fire("close", [reason === "abort" ? "close" : "error"]);
+					};
 				
-				xhr = $.ajax(u, {dataType: "script", crossDomain: true, cache: true, timeout: 0})
-				.done(function() {
-					if (called) {
-						called = false;
-						poll();
-					} else {
-						socket.fire("close", ["done"]);
-					}
-				})
-				.fail(function(jqXHR, reason) {
-					socket.fire("close", [reason === "abort" ? "close" : "error"]);
-				});
+				socket.data("url", u);
+				xhr = $.ajax(u, {dataType: "script", crossDomain: true, cache: true, timeout: 0}).then(done, fail);
 			}
 			
 			return $.extend(transports.http(socket, options), {
