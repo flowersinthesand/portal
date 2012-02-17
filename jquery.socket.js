@@ -307,11 +307,9 @@
 						return this;
 					}
 					
-					var events = isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data)),
-						i, event;
+					var events = isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data));
 					
-					for (i = 0; i < events.length; i++) {
-						event = events[i];
+					$.each(events, function(i, event) {
 						connection.result = null;
 						self.fire(event.type, [event.data]);
 						
@@ -320,7 +318,7 @@
 								self.send("reply", {id: "" + event.id, data: result});
 							});
 						}
-					}
+					});
 					
 					return this;
 				},
