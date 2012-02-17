@@ -151,6 +151,7 @@
 				var i, ret, answer = null;
 				
 				if (!flags) {
+					args = args || [];
 					for (i = 0; i < list.length; i++) {
 						ret = list[i].apply(context, args);
 						if (ret !== undefined) {
