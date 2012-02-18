@@ -731,7 +731,7 @@
 			
 			// The Content-Type is not application/x-www-form-urlencoded but text/plain on account of XDomainRequest
 			// See the fourth at http://blogs.msdn.com/b/ieinternals/archive/2010/05/13/xdomainrequest-restrictions-limitations-and-workarounds.aspx
-			send = !options.crossDomain || (options.crossDomain && $.support.cors) ? 
+			send = !options.crossDomain || $.support.cors ? 
 			function(url, data) {
 				$.ajax(url, {type: "POST", contentType: "text/plain", data: "data=" + data, async: true, timeout: 0}).always(post);
 			} : window.XDomainRequest && options.xdrURL && (options.xdrURL.call(socket, "") !== false) ? 
