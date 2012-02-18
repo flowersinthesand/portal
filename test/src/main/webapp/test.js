@@ -4,7 +4,7 @@ function setup() {
 	var reconnect = $.socket.defaults.reconnect;
 	
 	$.extend($.socket.defaults, {
-		transport: "test",
+		transports: "test",
 		reconnect: function() {
 			var delay = reconnect.apply(this, arguments);
 			return $.isNumeric(delay) ? delay * (this.data("transport") === "test" ? 0.01 : 1) : delay;
@@ -206,7 +206,7 @@ test("transport function should receive the socket and the options", function() 
 		soc = socket;
 	};
 	
-	$.socket("url", {transport: "subway"});
+	$.socket("url", {transports: "subway"});
 	strictEqual(soc, $.socket());
 });
 
@@ -224,7 +224,7 @@ test("transport function should be executed after the socket.open()", function()
 		};
 	};
 	
-	$.socket("url", {transport: "subway"}).open();
+	$.socket("url", {transports: "subway"}).open();
 	strictEqual(result, "ABAB");
 });
 
@@ -241,7 +241,7 @@ test("transport's send method should be executed with data after the socket.send
 		};
 	};
 	
-	$.socket("url", {transport: "subway"}).send("data");
+	$.socket("url", {transports: "subway"}).send("data");
 });
 
 test("transport's close method should be executed after the socket.close()", 1, function() {
@@ -257,7 +257,7 @@ test("transport's close method should be executed after the socket.close()", 1, 
 		};
 	};
 	
-	$.socket("url", {transport: "subway"}).close();
+	$.socket("url", {transports: "subway"}).close();
 });
 
 test("transport function should be able to pass the responsibility onto the next transport function by returning void or false", function() {
@@ -274,7 +274,7 @@ test("transport function should be able to pass the responsibility onto the next
 		ok(false);
 	};
 	
-	$.socket("url", {transport: ["bus", "subway", "bicycle"]});
+	$.socket("url", {transports: ["bus", "subway", "bicycle"]});
 	strictEqual(result, "AB");
 });
 
@@ -504,7 +504,7 @@ asyncTest("close event handler should be executed with a reason when the connect
 });
 
 asyncTest("close event's reason should be 'notransport' if there is no available transport", function() {
-	$.socket("url", {transport: "what"})
+	$.socket("url", {transports: "what"})
 	.close(function(reason) {
 		strictEqual(reason, "notransport");
 		start();
@@ -1384,7 +1384,7 @@ if (!isLocal) {
 	module("Transport WebSocket", {
 		setup: function() {
 			setup();
-			$.socket.defaults.transport = "ws";
+			$.socket.defaults.transports = "ws";
 		},
 		teardown: teardown
 	});
@@ -1414,7 +1414,7 @@ if (!isLocal) {
 	module("Transport HTTP Streaming", {
 		setup: function() {
 			setup();
-			$.socket.defaults.transport = "stream";
+			$.socket.defaults.transports = "stream";
 		},
 		teardown: teardown
 	});
@@ -1464,7 +1464,7 @@ if (!isLocal) {
 		module("Transport HTTP Streaming - " + transportName, {
 			setup: function() {
 				setup();
-				$.socket.defaults.transport = transport;
+				$.socket.defaults.transports = transport;
 				$.socket.defaults.xdrURL = transport !== "streamxdr" ? false : function(url) {
 					return url;
 				};
@@ -1478,7 +1478,7 @@ if (!isLocal) {
 	module("Transport Server-Sent Events", {
 		setup: function() {
 			setup();
-			$.socket.defaults.transport = "sse";
+			$.socket.defaults.transports = "sse";
 		},
 		teardown: teardown
 	});
@@ -1502,7 +1502,7 @@ if (!isLocal) {
 	module("Transport Long Polling", {
 		setup: function() {
 			setup();
-			$.socket.defaults.transport = "longpoll";
+			$.socket.defaults.transports = "longpoll";
 		},
 		teardown: teardown
 	});
@@ -1556,7 +1556,7 @@ if (!isLocal) {
 		module("Transport HTTP Long Polling - " + transportName, {
 			setup: function() {
 				setup();
-				$.socket.defaults.transport = transport;
+				$.socket.defaults.transports = transport;
 				$.socket.defaults.xdrURL = transport !== "longpollxdr" ? false : function(url) {
 					return url;
 				};

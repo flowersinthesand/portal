@@ -99,16 +99,14 @@
  */
 (function($, undefined) {
 	
-	var // Socket events
-		socketEvents = ["connecting", "open", "message", "close", "waiting"],
-		// Sockets
-		sockets = {},
-		// Default options
+	var // Default options
 		defaults,
 		// Transports
 		transports,
-		// UUID
-		uuid = $.now();
+		// Socket instances
+		sockets = {},
+		// A global identifier
+		guid = $.now();
 	
 	// TODO reimplement
 	function callbacks(flags) {
@@ -324,7 +322,7 @@
 				},
 				// Establishes a connection
 				open: function() {
-					var candidates = $.makeArray(opts.transport),
+					var candidates = $.makeArray(opts.transports),
 						type;
 					
 					// Cancels the scheduled connection
@@ -417,7 +415,7 @@
 				// Finds a sub socket communicating with this socket
 				find: function(name) {
 					return $.socket(url + "/" + name, {
-						transport: "sub", 
+						transports: "sub", 
 						event: name, 
 						source: url,
 						timeout: false,
@@ -440,7 +438,7 @@
 			// port
 			(parts[3] || (parts[1] === "http:" ? 80 : 443)) != (location.port || (location.protocol === "http:" ? 80 : 443))));
 		
-		$.each(socketEvents, function(i, type) {
+		$.each(["connecting", "open", "message", "close", "waiting"], function(i, type) {
 			// Creates event helper
 			events[type] = callbacks(type === "message" ? "" : "once memory");
 			events[type].order = i;
@@ -560,13 +558,11 @@
 		return self.open();
 	}
 	
-	if (/android/.test(navigator.userAgent.toLowerCase())) {
-		$.browser.android = true;
-	}
+	$.browser.android = /android/.test(navigator.userAgent.toLowerCase());
 	
 	// Default options
 	defaults = {
-		transport: ["ws", "sse", "stream", "longpoll"],
+		transports: ["ws", "sse", "stream", "longpoll"],
 		timeout: 5000,
 		heartbeat: 20000,
 		_heartbeat: 5000,
@@ -748,7 +744,7 @@
 			} : 
 			function(url, data) {
 				var $form = $("<form method='POST' enctype='text/plain' />"),
-					$iframe = $("<iframe name='socket-" + (++uuid) + "'/>");
+					$iframe = $("<iframe name='socket-" + (++guid) + "'/>");
 				
 				$form.attr({action: url, target: $iframe.attr("name")}).hide().appendTo("body")
 				.append($("<textarea name='data' />").val(data))
@@ -1058,7 +1054,7 @@
 		},
 		// Long polling - JSONP
 		longpolljsonp: function(socket, options) {
-			var count = 0, url = socket.data("url"), callback = "socket_" + (++uuid),
+			var count = 0, url = socket.data("url"), callback = "socket_" + (++guid),
 				xhr, called;
 			
 			// Attaches callback
