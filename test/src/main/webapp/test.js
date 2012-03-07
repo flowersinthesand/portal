@@ -1535,7 +1535,7 @@ if (!isLocal) {
 					start();
 				});
 			});
-			test("xdrURL which is false should stop longpollxdr transport", function() {
+			test("xdrURL which returns false should stop longpollxdr transport", function() {
 				$.socket.defaults.xdrURL = function() {
 					return false;
 				};
