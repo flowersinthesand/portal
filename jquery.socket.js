@@ -539,7 +539,9 @@
 					reconnectDelay = opts.reconnect.call(self, reconnectDelay, reconnectTry);
 					
 					if (reconnectDelay !== false) {
-						reconnectTimer = setTimeout(self.open, reconnectDelay);
+						reconnectTimer = setTimeout(function() {
+							self.open();
+						}, reconnectDelay);
 						self.fire("waiting", [reconnectDelay, reconnectTry]);
 					}
 				});

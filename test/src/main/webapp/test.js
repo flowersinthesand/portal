@@ -296,7 +296,9 @@ asyncTest("request should be pended if there is no action on request", function(
 	$.socket("url", {
 		server: function(request) {
 			ok(request);
-			setTimeout(start, 10);
+			setTimeout(function() {
+				start();
+			}, 10);
 		}
 	})
 	.open(function() {
@@ -845,7 +847,9 @@ asyncTest("reconnect handler which is false should stop reconnection", 1, functi
 		ok(false);
 	})
 	.close(function() {
-		setTimeout(start, 10);
+		setTimeout(function() {
+			start();
+		}, 10);
 	});
 });
 
@@ -867,7 +871,9 @@ asyncTest("reconnect handler which returns false should stop reconnection", 1, f
 		ok(false);
 	})
 	.close(function() {
-		setTimeout(start, 10);
+		setTimeout(function() {
+			start();
+		}, 10);
 	});
 });
 
