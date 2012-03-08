@@ -105,21 +105,27 @@ public class DispatcherServlet extends WebSocketServlet {
 	
 		Collection<String> mappings = getServletContext().getServletRegistration(getServletName()).getMappings();
 		Class<?> handlerClass = null;
-		String handlerMethod = null;
+		Method handlerMethod = null;
 		outer: for (Class<?> clazz : new Reflections("").getTypesAnnotatedWith(EventHandler.class)) {
 			EventHandler eventHandler = clazz.getAnnotation(EventHandler.class);
 			if (eventHandler.value().equals("") || mappings.contains(eventHandler.value())) {
 				if (clazz.isAnnotationPresent(On.class)) {
 					if (clazz.getAnnotation(On.class).value().equals(type)) {
 						handlerClass = clazz;
-						handlerMethod = "execute";
-						break outer;
+						try {
+							handlerMethod = handlerClass.getMethod("execute", new Class[0]);
+							break outer;
+						} catch (SecurityException e) {
+						} catch (NoSuchMethodException e) {
+						}
 					}
 				} else {
 					for (Method method : clazz.getMethods()) {
-						if (method.isAnnotationPresent(On.class) && method.getAnnotation(On.class).value().equals(type)) {
+						if (method.isAnnotationPresent(On.class)
+								&& method.getAnnotation(On.class).value().equals(type)
+								&& method.getParameterTypes().length == 0) {
 							handlerClass = clazz;
-							handlerMethod = method.getName();
+							handlerMethod = method;
 							break outer;
 						}
 					}
@@ -148,16 +154,13 @@ public class DispatcherServlet extends WebSocketServlet {
 					} catch (IllegalAccessException e) {
 					}
 				}
-	
-				try {
-					reply = handlerClass.getMethod(handlerMethod, new Class[0]).invoke(handler, new Object[0]);
-				} catch (SecurityException e) {
-				} catch (NoSuchMethodException e) {
-				} catch (IllegalArgumentException e) {
-				} catch (InvocationTargetException e) {
-				}
+				
+				reply = handlerMethod.invoke(handler, new Object[0]);
 			} catch (InstantiationException e) {
 			} catch (IllegalAccessException e) {
+			} catch (SecurityException e) {
+			} catch (IllegalArgumentException e) {
+			} catch (InvocationTargetException e) {
 			}
 		}
 	
