@@ -898,7 +898,7 @@ module("Heartbeat", {
 	setup: function() {
 		setup();
 		$.socket.defaults.heartbeat = 500;
-		$.socket.defaults._heartbeat = 100;
+		$.socket.defaults._heartbeat = 250;
 	},
 	teardown: teardown
 });
