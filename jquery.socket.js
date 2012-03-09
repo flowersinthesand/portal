@@ -411,20 +411,6 @@
 					}
 					
 					return this;
-				},
-				// Finds a sub socket communicating with this socket
-				find: function(name) {
-					return $.socket(url + "/" + name, {
-						transports: "sub", 
-						event: name, 
-						source: url,
-						timeout: false,
-						heartbeat: false,
-						reconnect: false,
-						outbound: function(event) {
-							return event.data;
-						}
-					});
 				}
 			},
 			// From jQuery.ajax
@@ -643,40 +629,6 @@
 	
 	// Transports
 	transports = {
-		// Sub socket implementation
-		sub: function(socket, options) {
-			var event = options.event,
-				source = $.socket(options.source);
-			
-			return {
-				feedback: true,
-				open: function() {
-					if (!options.init) {
-						options.init = true;
-						
-						source.open(function() {
-							if (socket.state() === "closed") {
-								socket.open();
-							}
-							
-							socket.fire("open");
-						})
-						.close(function(reason) {
-							socket.fire("close", [reason]);
-						})
-						.on(event, function(data) {
-							socket.fire("message", [data]);
-						});
-					}
-				},
-				send: function(data) {
-					source.send(event, data);
-				},
-				close: function() {
-					socket.fire("close", ["close"]);
-				}
-			};
-		},
 		// WebSocket
 		ws: function(socket) {
 			var WebSocket = window.WebSocket || window.MozWebSocket,

@@ -178,10 +178,6 @@ asyncTest("close method should close a connection", function() {
 	.close();
 });
 
-test("find method should find a sub socket", function() {
-	ok($.socket("url").find("chat"));
-});
-
 test("data method should set and get a connection-scoped value", function() {
 	strictEqual($.socket("url").data("string", "value"), $.socket());
 	strictEqual($.socket("url").data("boolean"), null);
@@ -661,109 +657,6 @@ asyncTest("send method should be able to send custom event message", function() 
 	.send("dm", {sender: "flowersits", message: "I'm fine thank you, and you?"});
 });
 
-module("Sub socket", {
-	setup: setup,
-	teardown: teardown
-});
-
-asyncTest("open event should be triggered following the source socket's open event", function() {
-	$.socket("url", {
-		server: function(request) {
-			request.accept();
-		}
-	})
-	.find("dm")
-	.open(function() {
-		ok(true);
-		start();
-	});
-});
-
-asyncTest("message event should be triggered following the source socket's corresponding message event", function() {
-	$.socket("url", {
-		server: function(request) {
-			request.accept().on("open", function() {
-				this.send("dm", {sender: "flowersits", message: "How are you?"});
-			});
-		}
-	})
-	.find("dm")
-	.message(function(data) {
-		deepEqual(data, {sender: "flowersits", message: "How are you?"});
-		start();
-	});
-});
-
-asyncTest("close event should be triggered following the source socket's close event", function() {
-	$.socket("url", {
-		server: function(request) {
-			request.reject();
-		}
-	})
-	.find("dm")
-	.close(function(reason) {
-		strictEqual(reason, "error");
-		start();
-	});
-});
-
-asyncTest("send method should send custom message to the source socket", function() {
-	$.socket("url", {
-		server: function(request) {
-			request.accept().on("dm", function(data) {
-				deepEqual(data, {receiver: "flowersits", message: "I'm fine thank you, and you?"});
-				start();
-			});
-		}
-	})
-	.find("dm")
-	.send({receiver: "flowersits", message: "I'm fine thank you, and you?"});
-});
-
-asyncTest("close method should close only the sub socket, not the source socket", function() {
-	var started;
-	
-	$.socket("url", {
-		server: function(request) {
-			request.accept();
-		}
-	})
-	.close(function() {
-		if (!started) {
-			ok(false);
-		}
-	})
-	.find("dm")
-	.close(function(reason) {
-		strictEqual(reason, "close");
-		start();
-		started = true;
-	})
-	.close();
-});
-
-asyncTest("event handlers should be registered once even though the source socket has been reconnected", function() {
-	var count = 0, result = "";
-
-	$.socket("url", {
-		server: function(request) {
-			request.accept().on("open", function() {
-				this.send("dm", String.fromCharCode("A".charCodeAt(0) + count));
-				if (count++ < 3) {
-					this.close();
-				} else {
-					strictEqual(result, "ABC");
-					start();
-				}
-			});
-		}
-	})
-	.find("dm")
-	.message(function(data) {
-		result += data;
-	});
-});
-
 module("Reconnection", {
 	setup: function() {
 		setup();
@@ -784,27 +677,6 @@ asyncTest("socket should reconnect by default", 4, function() {
 	})
 	.open(function() {
 		start();
-	});
-});
-
-asyncTest("sub socket should reconnect according to the source socket", 4, function() {
-	var count = 4;
-	
-	$.socket("url", {
-		server: function(request) {
-			if (count--) {
-				request.accept().on("open", function() {
-					this.close();
-				});
-			}
-		}
-	})
-	.find("dm")
-	.open(function() {
-		ok(true);
-		if (!count) {
-			start();
-		}
 	});
 });
 
