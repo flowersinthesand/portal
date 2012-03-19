@@ -87,7 +87,6 @@ public class DispatcherServlet extends WebSocketServlet {
 					callbacks.remove(callbackKey);
 				}
 			}
-			connections.remove(id);
 		} else if (type.equals("heartbeat")) {
 			if (c.heartbeatTimer != null) {
 				c.setHeartbeat();
@@ -164,7 +163,9 @@ public class DispatcherServlet extends WebSocketServlet {
 			}
 		}
 	
-		if (event.containsKey("reply") && (Boolean) event.get("reply")) {
+		if (type.equals("close")) {
+			connections.remove(id);
+		} else if (event.containsKey("reply") && (Boolean) event.get("reply")) {
 			Map<String, Object> replyData = new LinkedHashMap<String, Object>();
 			replyData.put("id", event.get("id"));
 			replyData.put("data", reply);
