@@ -442,11 +442,11 @@ public class DispatcherServlet extends WebSocketServlet {
 		// This value may be used as a reply data
 		Object reply = handle(id, type, data);
 
-		// If the client requires a reply, sends a reply event with the above data 
 		if (type.equals("close")) {
 			// Removes the completed connection
 			connections.remove(id);
 		} else if (event.containsKey("reply") && (Boolean) event.get("reply")) {
+			// Sends a reply event with the above data
 			Map<String, Object> replyData = new LinkedHashMap<String, Object>();
 			replyData.put("id", event.get("id"));
 			replyData.put("data", reply);
