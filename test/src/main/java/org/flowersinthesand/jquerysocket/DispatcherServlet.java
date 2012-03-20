@@ -61,10 +61,14 @@ public class DispatcherServlet extends WebSocketServlet {
 			data.put("request", request);
 			data.put("id", request.getParameter("id"));
 			data.put("transport", request.getParameter("transport"));
-			data.put("heartbeat", request.getParameter("id"));
+			data.put("heartbeat", request.getParameter("heartbeat"));
 		}
 
 		void setHeartbeat() {
+			// Cancels if scheduled
+			if (heartbeatTimer != null) {
+				heartbeatTimer.cancel();
+			}
 			// Schedules the close
 			heartbeatTimer = new Timer();
 			heartbeatTimer.schedule(new TimerTask() {
