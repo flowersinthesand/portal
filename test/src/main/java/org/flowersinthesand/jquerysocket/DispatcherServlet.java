@@ -128,8 +128,8 @@ public class DispatcherServlet extends WebSocketServlet {
 	// POST
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		// CORS
-		response.setHeader("Access-Control-Allow-Origin", "*");
+		// Some Internet Explorer sends wrong encoded data for some reason
+		request.setCharacterEncoding("utf-8");
 		// Because the Content-Type is not application/x-www-form-urlencoded but text/plain on account of XDomainRequest,
 		// You should use the POST request's message body to retrieve a message instead of request.getParameter method 
 		// See the fourth at http://blogs.msdn.com/b/ieinternals/archive/2010/05/13/xdomainrequest-restrictions-limitations-and-workarounds.aspx
@@ -137,6 +137,8 @@ public class DispatcherServlet extends WebSocketServlet {
 		// By default, message is a JSON string representing an event
 		Map<String, Object> event = new Gson().fromJson(message, new TypeToken<Map<String, Object>>() {}.getType());
 		fire(event);
+		// CORS
+		response.setHeader("Access-Control-Allow-Origin", "*");
 	}
 
 	// Handles ws transport

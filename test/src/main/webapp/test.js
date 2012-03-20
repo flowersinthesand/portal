@@ -1207,6 +1207,14 @@ function testTransport(transport, fn) {
 		.send("data");
 	});
 	
+	asyncTest("send method should work properly with multi-byte character data", function() {
+		$.socket(url).message(function(data) {
+			strictEqual(data, "안녕");
+			start();
+		})
+		.send("안녕");
+	});
+	
 	asyncTest("send method should work properly with big data", function() {
 		var i, text = "A";
 		

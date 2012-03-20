@@ -687,7 +687,7 @@
 			// See the fourth at http://blogs.msdn.com/b/ieinternals/archive/2010/05/13/xdomainrequest-restrictions-limitations-and-workarounds.aspx
 			send = !options.crossDomain || $.support.cors ? 
 			function(url, data) {
-				$.ajax(url, {type: "POST", contentType: "text/plain", data: "data=" + data, async: true, timeout: 0}).always(post);
+				$.ajax(url, {type: "POST", contentType: "text/plain; charset=UTF-8", data: "data=" + data, async: true, timeout: 0}).always(post);
 			} : window.XDomainRequest && options.xdrURL && (options.xdrURL.call(socket, "") !== false) ? 
 			function(url, data) {
 				var xdr = new window.XDomainRequest();
@@ -697,7 +697,7 @@
 				xdr.send("data=" + data);
 			} : 
 			function(url, data) {
-				var $form = $("<form method='POST' enctype='text/plain' />"),
+				var $form = $("<form method='POST' enctype='text/plain' accept-charset='UTF-8' />"),
 					$iframe = $("<iframe name='socket-" + (++guid) + "'/>");
 				
 				$form.attr({action: url, target: $iframe.attr("name")}).hide().appendTo("body")
