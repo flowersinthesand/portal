@@ -161,7 +161,7 @@ public class DispatcherServlet extends WebSocketServlet {
 				c.connection = connection;
 				// If the heartbeat is in number format, makes the max idle time infinite 
 				try {
-					new Long(heartbeat);
+					c.data.put("heartbeat", new Long(heartbeat));
 					connection.setMaxIdleTime(Integer.MAX_VALUE);
 				} catch (NumberFormatException e) {}
 				connections.put(id, c);
@@ -238,16 +238,17 @@ public class DispatcherServlet extends WebSocketServlet {
 				fire(id, "close");
 			}
 		});
-		// If the heartbeat is in number format, makes the max idle time infinite 
-		try {
-			new Long(request.getParameter("heartbeat"));
-			asyncContext.setTimeout(0);
-		} catch (NumberFormatException e) {}
 
 		StreamConnection c = new StreamConnection();
 		c.setData(request);
 		c.asyncContext = asyncContext;
 
+		// If the heartbeat is in number format, makes the max idle time infinite 
+		try {
+			c.data.put("heartbeat", new Long(request.getParameter("heartbeat")));
+			asyncContext.setTimeout(0);
+		} catch (NumberFormatException e) {}
+		
 		// sse requires padding of white space ending with \n
 		// streamxdr, streamiframe and streamxhr in Webkit require padding of any character
 		PrintWriter writer = response.getWriter();
@@ -326,17 +327,18 @@ public class DispatcherServlet extends WebSocketServlet {
 				}
 			}
 		});
-		// If the heartbeat is in number format, makes the max idle time infinite 
-		try {
-			new Long(request.getParameter("heartbeat"));
-			asyncContext.setTimeout(0);
-		} catch (NumberFormatException e) {}
 		
 		// A new request doesn't mean the start of a new connection in the long poll transport
 		LongPollConnection c = connections.containsKey(id) ? (LongPollConnection) connections.get(id) : new LongPollConnection();
 		c.setData(request);
 		c.asyncContext = asyncContext;
 		c.jsonp = transport.equals("longpolljsonp") ? request.getParameter("callback") : null;
+		
+		// If the heartbeat is in number format, makes the max idle time infinite 
+		try {
+			c.data.put("heartbeat", new Long(request.getParameter("heartbeat")));
+			asyncContext.setTimeout(0);
+		} catch (NumberFormatException e) {}
 		
 		// To tell the client that the server accepts the request, sends an empty string
 		if ("1".equals(request.getParameter("count"))) {
@@ -414,7 +416,6 @@ public class DispatcherServlet extends WebSocketServlet {
 		if (type.equals("open")) {
 			// If the heartbeat is in number format, sets a heartbeat timer 
 			try {
-				c.data.put("heartbeat", new Long((String) c.data.get("heartbeat")));
 				c.setHeartbeat();
 			} catch (NumberFormatException e) {}
 		} else if (type.equals("close")) {
