@@ -1,4 +1,4 @@
-package org.flowersinthesand.jquerysocket.test;
+package org.flowersinthesand.test;
 
 import java.util.Timer;
 import java.util.TimerTask;

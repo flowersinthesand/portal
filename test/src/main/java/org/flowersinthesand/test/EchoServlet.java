@@ -1,4 +1,4 @@
-package org.flowersinthesand.jquerysocket.test;
+package org.flowersinthesand.test;
 
 import javax.servlet.annotation.WebInitParam;
 import javax.servlet.annotation.WebServlet;
