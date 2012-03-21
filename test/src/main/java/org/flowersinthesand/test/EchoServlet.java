@@ -3,7 +3,7 @@ package org.flowersinthesand.test;
 import javax.servlet.annotation.WebInitParam;
 import javax.servlet.annotation.WebServlet;
 
-import org.flowersinthesand.jquerysocket.DispatcherServlet;
+import org.flowersinthesand.jquerysocket.jetty.DispatcherServlet;
 
 @WebServlet(
 	urlPatterns = "/echo", 

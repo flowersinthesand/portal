@@ -1,4 +1,4 @@
-package org.flowersinthesand.jquerysocket;
+package org.flowersinthesand.jquerysocket.jetty;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -26,6 +26,9 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
+import org.flowersinthesand.jquerysocket.Connection;
+import org.flowersinthesand.jquerysocket.EventHandler;
+import org.flowersinthesand.jquerysocket.On;
 import org.reflections.Reflections;
 
 import com.google.gson.Gson;

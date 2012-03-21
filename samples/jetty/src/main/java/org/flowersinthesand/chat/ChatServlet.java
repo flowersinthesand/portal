@@ -2,7 +2,7 @@ package org.flowersinthesand.chat;
 
 import javax.servlet.annotation.WebServlet;
 
-import org.flowersinthesand.jquerysocket.DispatcherServlet;
+import org.flowersinthesand.jquerysocket.jetty.DispatcherServlet;
 
 @WebServlet(urlPatterns = "/chat", asyncSupported = true)
 public class ChatServlet extends DispatcherServlet {
