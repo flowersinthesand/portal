@@ -137,10 +137,12 @@ public class DispatcherServlet extends WebSocketServlet {
 		// Because the Content-Type is not application/x-www-form-urlencoded but text/plain on account of XDomainRequest,
 		// You should use the POST request's message body to retrieve a message instead of request.getParameter method 
 		// See the fourth at http://blogs.msdn.com/b/ieinternals/archive/2010/05/13/xdomainrequest-restrictions-limitations-and-workarounds.aspx
-		String message = request.getReader().readLine().substring("data=".length());
-		// By default, message is a JSON string representing an event
-		Map<String, Object> event = new Gson().fromJson(message, new TypeToken<Map<String, Object>>() {}.getType());
-		fire(event);
+		String message = request.getReader().readLine();
+		if (message != null) {
+			// By default, message is a JSON string representing an event
+			Map<String, Object> event = new Gson().fromJson(message.substring("data=".length()), new TypeToken<Map<String, Object>>() {}.getType());
+			fire(event);
+		}
 		// CORS
 		response.setHeader("Access-Control-Allow-Origin", "*");
 	}
