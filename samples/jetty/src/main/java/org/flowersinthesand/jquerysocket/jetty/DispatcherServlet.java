@@ -417,10 +417,10 @@ public class DispatcherServlet extends WebSocketServlet {
 		Object data = event.get("data");
 	
 		if (type.equals("open")) {
-			// If the heartbeat is in number format, sets a heartbeat timer 
-			try {
+			// If the heartbeat is in number format, sets a heartbeat timer
+			if (c.data.get("heartbeat") instanceof Long) {
 				c.setHeartbeat();
-			} catch (NumberFormatException e) {}
+			}
 		} else if (type.equals("close")) {
 			// Cancels the heartbeat timer and callbacks related to the connection
 			if (c.heartbeatTimer != null) {
