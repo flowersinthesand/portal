@@ -1,6 +1,5 @@
 package org.flowersinthesand.chat;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.flowersinthesand.jquerysocket.Connection;
@@ -16,7 +15,8 @@ public class ChatHandler {
 
 	@On("open")
 	public void open() {
-		String username = connection.data().get("transport") + "-" + connection.data().get("id").toString().substring(0, 8);
+		@SuppressWarnings("unchecked")
+		String username = ((Map<String, String[]>) connection.data().get("parameters")).get("username")[0];
 		connection.data().put("username", username);
 
 		for (Connection conn : connections.values()) {
@@ -26,12 +26,11 @@ public class ChatHandler {
 		}
 	}
 
-	@On("init")
-	public Map<String, Object> init() {
-		Map<String, Object> map = new LinkedHashMap<String, Object>();
-		map.put("username", connection.data().get("username"));
-
-		return map;
+	@On("message")
+	public void message() {
+		for (Connection conn : connections.values()) {
+			conn.send(data);
+		}
 	}
 
 	@On("close")
@@ -41,13 +40,6 @@ public class ChatHandler {
 			if (connection != conn) {
 				conn.send("exit", username);
 			}
-		}
-	}
-
-	@On("message")
-	public void message() {
-		for (Connection conn : connections.values()) {
-			conn.send(data);
 		}
 	}
 
