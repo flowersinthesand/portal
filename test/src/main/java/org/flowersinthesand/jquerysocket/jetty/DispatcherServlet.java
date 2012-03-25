@@ -62,6 +62,7 @@ public class DispatcherServlet extends WebSocketServlet {
 		
 		void setData(HttpServletRequest request) {
 			data.put("request", request);
+			data.put("parameters", request.getParameterMap());
 			data.put("id", request.getParameter("id"));
 			data.put("transport", request.getParameter("transport"));
 			data.put("heartbeat", request.getParameter("heartbeat"));
@@ -167,12 +168,14 @@ public class DispatcherServlet extends WebSocketServlet {
 					c.data.put("heartbeat", new Long(heartbeat));
 					connection.setMaxIdleTime(Integer.MAX_VALUE);
 				} catch (NumberFormatException e) {}
+				// Fires the open event
 				connections.put(id, c);
 				fire(id, "open");
 			}
 
 			@Override
 			public void onClose(int code, String reason) {
+				// Fires the close event
 				fire(id, "close");
 			}
 
@@ -238,6 +241,7 @@ public class DispatcherServlet extends WebSocketServlet {
 			}
 
 			void cleanup() {
+				// Fires the close event
 				fire(id, "close");
 			}
 		});
@@ -259,6 +263,7 @@ public class DispatcherServlet extends WebSocketServlet {
 		writer.print("\n");
 		writer.flush();
 
+		// Fires the open event
 		connections.put(id, c);
 		fire(id, "open");
 	}
@@ -343,9 +348,11 @@ public class DispatcherServlet extends WebSocketServlet {
 			asyncContext.setTimeout(0);
 		} catch (NumberFormatException e) {}
 		
-		// To tell the client that the server accepts the request, sends an empty string
+		// If this request is first
 		if ("1".equals(request.getParameter("count"))) {
+			// To tell the client that the server accepts the request, sends an empty string
 			c.send(" ");
+			// Fires the open event
 			connections.put(id, c);
 			fire(id, "open");
 		// If the connection's buffer is not empty, flushes them

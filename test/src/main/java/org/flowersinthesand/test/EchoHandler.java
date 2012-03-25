@@ -1,9 +1,8 @@
 package org.flowersinthesand.test;
 
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
-
-import javax.servlet.http.HttpServletRequest;
 
 import org.flowersinthesand.jquerysocket.Connection;
 import org.flowersinthesand.jquerysocket.EventHandler;
@@ -17,8 +16,9 @@ public class EchoHandler {
 
 	@On("open")
 	public void execute() {
-		HttpServletRequest request = (HttpServletRequest) connection.data().get("request");
-		if (Boolean.valueOf(request.getParameter("close"))) {
+		@SuppressWarnings("unchecked")
+		Map<String, String[]> params = (Map<String, String[]>) connection.data().get("parameters");
+		if (params.containsKey("close") && Boolean.valueOf(params.get("close")[0])) {
 			new Timer().schedule(new TimerTask() {
 				@Override
 				public void run() {
