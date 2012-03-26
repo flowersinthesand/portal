@@ -108,66 +108,91 @@
 		// A global identifier
 		guid = $.now();
 	
-	// TODO reimplement
-	function callbacks(flags) {
+	// From jQuery.Callbacks
+	function callbacks(deferred) {
 		var list = [],
-			wrapper = {},
-			wrapped = $.Callbacks(flags);
-		
-		$.each(wrapped, function(key) {
-			wrapper[key] = function() {
-				return wrapped[key].apply(this, arguments);
-			};
-		});
-		
-		return $.extend(wrapper, {
-			add: function() {
-				var args = arguments;
-				
-				if (!wrapped.disabled()) {
-					$.merge(list, args);
+			stack = [],
+			memory,
+			result,
+			firing,
+			firingStart,
+			firingLength,
+			firingIndex,
+			fire = function(context, args) {
+				args = args || [];
+				memory = !deferred || [context, args];
+				firing = true;
+				firingIndex = firingStart || 0;
+				firingStart = 0;
+				firingLength = list.length;
+				for (; firingIndex < firingLength; firingIndex++) {
+					result = list[firingIndex].apply(context, args);
 				}
-				
-				return wrapped.add.apply(this, args); 
+				firing = false;
 			},
-			remove: function() {
-				var i, j, args = arguments;
-				
-				if (!wrapped.disabled()) {
-					for (i = 0; i < args.length; i++) {
-						for (j = 0; j < list.length; j++) {
-							if (args[i] === list[j]) {
-								list.splice(j--, 1);
+			self = {
+				add: function(fn) {
+					var length = list.length;
+					
+					if (stack) {
+						list.push(fn);
+						if (firing) {
+							firingLength = list.length;
+						} else if (memory && memory !== true) {
+							firingStart = length;
+							fire(memory[0], memory[1]);
+						}
+					}
+				},
+				remove: function(fn) {
+					var i;
+					
+					if (stack) {
+						for (i = 0; i < list.length; i++) {
+							if (fn === list[i]) {
+								if (firing) {
+									if (i <= firingLength) {
+										firingLength--;
+										if (i <= firingIndex) {
+											firingIndex--;
+										}
+									}
+								}
+								list.splice(i--, 1);
 							}
 						}
 					}
-				}
-				
-				return wrapped.remove.apply(this, args);
-			},
-			fireWith: function(context, args) {
-				var i, ret, answer = null;
-				
-				if (!flags) {
-					args = args || [];
-					for (i = 0; i < list.length; i++) {
-						ret = list[i].apply(context, args);
-						if (ret !== undefined) {
-							answer = ret;
+				},
+				fire: function(context, args) {
+					var ret;
+					
+					if (stack) {
+						if (firing) {
+							if (!deferred) {
+								stack.push([context, args]);
+							}
+						} else if (!(deferred && memory)) {
+							fire(context, args);
 						}
+						ret = result;
+						result = undefined;
 					}
-				} else {
-					wrapped.fireWith.call(this, context, args);
+					
+					return ret;
+				},
+				lock: function() {
+					stack = undefined;
+				},
+				locked: function() {
+					return !stack;
+				},
+				unlock: function() {
+					stack = [];
+					memory = firing = firingStart = firingLength = firingIndex = undefined;
 				}
-				
-				return answer;
-			},
-			reset: function() {
-				wrapped.disable();
-				wrapped = $.Callbacks(flags);
-				return wrapped.add.apply(this, list);
-			}
-		});
+			};
+		
+		return self;
 	}
 	
 	function isBinary(data) {
@@ -252,7 +277,7 @@
 					
 					// For custom event
 					if (!event) {
-						if (events.message.disabled()) {
+						if (events.message.locked()) {
 							return this;
 						}
 						
@@ -289,7 +314,7 @@
 					var event = events[type];
 					
 					if (event) {
-						connection.result = event.fireWith(self, args);
+						connection.result = event.fire(self, args);
 					}
 					
 					return this;
@@ -334,7 +359,7 @@
 					// Resets the connection scope and event helpers
 					connection = {};
 					for (type in events) {
-						events[type].reset();
+						events[type].unlock();
 					}
 					
 					// Chooses transport
@@ -426,7 +451,7 @@
 		
 		$.each(["connecting", "open", "message", "close", "waiting"], function(i, type) {
 			// Creates event helper
-			events[type] = callbacks(type === "message" ? "" : "once memory");
+			events[type] = callbacks(type !== "message");
 			events[type].order = i;
 			
 			// Shortcuts for on method
@@ -484,8 +509,8 @@
 				setHeartbeatTimer();
 			}
 			
-			// Disables the connecting event
-			events.connecting.disable();
+			// Locks the connecting event
+			events.connecting.lock();
 			
 			// Initializes variables related with reconnection
 			reconnectTimer = reconnectDelay = reconnectTry = null;
@@ -510,11 +535,11 @@
 				heartbeatTimer = null;
 			}
 			
-			// Disables event whose order is lower than close event
+			// Locks event whose order is lower than close event
 			for (type in events) {
 				event = events[type];
 				if (event.order < order) {
-					event.disable();
+					event.lock();
 				}
 			}
 			
