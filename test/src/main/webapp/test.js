@@ -99,6 +99,20 @@ test("one method should add an one time event handler", 5, function() {
 	}
 });
 
+test("handler attached by one method should be able to be detached by off method", 4, function() {
+	var type, 
+		yes = function() {
+			ok(true);
+		},
+		no = function() {
+			ok(false);
+		};
+		
+	for (type in {open: 1, message: 1, close: 1, waiting: 1}) {
+		$.socket(type).one(type, no).off(type, no).on(type, yes).fire(type);
+	}
+});
+
 test("the context of all event handlers should be the corresponding socket object", 7, function() {
 	var type,
 		socket,
@@ -113,7 +127,7 @@ test("the context of all event handlers should be the corresponding socket objec
 });
 
 $.each(["connecting", "open", "message", "close", "waiting"], function(i, name) {
-	test(name + " method should add " + name + " event handler" + (name !== "message" ? " - flags: once, memory" : ""), function() {
+	test(name + " method should add " + name + " event handler" + (name !== "message" ? " like a Deferred" : ""), function() {
 		var result = "",
 			out = function(string) {
 				return function() {
@@ -620,7 +634,7 @@ module("Custom event", {
 	teardown: teardown
 });
 
-test("on, off and one method should work with custom event", 3, function() {
+test("on, off and one method should work with custom event", 2, function() {
 	var yes = function() {
 			ok(true);
 		},

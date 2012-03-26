@@ -149,7 +149,7 @@
 					
 					if (stack) {
 						for (i = 0; i < list.length; i++) {
-							if (fn === list[i]) {
+							if (fn === list[i] || (fn.guid && fn.guid === list[i].guid)) {
 								if (firing) {
 									if (i <= firingLength) {
 										firingLength--;
@@ -300,12 +300,14 @@
 					return this;
 				},
 				// Adds one time event handler
-				// TODO the given handler should be able to delete by .off()
 				one: function(type, fn) {
 					function proxy() {
 						self.off(type, proxy);
 						fn.apply(this, arguments);
 					}
+					
+					fn.guid = fn.guid || guid++;
+					proxy.guid = fn.guid;
 					
 					return self.on(type, proxy);
 				},
