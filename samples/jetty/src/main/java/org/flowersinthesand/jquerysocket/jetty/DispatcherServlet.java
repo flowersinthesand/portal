@@ -13,13 +13,16 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncEvent;
 import javax.servlet.AsyncListener;
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -41,6 +44,32 @@ public class DispatcherServlet extends WebSocketServlet {
 	private Map<String, Connection> connections = new ConcurrentHashMap<String, Connection>();
 	// A map of callback identifiers and objects
 	private Map<String, Connection.Callback<?>> callbacks = new ConcurrentHashMap<String, Connection.Callback<?>>();
+	// Unit of works
+	private BlockingQueue<Object[]> queue = new LinkedBlockingQueue<Object[]>();
+	// Thread to send data
+	private Thread sender = new Thread(new Runnable() {
+		@Override
+		public void run() {
+			while (true) {
+				try {
+					// Waits until a unit of work arrives - [Connection, Data]
+					Object[] objects = queue.take();
+					try {
+						((AbstractConnection) objects[0]).transmit((String) objects[1]);
+					} catch (IOException e) {
+						throw new RuntimeException(e);
+					}
+				} catch (InterruptedException e) {
+					break;
+				}
+			}
+		}
+	});
+	
+	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
+		sender.start();
+	}
 	
 	// GET
 	@Override
@@ -121,10 +150,11 @@ public class DispatcherServlet extends WebSocketServlet {
 			map.put("reply", callback != null);
 			map.put("type", event);
 			map.put("data", datum);
-			
+
 			try {
-				transmit(new Gson().toJson(map));
-			} catch (IOException e) {
+				// Puts a unit of work to send data into the queue
+				queue.put(new Object[] {this, new Gson().toJson(map)});
+			} catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
 		}
