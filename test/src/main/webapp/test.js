@@ -27,7 +27,7 @@ function teardown() {
 }
 
 function param(url, name) {
-	var match = new RegExp("[?&]" + name + "=([^&]+)").exec(url);
+	var match = new RegExp("[?&]" + name + "=([^&]*)").exec(url);
 	return match ? decodeURIComponent(match[1]) : null;
 }
 
@@ -916,12 +916,33 @@ test("url used for connection should be exposed by data('url')", function() {
 test("url handler should receive the original url and the parameters object and return a url to be used to establish a connection", function() {
 	$.socket.defaults.url = function(url, params) {
 		strictEqual(url, "url");
-		deepEqual(params, {id: this.option("id"), heartbeat: this.option("heartbeat") || false, transport: "test"});
+		deepEqual(params, {id: this.option("id"), heartbeat: this.option("heartbeat") || false, transport: "test", lastEventId: ""});
 		
 		return "modified";
 	};
 	
 	strictEqual($.socket("url").data("url"), "modified");
+});
+
+asyncTest("lastEventId parameter should be the id of the last event which is sent by the server", function() {
+	var i;
+	
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("open", function() {
+				for (i = 0; i < 10; i++) {
+					this.send(i);
+				}
+				this.close();
+			});
+		}
+	})
+	.connecting(function() {
+		if (i) {
+			strictEqual(param(this.data("url"), "lastEventId"), "" + i);
+			start();
+		}
+	});
 });
 
 asyncTest("outbound handler should receive a event object and return a final data to be sent to the server", function() {
@@ -1116,6 +1137,7 @@ test("effective url should contain id, transport and heartbeat as query string p
 	strictEqual(param(url, "id"), $.socket().option("id"));
 	strictEqual(param(url, "transport"), $.socket().data("transport"));
 	strictEqual(param(url, "heartbeat"), String($.socket().option("heartbeat") || false));
+	strictEqual(param(url, "lastEventId"), "");
 });
 
 test("a final data to be sent to the server should be a JSON string representing a event object", function() {

@@ -251,6 +251,8 @@
 			reconnectTry,
 			// Map of the connection-scoped values
 			connection = {},
+			// Last event id
+			lastEventId,
 			// Socket object
 			self = {
 				// Finds the value of an option
@@ -335,6 +337,7 @@
 					var events = isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data));
 					
 					$.each(events, function(i, event) {
+						lastEventId = event.id;
 						connection.result = null;
 						self.fire(event.type, [event.data]);
 						
@@ -372,7 +375,12 @@
 						type = candidates.shift();
 						
 						if (transports[type]) {
-							connection.url = opts.url.call(self, url, {id: id, transport: type, heartbeat: opts.heartbeat || false});
+							connection.url = opts.url.call(self, url, {
+								id: id, 
+								transport: type, 
+								heartbeat: opts.heartbeat || false, 
+								lastEventId: lastEventId || ""
+							});
 							transport = transports[type](self, opts);
 							
 							// Fires the connecting event and connects
