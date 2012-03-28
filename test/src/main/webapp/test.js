@@ -844,7 +844,7 @@ asyncTest("socket should reply if the server requires to reply", 2, function() {
 					start();
 				})
 				.on("reply", function(data) {
-					deepEqual(data, {id: "1", data: "Heaven Shall Burn"});
+					deepEqual(data, {id: 1, data: "Heaven Shall Burn"});
 				});
 			});
 		}
@@ -863,7 +863,7 @@ asyncTest("socket should be able to handle a deferred object as reply data", 2, 
 					start();
 				})
 				.on("reply", function(data) {
-					deepEqual(data, {id: "1", data: "Heaven Shall Burn"});
+					deepEqual(data, {id: 1, data: "Heaven Shall Burn"});
 				});
 			});
 		}
@@ -892,7 +892,7 @@ asyncTest("socket should require the server to reply if a reply callback is prov
 		start();
 	})
 	.on("reply", function(data) {
-		deepEqual(data, {id: "1", data: "Caliban"});
+		deepEqual(data, {id: 1, data: "Caliban"});
 	});
 });
 
@@ -926,7 +926,7 @@ test("url handler should receive the original url and the parameters object and 
 
 asyncTest("outbound handler should receive a event object and return a final data to be sent to the server", function() {
 	$.socket.defaults.outbound = function(event) {
-		deepEqual(event, {id: "1", socket: this.option("id"), reply: false, type: "message", data: "data"});
+		deepEqual(event, {id: 1, socket: this.option("id"), reply: false, type: "message", data: "data"});
 		return $.stringifyJSON(event);
 	};
 	
@@ -943,7 +943,7 @@ asyncTest("outbound handler should receive a event object and return a final dat
 
 asyncTest("inbound handler should receive a raw data from the server and return a event object", function() {
 	$.socket.defaults.inbound = function(data) {
-		deepEqual($.parseJSON(data), {id: "1", reply: false, type: "message", data: "data"});
+		deepEqual($.parseJSON(data), {id: 1, reply: false, type: "message", data: "data"});
 		return $.parseJSON(data);
 	};
 	
@@ -1016,17 +1016,17 @@ asyncTest("event object should contain a event type and optional id, reply, sock
 		var self = this, id = self.option("id");
 		
 		outbound = function(event) {
-			deepEqual(event, {id: "1", socket: id, reply: false, type: "message", data: {key: "value"}});
+			deepEqual(event, {id: 1, socket: id, reply: false, type: "message", data: {key: "value"}});
 		};
 		this.send({key: "value"});
 		
 		outbound = function(event) {
-			deepEqual(event, {id: "2", socket: id, reply: false, type: "chat", data: "data"});
+			deepEqual(event, {id: 2, socket: id, reply: false, type: "chat", data: "data"});
 		};
 		this.send("chat", "data");
 		
 		outbound = function(event) {
-			deepEqual(event, {id: "3", socket: id, reply: true, type: "news", data: "data"});
+			deepEqual(event, {id: 3, socket: id, reply: true, type: "news", data: "data"});
 		};
 		this.send("news", "data", $.noop);
 		
@@ -1126,7 +1126,7 @@ test("a final data to be sent to the server should be a JSON string representing
 			},
 			send: function(data) {
 				try {
-					deepEqual($.parseJSON(data), {id: "1", socket: socket.option("id"), reply: false, type: "message", data: "data"});
+					deepEqual($.parseJSON(data), {id: 1, socket: socket.option("id"), reply: false, type: "message", data: "data"});
 				} catch (e) {
 					ok(false);
 				}

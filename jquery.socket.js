@@ -340,7 +340,7 @@
 						
 						if (event.reply) {
 							$.when(connection.result).done(function(result) {
-								self.send("reply", {id: "" + event.id, data: result});
+								self.send("reply", {id: event.id, data: result});
 							});
 						}
 					});
@@ -407,7 +407,7 @@
 						eventId++;
 						replyCallbacks[eventId] = callback;
 						transport.send(isBinary(data) ? data : opts.outbound.call(self, {
-							id: "" + eventId, 
+							id: eventId, 
 							socket: id, 
 							type: event, 
 							data: data,
