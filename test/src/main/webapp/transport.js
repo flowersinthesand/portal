@@ -79,7 +79,7 @@
 								
 								eventId++;
 								callbacks[eventId] = callback;
-								socket.notify(isBinary(data) ? data : $.stringifyJSON({id: eventId, reply: !!callback, type: event, data: data}));
+								socket._notify(isBinary(data) ? data : $.stringifyJSON({id: eventId, reply: !!callback, type: event, data: data}));
 							}
 						}, 5);
 						return this;

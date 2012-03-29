@@ -323,33 +323,6 @@
 					
 					return this;
 				},
-				// Fire helper for transport
-				notify: function(data, isChunk) {
-					if (isChunk) {
-						data = opts.chunkParser.call(self, data);
-						while (data.length) {
-							self.notify(data.shift());
-						}
-						
-						return this;
-					}
-					
-					var events = isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data));
-					
-					$.each(events, function(i, event) {
-						connection.result = null;
-						self.fire(event.type, [event.data]);
-						lastEventId = connection.params.lastEventId = event.id;
-						
-						if (event.reply) {
-							$.when(connection.result).done(function(result) {
-								self.send("reply", {id: event.id, data: result});
-							});
-						}
-					});
-					
-					return this;
-				},
 				// Establishes a connection
 				open: function() {
 					var candidates = $.makeArray(opts.transports),
@@ -375,13 +348,12 @@
 						type = candidates.shift();
 						
 						if (transports[type]) {
-							connection.params = {id: id, transport: type, heartbeat: opts.heartbeat || false, lastEventId: lastEventId || ""};
-							connection.url = opts.url.call(self, url, connection.params);
+							connection.transport = type;
+							connection.url = self._url();
 							transport = transports[type](self, opts);
 							
 							// Fires the connecting event and connects
 							if (transport) {
-								connection.transport = type;
 								self.fire("connecting");
 								transport.open();
 								break;
@@ -442,6 +414,43 @@
 					}
 					
 					return this;
+				},
+				// For internal use only
+				// Fires events from the server
+				_notify: function(data, isChunk) {
+					if (isChunk) {
+						data = opts.chunkParser.call(self, data);
+						while (data.length) {
+							self._notify(data.shift());
+						}
+						
+						return this;
+					}
+					
+					var events = isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data));
+					
+					$.each(events, function(i, event) {
+						lastEventId = event.id;
+						connection.result = null;
+						self.fire(event.type, [event.data]);
+						
+						if (event.reply) {
+							$.when(connection.result).done(function(result) {
+								self.send("reply", {id: event.id, data: result});
+							});
+						}
+					});
+					
+					return this;
+				},
+				// Url generator
+				_url: function(params) {
+					return opts.url.call(self, url, $.extend({
+						id: id, 
+						transport: connection.transport, 
+						heartbeat: opts.heartbeat || false, 
+						lastEventId: lastEventId || ""
+					}, params));
 				}
 			},
 			// From jQuery.ajax
@@ -682,7 +691,7 @@
 						socket.data("event", event).fire("open");
 					};
 					ws.onmessage = function(event) {
-						socket.data("event", event).notify(event.data);
+						socket.data("event", event)._notify(event.data);
 					};
 					ws.onerror = function(event) {
 						socket.data("event", event).fire("close", [aborted ? "close" : "error"]);
@@ -780,7 +789,7 @@
 							if (!index) {
 								socket.fire("open");
 							} else if (length > index) {
-								socket.notify(xhr.responseText.substring(index, length), true);
+								socket._notify(xhr.responseText.substring(index, length), true);
 							}
 							
 							socket.data("index", length);
@@ -861,7 +870,7 @@
 							
 							if (text) {
 								response.innerText = "";
-								socket.notify(text, true);
+								socket._notify(text, true);
 							}
 							
 							if (cdoc.readyState === "complete") {
@@ -902,7 +911,7 @@
 						if (!index) {
 							socket.fire("open");
 						} else {
-							socket.notify(xdr.responseText.substring(index, length), true);
+							socket._notify(xdr.responseText.substring(index, length), true);
 						}
 						
 						socket.data("index", length);
@@ -938,7 +947,7 @@
 						socket.data("event", event).fire("open");
 					};
 					es.onmessage = function(event) {
-						socket.data("event", event).notify(event.data);
+						socket.data("event", event)._notify(event.data);
 					};
 					es.onerror = function(event) {
 						es.close();
@@ -965,13 +974,13 @@
 			}
 			
 			function poll() {
-				var url = options.url.call(socket, options._url, $.extend(socket.data("params"), {count: ++count}));
+				var url = socket._url({count: ++count}),
 					done = function(data) {
 						if (data) {
 							if (count === 1) {
 								socket.fire("open");
 							} else {
-								socket.notify(data);
+								socket._notify(data);
 							}
 							poll();
 						} else {
@@ -1002,13 +1011,13 @@
 			}
 			
 			function poll() {
-				var url = options.xdrURL.call(socket, options.url.call(socket, options._url, $.extend(socket.data("params"), {count: ++count}))),
+				var url = options.xdrURL.call(socket, socket._url({count: ++count})),
 					done = function() {
 						if (xdr.responseText) {
 							if (count === 1) {
 								socket.fire("open");
 							} else {
-								socket.notify(xdr.responseText);
+								socket._notify(xdr.responseText);
 							}
 							poll();
 						} else {
@@ -1045,7 +1054,7 @@
 				if (count === 1) {
 					socket.fire("open");
 				} else {
-					socket.notify(data);
+					socket._notify(data);
 				}
 			};
 			socket.one("close", function() {
@@ -1054,7 +1063,7 @@
 			});
 			
 			function poll() {
-				var url = options.url.call(socket, options._url, $.extend(socket.data("params"), {callback: callback, count: ++count})),
+				var url = socket._url({callback: callback, count: ++count}),
 					done = function() {
 						if (called) {
 							called = false;
