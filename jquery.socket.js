@@ -337,9 +337,9 @@
 					var events = isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data));
 					
 					$.each(events, function(i, event) {
-						lastEventId = event.id;
 						connection.result = null;
 						self.fire(event.type, [event.data]);
+						lastEventId = connection.params.lastEventId = event.id;
 						
 						if (event.reply) {
 							$.when(connection.result).done(function(result) {
@@ -375,12 +375,8 @@
 						type = candidates.shift();
 						
 						if (transports[type]) {
-							connection.url = opts.url.call(self, url, {
-								id: id, 
-								transport: type, 
-								heartbeat: opts.heartbeat || false, 
-								lastEventId: lastEventId || ""
-							});
+							connection.params = {id: id, transport: type, heartbeat: opts.heartbeat || false, lastEventId: lastEventId || ""};
+							connection.url = opts.url.call(self, url, connection.params);
 							transport = transports[type](self, opts);
 							
 							// Fires the connecting event and connects
@@ -962,15 +958,14 @@
 		},
 		// Long polling - AJAX
 		longpollajax: function(socket, options) {
-			var count = 0, url = socket.data("url"),
-				xhr;
+			var count = 0, xhr;
 			
 			if (!$.support.ajax || (options.crossDomain && !$.support.cors)) {
 				return;
 			}
 			
 			function poll() {
-				var u = url + queryOrAmpersand(url) + $.param({count: ++count}),
+				var url = options.url.call(socket, options._url, $.extend(socket.data("params"), {count: ++count}));
 					done = function(data) {
 						if (data) {
 							if (count === 1) {
@@ -987,8 +982,8 @@
 						socket.fire("close", [reason === "abort" ? "close" : "error"]);
 					};
 				
-				socket.data("url", u);
-				xhr = $.ajax(u, {type: "GET", dataType: "text", async: true, cache: true, timeout: 0}).then(done, fail);
+				socket.data("url", url);
+				xhr = $.ajax(url, {type: "GET", dataType: "text", async: true, cache: true, timeout: 0}).then(done, fail);
 			}
 			
 			return $.extend(transports.http(socket, options), {
@@ -1000,15 +995,14 @@
 		},
 		// Long polling - XDomainRequest
 		longpollxdr: function(socket, options) {
-			var XDomainRequest = window.XDomainRequest, count = 0, url = socket.data("url"), 
-				xdr;
+			var XDomainRequest = window.XDomainRequest, count = 0, xdr;
 			
 			if (!XDomainRequest || !options.xdrURL || (options.xdrURL.call(socket, "") === false)) {
 				return;
 			}
 			
 			function poll() {
-				var u = options.xdrURL.call(socket, url + queryOrAmpersand(url) + $.param({count: ++count})),
+				var url = options.xdrURL.call(socket, options.url.call(socket, options._url, $.extend(socket.data("params"), {count: ++count}))),
 					done = function() {
 						if (xdr.responseText) {
 							if (count === 1) {
@@ -1029,8 +1023,8 @@
 				xdr.onload = done;
 				xdr.onerror = fail;
 				
-				socket.data("url", u);
-				xdr.open("GET", u);
+				socket.data("url", url);
+				xdr.open("GET", url);
 				xdr.send();
 			}
 			
@@ -1043,8 +1037,7 @@
 		},
 		// Long polling - JSONP
 		longpolljsonp: function(socket, options) {
-			var count = 0, url = socket.data("url"), callback = "socket_" + (++guid),
-				xhr, called;
+			var count = 0, callback = "socket_" + (++guid), xhr, called;
 			
 			// Attaches callback
 			window[callback] = function(data) {
@@ -1061,7 +1054,7 @@
 			});
 			
 			function poll() {
-				var u = url + queryOrAmpersand(url) + $.param({callback: callback, count: ++count}),
+				var url = options.url.call(socket, options._url, $.extend(socket.data("params"), {callback: callback, count: ++count})),
 					done = function() {
 						if (called) {
 							called = false;
@@ -1074,8 +1067,8 @@
 						socket.fire("close", [reason === "abort" ? "close" : "error"]);
 					};
 				
-				socket.data("url", u);
-				xhr = $.ajax(u, {dataType: "script", crossDomain: true, cache: true, timeout: 0}).then(done, fail);
+				socket.data("url", url);
+				xhr = $.ajax(url, {dataType: "script", crossDomain: true, cache: true, timeout: 0}).then(done, fail);
 			}
 			
 			return $.extend(transports.http(socket, options), {

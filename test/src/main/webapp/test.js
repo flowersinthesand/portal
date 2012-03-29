@@ -1281,16 +1281,20 @@ function testTransport(transport, fn) {
 	});
 	
 	if (/^longpoll/.test(transport)) {
-		asyncTest("data('url') should be modified whenever trying to connect to the server", 3, function() {
-			var oldURL;
+		asyncTest("data('url') should be modified whenever trying to connect to the server", 6, function() {
+			var oldCount, oldLastEventId;
 			
 			$.socket(url).send(0).message(function(i) {
-				var url = this.data("url");
+				var url = this.data("url"), 
+					count = param(url, "count"), 
+					lastEventId = param(url, "lastEventId");
 				
-				if (oldURL) {
-					notStrictEqual(oldURL, url);
+				if (oldCount !=null && oldLastEventId != null) {
+					ok(oldCount < count);
+					ok(oldLastEventId < lastEventId);
 				}
-				oldURL = url;
+				oldCount = count;
+				oldLastEventId = lastEventId;
 				
 				if (i > 2) {
 					start();
