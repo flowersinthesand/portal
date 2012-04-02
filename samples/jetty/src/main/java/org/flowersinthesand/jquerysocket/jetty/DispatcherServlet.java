@@ -2,15 +2,10 @@ package org.flowersinthesand.jquerysocket.jetty;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
@@ -30,15 +25,12 @@ import javax.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
 import org.flowersinthesand.jquerysocket.Connection;
-import org.flowersinthesand.jquerysocket.EventHandler;
-import org.flowersinthesand.jquerysocket.On;
-import org.reflections.Reflections;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 @SuppressWarnings("serial")
-public class DispatcherServlet extends WebSocketServlet {
+public abstract class DispatcherServlet extends WebSocketServlet {
 	
 	// A map of connection identifiers and objects
 	private Map<String, Connection> connections = new ConcurrentHashMap<String, Connection>();
@@ -52,10 +44,10 @@ public class DispatcherServlet extends WebSocketServlet {
 		public void run() {
 			while (true) {
 				try {
-					// Waits until a unit of work arrives - [Connection, Data]
+					// Waits until a unit of work arrives
 					Object[] objects = queue.take();
 					try {
-						((AbstractConnection) objects[0]).transmit((String) objects[1]);
+						((AbstractConnection) objects[0]).doSend((String) objects[1]);
 					} catch (IOException e) {
 						throw new RuntimeException(e);
 					}
@@ -119,25 +111,21 @@ public class DispatcherServlet extends WebSocketServlet {
 
 		@Override
 		public void send(Object data) {
-			doSend("message", data, null);
+			sendWithCallback("message", data, null);
 		}
 
 		@Override
 		public void send(String event, Object data) {
-			doSend(event, data, null);
+			sendWithCallback(event, data, null);
 		}
 		
 		@Override
 		public void sendWithCallback(Object data, Callback<?> callback) {
-			doSend("message", data, callback);
+			sendWithCallback("message", data, callback);
 		}
 		
 		@Override
-		public void sendWithCallback(String event, Object data, Callback<?> callback) {
-			doSend(event, data, callback);
-		}
-		
-		void doSend(String event, Object datum, Callback<?> callback) {
+		public void sendWithCallback(String event, Object datum, Callback<?> callback) {
 			// eventId++
 			eventId.incrementAndGet();
 			// Puts a callback with a id made of connection id and event id
@@ -151,15 +139,19 @@ public class DispatcherServlet extends WebSocketServlet {
 			map.put("type", event);
 			map.put("data", datum);
 
+			transmit(map);
+		}
+		
+		void transmit(Object data) {
 			try {
 				// Puts a unit of work to send data into the queue
-				queue.put(new Object[] {this, new Gson().toJson(map)});
+				queue.put(new Object[] {this, new Gson().toJson(data)});
 			} catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
 		}
 	
-		abstract void transmit(String data) throws IOException;
+		abstract void doSend(String data) throws IOException;
 	
 	}
 
@@ -223,7 +215,7 @@ public class DispatcherServlet extends WebSocketServlet {
 		WebSocket.Connection connection;
 
 		@Override
-		void transmit(String data) throws IOException {
+		void doSend(String data) throws IOException {
 			connection.sendMessage(data);
 		}
 
@@ -303,7 +295,7 @@ public class DispatcherServlet extends WebSocketServlet {
 		AsyncContext asyncContext;
 
 		@Override
-		void transmit(String data) throws IOException {
+		void doSend(String data) throws IOException {
 			// streamxdr, streamiframe, streamxhr and sse require a message to be formatted according to event stream format
 			// http://www.w3.org/TR/eventsource/#event-stream-interpretation
 			PrintWriter writer = asyncContext.getResponse().getWriter();
@@ -381,13 +373,22 @@ public class DispatcherServlet extends WebSocketServlet {
 		// If this request is first
 		if ("1".equals(request.getParameter("count"))) {
 			// To tell the client that the server accepts the request, sends an empty string
-			c.send(" ");
+			// the first response text doesn't matter but can't be empty 
+			PrintWriter writer = response.getWriter();
+			if (c.jsonp == null) {
+				writer.print(" ");
+			} else {
+				writer.print(c.jsonp);
+				writer.print("()");
+			}
+			writer.flush();
+			asyncContext.complete();
 			// Fires the open event
 			connections.put(id, c);
 			fire(id, "open");
 		// If the connection's buffer is not empty, flushes them
 		} else if (!c.buffer.isEmpty()) {
-			c.transmit(new Gson().toJson(c.buffer));
+			c.transmit(c.buffer);
 			c.buffer.clear();
 		}
 	}
@@ -400,7 +401,7 @@ public class DispatcherServlet extends WebSocketServlet {
 
 		@Override
 		@SuppressWarnings("unchecked")
-		void transmit(String data) throws IOException {
+		void doSend(String data) throws IOException {
 			if (asyncContext.getRequest().isAsyncStarted()) {
 				PrintWriter writer = asyncContext.getResponse().getWriter();
 
@@ -419,7 +420,11 @@ public class DispatcherServlet extends WebSocketServlet {
 				asyncContext.complete();
 			} else {
 				// If the real connection is not available, accumulates it to the buffer
-				buffer.add(new Gson().fromJson(data, Map.class));
+				if (data.startsWith("[")) {
+					buffer.addAll(new Gson().fromJson(data, List.class));
+				} else {
+					buffer.add(new Gson().fromJson(data, Map.class));
+				}
 			}
 		}
 
@@ -502,85 +507,11 @@ public class DispatcherServlet extends WebSocketServlet {
 		}
 	}
 
-	// Calls a business logic handler
-	private Object handle(String id, String type, Object data) {
-		// You can enhance this tedious process by making cache
-		Collection<String> mappings = getServletContext().getServletRegistration(getServletName()).getMappings();
-		Class<?> handlerClass = null;
-		Method handlerMethod = null;
-		
-		// Scans annotated classes by using org.reflections.Reflections
-		outer: for (Class<?> clazz : new Reflections("").getTypesAnnotatedWith(EventHandler.class)) {
-			EventHandler eventHandler = clazz.getAnnotation(EventHandler.class);
-			// The value should be a default value or be contained in this servlet's mappings
-			if (eventHandler.value().equals("") || mappings.contains(eventHandler.value())) {
-				if (clazz.isAnnotationPresent(On.class)) {
-					// @EventHandler("/chat")
-					// @On("message")
-					// public class ChatMessageHandler {
-					//     public void execute() {}
-					// }
-					if (clazz.getAnnotation(On.class).value().equals(type)) {
-						handlerClass = clazz;
-						try {
-							handlerMethod = handlerClass.getMethod("execute", new Class[0]);
-							break outer;
-						} catch (SecurityException e) {
-						} catch (NoSuchMethodException e) {
-						}
-					}
-				} else {
-					// @EventHandler("/chat")
-					// public class ChatHandler {
-					//     @On("message")
-					//     public void message() {}
-					// }
-					for (Method method : clazz.getMethods()) {
-						if (method.isAnnotationPresent(On.class)
-								&& method.getAnnotation(On.class).value().equals(type)
-								&& method.getParameterTypes().length == 0) {
-							handlerClass = clazz;
-							handlerMethod = method;
-							break outer;
-						}
-					}
-				}
-			}
-		}
-
-		if (handlerClass != null && handlerMethod != null) {
-			try {
-				Object handler = handlerClass.newInstance();
-				
-				Map<String, Object> fields = new LinkedHashMap<String, Object>();
-				fields.put("connections", connections);
-				fields.put("connection", connections.get(id));
-				fields.put("data", data);
-				
-				// Fills reserved fields
-				for (Entry<String, Object> entry : fields.entrySet()) {
-					try {
-						Field field = handlerClass.getDeclaredField(entry.getKey());
-						field.setAccessible(true);
-						field.set(handler, entry.getValue());
-					} catch (SecurityException e) {
-					} catch (NoSuchFieldException e) {
-					} catch (IllegalArgumentException e) {
-					} catch (IllegalAccessException e) {
-					}
-				}
-				
-				// Invokes the method
-				return handlerMethod.invoke(handler, new Object[0]);
-			} catch (InstantiationException e) {
-			} catch (IllegalAccessException e) {
-			} catch (SecurityException e) {
-			} catch (IllegalArgumentException e) {
-			} catch (InvocationTargetException e) {
-			}
-		}
-		
-		return null;
+	// Business logic
+	public abstract Object handle(String id, String type, Object data);
+	
+	public Map<String, Connection> getConnections() {
+		return connections;
 	}
 	
 }
