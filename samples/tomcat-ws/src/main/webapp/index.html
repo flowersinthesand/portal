@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, target-densitydpi=medium-dpi" />
+		<title>jQuery Socket Chat</title>
+		<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.js"></script>
+		<script type="text/javascript" src="jquery.socket-1.0a1.js"></script>
+		<script type="text/javascript">
+		$.extend($.socket.defaults, {
+			transports: ["ws"],
+			heartbeat: false
+		});
+		
+		$(function() {
+			var username, 
+				lastUsername,
+				content = $("#content")[0];
+			
+			function notify(text) {
+				$('<p class="message notice"/>').text(text).appendTo(content);
+				content.scrollTop = content.scrollHeight;
+			}
+			
+			$("#editor input").keyup(function(event) {
+				var self = this;
+				
+				if (event.which === 13 && $.trim(self.value)) {
+					if (!username) {
+						username = self.value;
+						$("#editor p").addClass("user").removeClass("guide").text(username);
+						
+						$.socket("chat")
+						.connecting(function() {
+							notify("The connection has been tried");
+						})
+						.open(function() {
+							notify("The connection has been opened");
+							$(self).removeAttr("disabled").focus();
+						})
+						.close(function(reason) {
+							notify("The connection has been closed due to '" + reason + "'");
+							$(self).attr("disabled", "disabled");
+						})
+						.message(function(data) {
+							if (lastUsername !== data.username) {
+								lastUsername = data.username;
+								$('<p class="user"/>').text(data.username).appendTo(content);
+							}
+							
+							$('<p class="message"/>').text(data.message).appendTo(content);
+							content.scrollTop = content.scrollHeight;
+						})
+						.waiting(function(delay, attempts) {
+							notify("The socket will try to reconnect after " + delay + " ms");
+							notify("The total number of reconnection attempts is " + attempts);
+						});
+					} else {
+						$.socket().send({username: username, message: self.value});
+					}
+					
+					self.value = "";
+				}
+			})
+			.focus();
+			
+			$(window).resize(function() {
+				$(content).height($(window).height() - $("#editor").outerHeight(true) - 15).scrollTop(content.scrollHeight);
+			})
+			.resize();
+		});
+		</script>
+		<style>
+		body {padding: 0; margin: 0; font-family: 'Trebuchet MS','Malgun Gothic',Verdana,Helvetica,Arial,sans-serif; font-size: 62.5%; color: #333333}
+		#content {height: 100%; overflow-y: auto; padding: 14px 15px 0 25px;}
+		#content p {margin: 0; padding: 0;}
+		#content .user {font-size: 1.5em; color: #3e3e3e; font-weight: bold; letter-spacing: -1px; margin-top: 0.5em;}
+		#content .message {font-size: 1.3em; color: #444444; line-height: 1.7em; word-wrap: break-word;}
+		#content .notice {font-size: 1.3em; color: #999;}
+		#editor {margin: 0 25px 15px 25px;}
+		#editor p {font-size: 1.5em; display: inline-block; margin: 1em;}
+		#editor .guide {color: #999;}
+		#editor .user {font-weight: bold;}
+		#editor form {position: relative;}
+		#editor input {font-family: 'Trebuchet MS','Malgun Gothic'; width: 100%; height: 28px; line-height: 28px; border: medium none; border-color: #E5E5E5 #DBDBDB #D2D2D2; border-style: solid; border-width: 1px;}
+		</style>
+	</head>
+	<body>
+		<div id="content">
+			<p class="user"><span>Donghwan Kim</span></p>
+			<p class="message">Welcome to jQuery Socket!</p>
+		</div>
+		<div id="editor">
+			<p class="guide">Enter your username</p>
+			<form action="#" onsubmit="return false;">
+				<input type="text" />
+			</form>
+		</div>
+	</body>
+</html>
