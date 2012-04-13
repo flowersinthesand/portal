@@ -11,7 +11,9 @@ import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.servlet.AsyncContext;
@@ -387,14 +389,24 @@ public abstract class DispatcherServlet extends WebSocketServlet {
 			connections.put(id, c);
 			fire(id, "open");
 		// If the connection's buffer is not empty, flushes them
-		} else if (!c.buffer.isEmpty()) {
-			c.transmit(c.buffer);
-			c.buffer.clear();
+		} else {
+			try {
+				if (c.sending.get()) {
+					c.latch.await();
+				}
+			} catch (InterruptedException e) {
+			} finally {
+				if (!c.buffer.isEmpty()) {
+					c.transmit(c.buffer);
+				}
+			}
 		}
 	}
 
 	private class LongPollConnection extends AbstractConnection {
 
+		AtomicBoolean sending = new AtomicBoolean();
+		CountDownLatch latch;
 		List<Map<String, Object>> buffer = new CopyOnWriteArrayList<Map<String, Object>>();
 		AsyncContext asyncContext;
 		String jsonp;
@@ -402,7 +414,13 @@ public abstract class DispatcherServlet extends WebSocketServlet {
 		@Override
 		@SuppressWarnings("unchecked")
 		void doSend(String data) throws IOException {
+			sending.set(true);
+			latch = new CountDownLatch(1);
 			if (asyncContext.getRequest().isAsyncStarted()) {
+				if (data.startsWith("[")) {
+					buffer.clear();
+				}
+				
 				PrintWriter writer = asyncContext.getResponse().getWriter();
 
 				if (jsonp == null) {
@@ -426,6 +444,8 @@ public abstract class DispatcherServlet extends WebSocketServlet {
 					buffer.add(new Gson().fromJson(data, Map.class));
 				}
 			}
+			latch.countDown();
+			sending.set(false);
 		}
 
 		@Override

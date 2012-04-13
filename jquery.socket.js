@@ -592,7 +592,7 @@
 	defaults = {
 		transports: ["ws", "sse", "stream", "longpoll"],
 		timeout: 5000,
-		heartbeat: 20000,
+		heartbeat: false,
 		_heartbeat: 5000,
 		reconnect: function(lastDelay) {
 			return 2 * (lastDelay || 250);
