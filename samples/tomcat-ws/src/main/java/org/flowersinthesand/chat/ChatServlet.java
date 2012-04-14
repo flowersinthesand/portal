@@ -25,6 +25,7 @@ import com.google.gson.Gson;
 public class ChatServlet extends WebSocketServlet {
 
 	private static final long serialVersionUID = -8348163963937728320L;
+	private static final ThreadLocal<HttpServletRequest> requestHolder = new ThreadLocal<HttpServletRequest>();
 
 	private Map<String, ChatMessageInbound> connections = new ConcurrentHashMap<String, ChatMessageInbound>();
 	private BlockingQueue<Event> queue = new LinkedBlockingQueue<Event>();
@@ -51,7 +52,6 @@ public class ChatServlet extends WebSocketServlet {
 			}
 		}
 	});
-	private ThreadLocal<HttpServletRequest> requestHolder = new ThreadLocal<HttpServletRequest>();
 
 	@Override
 	public void init() throws ServletException {
