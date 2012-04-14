@@ -108,66 +108,91 @@
 		// A global identifier
 		guid = $.now();
 	
-	// TODO reimplement
-	function callbacks(flags) {
+	// From jQuery.Callbacks
+	function callbacks(deferred) {
 		var list = [],
-			wrapper = {},
-			wrapped = $.Callbacks(flags);
-		
-		$.each(wrapped, function(key) {
-			wrapper[key] = function() {
-				return wrapped[key].apply(this, arguments);
-			};
-		});
-		
-		return $.extend(wrapper, {
-			add: function() {
-				var args = arguments;
-				
-				if (!wrapped.disabled()) {
-					$.merge(list, args);
+			stack = [],
+			memory,
+			result,
+			firing,
+			firingStart,
+			firingLength,
+			firingIndex,
+			fire = function(context, args) {
+				args = args || [];
+				memory = !deferred || [context, args];
+				firing = true;
+				firingIndex = firingStart || 0;
+				firingStart = 0;
+				firingLength = list.length;
+				for (; firingIndex < firingLength; firingIndex++) {
+					result = list[firingIndex].apply(context, args);
 				}
-				
-				return wrapped.add.apply(this, args); 
+				firing = false;
 			},
-			remove: function() {
-				var i, j, args = arguments;
-				
-				if (!wrapped.disabled()) {
-					for (i = 0; i < args.length; i++) {
-						for (j = 0; j < list.length; j++) {
-							if (args[i] === list[j]) {
-								list.splice(j--, 1);
+			self = {
+				add: function(fn) {
+					var length = list.length;
+					
+					if (stack) {
+						list.push(fn);
+						if (firing) {
+							firingLength = list.length;
+						} else if (memory && memory !== true) {
+							firingStart = length;
+							fire(memory[0], memory[1]);
+						}
+					}
+				},
+				remove: function(fn) {
+					var i;
+					
+					if (stack) {
+						for (i = 0; i < list.length; i++) {
+							if (fn === list[i] || (fn.guid && fn.guid === list[i].guid)) {
+								if (firing) {
+									if (i <= firingLength) {
+										firingLength--;
+										if (i <= firingIndex) {
+											firingIndex--;
+										}
+									}
+								}
+								list.splice(i--, 1);
 							}
 						}
 					}
-				}
-				
-				return wrapped.remove.apply(this, args);
-			},
-			fireWith: function(context, args) {
-				var i, ret, answer = null;
-				
-				if (!flags) {
-					args = args || [];
-					for (i = 0; i < list.length; i++) {
-						ret = list[i].apply(context, args);
-						if (ret !== undefined) {
-							answer = ret;
+				},
+				fire: function(context, args) {
+					var ret;
+					
+					if (stack) {
+						if (firing) {
+							if (!deferred) {
+								stack.push([context, args]);
+							}
+						} else if (!(deferred && memory)) {
+							fire(context, args);
 						}
+						ret = result;
+						result = undefined;
 					}
-				} else {
-					wrapped.fireWith.call(this, context, args);
+					
+					return ret;
+				},
+				lock: function() {
+					stack = undefined;
+				},
+				locked: function() {
+					return !stack;
+				},
+				unlock: function() {
+					stack = [];
+					memory = firing = firingStart = firingLength = firingIndex = undefined;
 				}
-				
-				return answer;
-			},
-			reset: function() {
-				wrapped.disable();
-				wrapped = $.Callbacks(flags);
-				return wrapped.add.apply(this, list);
-			}
-		});
+			};
+		
+		return self;
 	}
 	
 	function isBinary(data) {
@@ -226,6 +251,8 @@
 			reconnectTry,
 			// Map of the connection-scoped values
 			connection = {},
+			// Last event id
+			lastEventId,
 			// Socket object
 			self = {
 				// Finds the value of an option
@@ -252,7 +279,7 @@
 					
 					// For custom event
 					if (!event) {
-						if (events.message.disabled()) {
+						if (events.message.locked()) {
 							return this;
 						}
 						
@@ -275,12 +302,14 @@
 					return this;
 				},
 				// Adds one time event handler
-				// TODO the given handler should be able to delete by .off()
 				one: function(type, fn) {
 					function proxy() {
 						self.off(type, proxy);
 						fn.apply(this, arguments);
 					}
+					
+					fn.guid = fn.guid || guid++;
+					proxy.guid = fn.guid;
 					
 					return self.on(type, proxy);
 				},
@@ -289,34 +318,8 @@
 					var event = events[type];
 					
 					if (event) {
-						connection.result = event.fireWith(self, args);
+						connection.result = event.fire(self, args);
 					}
-					
-					return this;
-				},
-				// Fire helper for transport
-				notify: function(data, isChunk) {
-					if (isChunk) {
-						data = opts.chunkParser.call(self, data);
-						while (data.length) {
-							self.notify(data.shift());
-						}
-						
-						return this;
-					}
-					
-					var events = isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data));
-					
-					$.each(events, function(i, event) {
-						connection.result = null;
-						self.fire(event.type, [event.data]);
-						
-						if (event.reply) {
-							$.when(connection.result).done(function(result) {
-								self.send("reply", {id: "" + event.id, data: result});
-							});
-						}
-					});
 					
 					return this;
 				},
@@ -334,7 +337,7 @@
 					// Resets the connection scope and event helpers
 					connection = {};
 					for (type in events) {
-						events[type].reset();
+						events[type].unlock();
 					}
 					
 					// Chooses transport
@@ -345,12 +348,12 @@
 						type = candidates.shift();
 						
 						if (transports[type]) {
-							connection.url = opts.url.call(self, url, {id: id, transport: type, heartbeat: opts.heartbeat || false});
+							connection.transport = type;
+							connection.url = self._url();
 							transport = transports[type](self, opts);
 							
 							// Fires the connecting event and connects
 							if (transport) {
-								connection.transport = type;
 								self.fire("connecting");
 								transport.open();
 								break;
@@ -380,7 +383,7 @@
 						eventId++;
 						replyCallbacks[eventId] = callback;
 						transport.send(isBinary(data) ? data : opts.outbound.call(self, {
-							id: "" + eventId, 
+							id: eventId, 
 							socket: id, 
 							type: event, 
 							data: data,
@@ -411,6 +414,43 @@
 					}
 					
 					return this;
+				},
+				// For internal use only
+				// Fires events from the server
+				_notify: function(data, isChunk) {
+					if (isChunk) {
+						data = opts.chunkParser.call(self, data);
+						while (data.length) {
+							self._notify(data.shift());
+						}
+						
+						return this;
+					}
+					
+					var events = isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data));
+					
+					$.each(events, function(i, event) {
+						lastEventId = event.id;
+						connection.result = null;
+						self.fire(event.type, [event.data]);
+						
+						if (event.reply) {
+							$.when(connection.result).done(function(result) {
+								self.send("reply", {id: event.id, data: result});
+							});
+						}
+					});
+					
+					return this;
+				},
+				// Url generator
+				_url: function(params) {
+					return opts.url.call(self, url, $.extend({
+						id: id, 
+						transport: connection.transport, 
+						heartbeat: opts.heartbeat || false, 
+						lastEventId: lastEventId || ""
+					}, params));
 				}
 			},
 			// From jQuery.ajax
@@ -426,7 +466,7 @@
 		
 		$.each(["connecting", "open", "message", "close", "waiting"], function(i, type) {
 			// Creates event helper
-			events[type] = callbacks(type === "message" ? "" : "once memory");
+			events[type] = callbacks(type !== "message");
 			events[type].order = i;
 			
 			// Shortcuts for on method
@@ -484,8 +524,8 @@
 				setHeartbeatTimer();
 			}
 			
-			// Disables the connecting event
-			events.connecting.disable();
+			// Locks the connecting event
+			events.connecting.lock();
 			
 			// Initializes variables related with reconnection
 			reconnectTimer = reconnectDelay = reconnectTry = null;
@@ -510,11 +550,11 @@
 				heartbeatTimer = null;
 			}
 			
-			// Disables event whose order is lower than close event
+			// Locks event whose order is lower than close event
 			for (type in events) {
 				event = events[type];
 				if (event.order < order) {
-					event.disable();
+					event.lock();
 				}
 			}
 			
@@ -551,8 +591,8 @@
 	// Default options
 	defaults = {
 		transports: ["ws", "sse", "stream", "longpoll"],
-		timeout: 5000,
-		heartbeat: 20000,
+		timeout: false,
+		heartbeat: false,
 		_heartbeat: 5000,
 		reconnect: function(lastDelay) {
 			return 2 * (lastDelay || 250);
@@ -651,7 +691,7 @@
 						socket.data("event", event).fire("open");
 					};
 					ws.onmessage = function(event) {
-						socket.data("event", event).notify(event.data);
+						socket.data("event", event)._notify(event.data);
 					};
 					ws.onerror = function(event) {
 						socket.data("event", event).fire("close", [aborted ? "close" : "error"]);
@@ -749,7 +789,7 @@
 							if (!index) {
 								socket.fire("open");
 							} else if (length > index) {
-								socket.notify(xhr.responseText.substring(index, length), true);
+								socket._notify(xhr.responseText.substring(index, length), true);
 							}
 							
 							socket.data("index", length);
@@ -830,7 +870,7 @@
 							
 							if (text) {
 								response.innerText = "";
-								socket.notify(text, true);
+								socket._notify(text, true);
 							}
 							
 							if (cdoc.readyState === "complete") {
@@ -871,7 +911,7 @@
 						if (!index) {
 							socket.fire("open");
 						} else {
-							socket.notify(xdr.responseText.substring(index, length), true);
+							socket._notify(xdr.responseText.substring(index, length), true);
 						}
 						
 						socket.data("index", length);
@@ -907,7 +947,7 @@
 						socket.data("event", event).fire("open");
 					};
 					es.onmessage = function(event) {
-						socket.data("event", event).notify(event.data);
+						socket.data("event", event)._notify(event.data);
 					};
 					es.onerror = function(event) {
 						es.close();
@@ -927,21 +967,20 @@
 		},
 		// Long polling - AJAX
 		longpollajax: function(socket, options) {
-			var count = 0, url = socket.data("url"),
-				xhr;
+			var count = 0, xhr;
 			
 			if (!$.support.ajax || (options.crossDomain && !$.support.cors)) {
 				return;
 			}
 			
 			function poll() {
-				var u = url + queryOrAmpersand(url) + $.param({count: ++count}),
+				var url = socket._url({count: ++count}),
 					done = function(data) {
 						if (data) {
 							if (count === 1) {
 								socket.fire("open");
 							} else {
-								socket.notify(data);
+								socket._notify(data);
 							}
 							poll();
 						} else {
@@ -952,8 +991,8 @@
 						socket.fire("close", [reason === "abort" ? "close" : "error"]);
 					};
 				
-				socket.data("url", u);
-				xhr = $.ajax(u, {type: "GET", dataType: "text", async: true, cache: true, timeout: 0}).then(done, fail);
+				socket.data("url", url);
+				xhr = $.ajax(url, {type: "GET", dataType: "text", async: true, cache: true, timeout: 0}).then(done, fail);
 			}
 			
 			return $.extend(transports.http(socket, options), {
@@ -965,21 +1004,20 @@
 		},
 		// Long polling - XDomainRequest
 		longpollxdr: function(socket, options) {
-			var XDomainRequest = window.XDomainRequest, count = 0, url = socket.data("url"), 
-				xdr;
+			var XDomainRequest = window.XDomainRequest, count = 0, xdr;
 			
 			if (!XDomainRequest || !options.xdrURL || (options.xdrURL.call(socket, "") === false)) {
 				return;
 			}
 			
 			function poll() {
-				var u = options.xdrURL.call(socket, url + queryOrAmpersand(url) + $.param({count: ++count})),
+				var url = options.xdrURL.call(socket, socket._url({count: ++count})),
 					done = function() {
 						if (xdr.responseText) {
 							if (count === 1) {
 								socket.fire("open");
 							} else {
-								socket.notify(xdr.responseText);
+								socket._notify(xdr.responseText);
 							}
 							poll();
 						} else {
@@ -994,8 +1032,8 @@
 				xdr.onload = done;
 				xdr.onerror = fail;
 				
-				socket.data("url", u);
-				xdr.open("GET", u);
+				socket.data("url", url);
+				xdr.open("GET", url);
 				xdr.send();
 			}
 			
@@ -1008,8 +1046,7 @@
 		},
 		// Long polling - JSONP
 		longpolljsonp: function(socket, options) {
-			var count = 0, url = socket.data("url"), callback = "socket_" + (++guid),
-				xhr, called;
+			var count = 0, callback = "socket_" + (++guid), xhr, called;
 			
 			// Attaches callback
 			window[callback] = function(data) {
@@ -1017,7 +1054,7 @@
 				if (count === 1) {
 					socket.fire("open");
 				} else {
-					socket.notify(data);
+					socket._notify(data);
 				}
 			};
 			socket.one("close", function() {
@@ -1026,7 +1063,7 @@
 			});
 			
 			function poll() {
-				var u = url + queryOrAmpersand(url) + $.param({callback: callback, count: ++count}),
+				var url = socket._url({callback: callback, count: ++count}),
 					done = function() {
 						if (called) {
 							called = false;
@@ -1039,8 +1076,8 @@
 						socket.fire("close", [reason === "abort" ? "close" : "error"]);
 					};
 				
-				socket.data("url", u);
-				xhr = $.ajax(u, {dataType: "script", crossDomain: true, cache: true, timeout: 0}).then(done, fail);
+				socket.data("url", url);
+				xhr = $.ajax(url, {dataType: "script", crossDomain: true, cache: true, timeout: 0}).then(done, fail);
 			}
 			
 			return $.extend(transports.http(socket, options), {

@@ -5,12 +5,9 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, target-densitydpi=medium-dpi" />
 		<title>jQuery Socket Chat</title>
 		<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.js"></script>
-		<script type="text/javascript" src="jquery.socket-1.0a1.js"></script>
+		<script type="text/javascript" src="jquery.socket-1.0a2.js"></script>
 		<script type="text/javascript">
-		$.extend($.socket.defaults, {
-			transports: ["ws", "sse", "stream"],
-			heartbeat: false
-		});
+		$.socket.defaults.transports = ["ws", "sse", "stream"];
 		
 		$(function() {
 			var username, 
