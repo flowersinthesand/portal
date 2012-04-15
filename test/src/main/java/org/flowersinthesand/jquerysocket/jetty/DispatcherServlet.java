@@ -353,8 +353,9 @@ public abstract class DispatcherServlet extends WebSocketServlet {
 			}
 
 			void cleanup(AsyncEvent event) {
-				// The completion of the request with no response means the end of the connection 
-				if (!event.getAsyncContext().getResponse().isCommitted()) {
+				// The completion of the request with no response means the end of the connection
+				if (!"1".equals(event.getAsyncContext().getRequest().getParameter("count"))
+						&& !event.getAsyncContext().getResponse().isCommitted()) {
 					fire(id, "close");
 				}
 			}
@@ -372,18 +373,8 @@ public abstract class DispatcherServlet extends WebSocketServlet {
 			asyncContext.setTimeout(0);
 		} catch (NumberFormatException e) {}
 		
-		// If this request is first
+		// If this request is first, complete
 		if ("1".equals(request.getParameter("count"))) {
-			// To tell the client that the server accepts the request, sends an empty string
-			// the first response text doesn't matter but can't be empty 
-			PrintWriter writer = response.getWriter();
-			if (c.jsonp == null) {
-				writer.print(" ");
-			} else {
-				writer.print(c.jsonp);
-				writer.print("()");
-			}
-			writer.flush();
 			asyncContext.complete();
 			// Fires the open event
 			connections.put(id, c);

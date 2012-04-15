@@ -976,12 +976,11 @@
 			function poll() {
 				var url = socket._url({count: ++count}),
 					done = function(data) {
-						if (data) {
-							if (count === 1) {
-								socket.fire("open");
-							} else {
-								socket._notify(data);
-							}
+						if (count === 1) {
+							socket.fire("open");
+							poll();
+						} else if (data) {
+							socket._notify(data);
 							poll();
 						} else {
 							socket.fire("close", ["done"]);
@@ -1013,12 +1012,13 @@
 			function poll() {
 				var url = options.xdrURL.call(socket, socket._url({count: ++count})),
 					done = function() {
-						if (xdr.responseText) {
-							if (count === 1) {
-								socket.fire("open");
-							} else {
-								socket._notify(xdr.responseText);
-							}
+						var data = xdr.responseText;
+						
+						if (count === 1) {
+							socket.fire("open");
+							poll();
+						} else if (data) {
+							socket._notify(data);
 							poll();
 						} else {
 							socket.fire("close", ["done"]);
@@ -1051,11 +1051,7 @@
 			// Attaches callback
 			window[callback] = function(data) {
 				called = true;
-				if (count === 1) {
-					socket.fire("open");
-				} else {
-					socket._notify(data);
-				}
+				socket._notify(data);
 			};
 			socket.one("close", function() {
 				// Assings an empty function for browsers which are not able to cancel a request made from script tag
@@ -1065,7 +1061,10 @@
 			function poll() {
 				var url = socket._url({callback: callback, count: ++count}),
 					done = function() {
-						if (called) {
+						if (count === 1) {
+							socket.fire("open");
+							poll();
+						} else if (called) {
 							called = false;
 							poll();
 						} else {
