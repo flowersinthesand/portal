@@ -36,11 +36,7 @@ public class ChatServlet extends HttpServlet {
 						try {
 							send(entry.getValue(), event);
 						} catch (IOException ex) {
-							Event e = new Event();
-							e.socket = entry.getKey();
-							e.type = "close";
-
-							fire(e);
+							fire(new Event("close").socket(entry.getKey()));
 						}
 					}
 				} catch (InterruptedException e) {
@@ -84,11 +80,7 @@ public class ChatServlet extends HttpServlet {
 			}
 
 			private void cleanup(AsyncEvent event) {
-				Event e = new Event();
-				e.socket = id;
-				e.type = "close";
-
-				fire(e);
+				fire(new Event("close").socket(id));
 			}
 		});
 
@@ -100,12 +92,7 @@ public class ChatServlet extends HttpServlet {
 		writer.flush();
 
 		connections.put(id, asyncContext);
-
-		Event e = new Event();
-		e.socket = id;
-		e.type = "open";
-
-		fire(e);
+		fire(new Event("open").socket(id));
 	}
 
 	private void send(AsyncContext asyncContext, Event event) throws IOException {
@@ -145,7 +132,7 @@ public class ChatServlet extends HttpServlet {
 
 	private void handle(Event event) {
 		if (event.type.equals("message")) {
-			queue.offer(new Event("message", event.data));
+			queue.offer(new Event("message").data(event.data));
 		}
 	}
 
@@ -158,9 +145,18 @@ public class ChatServlet extends HttpServlet {
 
 		}
 
-		public Event(String type, Object data) {
+		public Event(String type) {
 			this.type = type;
+		}
+
+		public Event data(Object data) {
 			this.data = data;
+			return this;
+		}
+
+		public Event socket(String socket) {
+			this.socket = socket;
+			return this;
 		}
 	}
 

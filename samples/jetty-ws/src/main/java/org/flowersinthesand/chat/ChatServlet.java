@@ -33,11 +33,7 @@ public class ChatServlet extends WebSocketServlet {
 						try {
 							send(entry.getValue(), event);
 						} catch (IOException ex) {
-							Event e = new Event();
-							e.socket = entry.getKey();
-							e.type = "close";
-
-							fire(e);
+							fire(new Event("close").socket(entry.getKey()));
 						}
 					}
 				} catch (InterruptedException e) {
@@ -74,7 +70,7 @@ public class ChatServlet extends WebSocketServlet {
 
 	private void handle(Event event) {
 		if (event.type.equals("message")) {
-			queue.offer(new Event("message", event.data));
+			queue.offer(new Event("message").data(event.data));
 		}
 	}
 
@@ -90,21 +86,12 @@ public class ChatServlet extends WebSocketServlet {
 		public void onOpen(Connection connection) {
 			this.connection = connection;
 			connections.put(id, this);
-
-			Event e = new Event();
-			e.socket = id;
-			e.type = "open";
-
-			fire(e);
+			fire(new Event("open").socket(id));
 		}
 
 		@Override
 		public void onClose(int closeCode, String message) {
-			Event e = new Event();
-			e.socket = id;
-			e.type = "close";
-
-			fire(e);
+			fire(new Event("close").socket(id));
 		}
 
 		@Override
@@ -122,9 +109,18 @@ public class ChatServlet extends WebSocketServlet {
 
 		}
 
-		public Event(String type, Object data) {
+		public Event(String type) {
 			this.type = type;
+		}
+
+		public Event data(Object data) {
 			this.data = data;
+			return this;
+		}
+
+		public Event socket(String socket) {
+			this.socket = socket;
+			return this;
 		}
 	}
 
