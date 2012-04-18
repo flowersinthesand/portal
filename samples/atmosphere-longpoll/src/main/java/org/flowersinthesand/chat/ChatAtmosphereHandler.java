@@ -27,8 +27,6 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 			final String id = request.getParameter("id");
 			String transport = request.getParameter("transport");
 			final boolean first = "1".equals(request.getParameter("count"));
-			// TODO will be remove in version alpha 3
-			final String callback = request.getParameter("callback");
 
 			response.setCharacterEncoding("utf-8");
 			response.setHeader("Access-Control-Allow-Origin", "*");
@@ -36,7 +34,7 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 			// TODO will be remove in version alpha 3
 			if (first) {
 				PrintWriter writer = response.getWriter();
-				writer.print(callback);
+				writer.print(request.getParameter("callback"));
 				writer.print("()");
 				writer.flush();
 			}
