@@ -33,21 +33,20 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 			response.setCharacterEncoding("utf-8");
 			response.setHeader("Access-Control-Allow-Origin", "*");
 			response.setContentType("text/" + ("longpolljsonp".equals(transport) ? "javascript" : "plain"));
+			// TODO will be remove in version alpha 3
+			if (first) {
+				PrintWriter writer = response.getWriter();
+				writer.print(callback);
+				writer.print("()");
+				writer.flush();
+			}
+
 			resource.addEventListener(new AtmosphereResourceEventListener() {
 				@Override
 				public void onSuspend(AtmosphereResourceEvent event) {
 					if (first) {
-						try {
-							// TODO will be remove in version alpha 3
-							PrintWriter writer = event.getResource().getResponse().getWriter();
-							writer.print(callback);
-							writer.print("()");
-							writer.flush();
-
-							event.getResource().resume();
-							fire(new Event("open").socket(id).resource(event.getResource()));
-						} catch (IOException ex) {
-						}
+						event.getResource().resume();
+						fire(new Event("open").socket(id).resource(event.getResource()));
 					}
 				}
 
