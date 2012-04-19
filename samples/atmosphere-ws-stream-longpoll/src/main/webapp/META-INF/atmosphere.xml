@@ -1,0 +1,3 @@
+<atmosphere-handlers>
+	<atmosphere-handler support-session="false" context-root="/chat" class-name="org.flowersinthesand.chat.ChatAtmosphereHandler" />
+</atmosphere-handlers>
