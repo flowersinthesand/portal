@@ -122,6 +122,7 @@ public class ChatServlet extends WebSocketServlet {
 		private String type;
 		private Object data;
 
+		@SuppressWarnings("unused")
 		public Event() {
 
 		}

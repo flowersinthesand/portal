@@ -136,6 +136,7 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 		private Object data;
 		private AtmosphereResource resource;
 
+		@SuppressWarnings("unused")
 		public Event() {
 
 		}

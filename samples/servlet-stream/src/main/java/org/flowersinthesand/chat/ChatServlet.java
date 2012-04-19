@@ -141,6 +141,7 @@ public class ChatServlet extends HttpServlet {
 		private String type;
 		private Object data;
 
+		@SuppressWarnings("unused")
 		public Event() {
 
 		}
