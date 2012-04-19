@@ -43,7 +43,6 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 				@Override
 				public void onSuspend(AtmosphereResourceEvent event) {
 					if (first) {
-						event.getResource().resume();
 						fire(new Event("open").socket(id).resource(event.getResource()));
 					}
 				}
@@ -75,6 +74,9 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 				}
 			});
 			resource.suspend(20 * 1000, false);
+			if (first) {
+				resource.resume();
+			}
 		} else if (request.getMethod().equalsIgnoreCase("POST")) {
 			request.setCharacterEncoding("utf-8");
 			response.setHeader("Access-Control-Allow-Origin", "*");

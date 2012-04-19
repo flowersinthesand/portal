@@ -54,9 +54,6 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 				@Override
 				public void onSuspend(AtmosphereResourceEvent event) {
 					if (!transport.startsWith("longpoll") || first) {
-						if (transport.startsWith("longpoll")) {
-							event.getResource().resume();
-						}
 						fire(new Event("open").socket(id).resource(event.getResource()));
 					}
 				}
@@ -88,6 +85,9 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 				}
 			});
 			resource.suspend(20 * 1000, false);
+			if (transport.startsWith("longpoll") && first) {
+				resource.resume();
+			}
 		} else if (request.getMethod().equalsIgnoreCase("POST")) {
 			request.setCharacterEncoding("utf-8");
 			response.setHeader("Access-Control-Allow-Origin", "*");
@@ -188,58 +188,6 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 			this.resource = resource;
 			return this;
 		}
-	}
-
-	public static class EventIdBroadcasterFilter implements BroadcastFilter {
-
-		private AtomicLong id = new AtomicLong();
-
-		@Override
-		public BroadcastAction filter(Object originalMessage, Object message) {
-			if (message instanceof Event) {
-				((Event) message).id(id.incrementAndGet());
-			}
-
-			return new BroadcastAction(message);
-		}
-
-	}
-
-	public static class EventIdBroadcasterCache extends BroadcasterCacheBase {
-
-		public void cache(AtmosphereResource resource, CachedMessage cm) {
-
-		}
-
-		public CachedMessage retrieveLastMessage(AtmosphereResource resource) {
-			AtmosphereResourceImpl r = AtmosphereResourceImpl.class.cast(resource);
-
-			if (!r.isInScope()) {
-				return null;
-			}
-
-			return retrieveUsingEventId(r.getRequest().getParameter("lastEventId"));
-		}
-
-		private CachedMessage retrieveUsingEventId(String lastEventIdString) {
-			if ("".equals(lastEventIdString)) {
-				return null;
-			}
-
-			long lastEventId = Long.valueOf(lastEventIdString);
-			CachedMessage prev = null;
-			for (CachedMessage cm : queue) {
-				long id = ((Event) cm.message()).id;
-				if (id > lastEventId) {
-					return prev;
-				}
-				
-				prev = cm;
-			}
-
-			return prev;
-		}
-
 	}
 
 }
