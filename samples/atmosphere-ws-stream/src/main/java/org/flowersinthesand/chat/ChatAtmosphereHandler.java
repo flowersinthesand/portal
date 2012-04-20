@@ -9,6 +9,7 @@ import org.atmosphere.cpr.AtmosphereResource;
 import org.atmosphere.cpr.AtmosphereResourceEvent;
 import org.atmosphere.cpr.AtmosphereResourceEventListener;
 import org.atmosphere.cpr.AtmosphereResponse;
+import org.atmosphere.cpr.BroadcasterFactory;
 
 import com.google.gson.Gson;
 
@@ -38,7 +39,7 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 			resource.addEventListener(new AtmosphereResourceEventListener() {
 				@Override
 				public void onSuspend(AtmosphereResourceEvent event) {
-					fire(new Event("open").socket(id).resource(event.getResource()));
+					fire(new Event("open").socket(id));
 				}
 
 				@Override
@@ -62,7 +63,7 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 				}
 
 				private void cleanup(AtmosphereResourceEvent event) {
-					fire(new Event("close").socket(id).resource(event.getResource()));
+					fire(new Event("close").socket(id));
 				}
 			});
 			resource.suspend(20 * 1000, false);
@@ -73,7 +74,7 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 			String data = request.getReader().readLine();
 			if (data != null) {
 				data = data.startsWith("data=") ? data.substring("data=".length()) : data;
-				fire(new Gson().fromJson(data, Event.class).resource(resource));
+				fire(new Gson().fromJson(data, Event.class));
 			}
 		}
 	}
@@ -115,7 +116,7 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 
 	private void handle(Event event) {
 		if (event.type.equals("message")) {
-			event.resource.getBroadcaster().broadcast(new Event("message").data(event.data));
+			BroadcasterFactory.getDefault().lookup("/chat", true).broadcast(new Event("message").data(event.data));
 		}
 	}
 
@@ -123,7 +124,6 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 		private String socket;
 		private String type;
 		private Object data;
-		private AtmosphereResource resource;
 		
 		@SuppressWarnings("unused")
 		public Event() {
@@ -141,11 +141,6 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 
 		public Event socket(String socket) {
 			this.socket = socket;
-			return this;
-		}
-
-		public Event resource(AtmosphereResource resource) {
-			this.resource = resource;
 			return this;
 		}
 	}
