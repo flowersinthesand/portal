@@ -39,7 +39,7 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 			resource.addEventListener(new AtmosphereResourceEventListener() {
 				@Override
 				public void onSuspend(AtmosphereResourceEvent event) {
-					fire(new Event("open").socket(id));
+					fire(new SocketEvent("open").setSocket(id));
 				}
 
 				@Override
@@ -63,7 +63,7 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 				}
 
 				private void cleanup(AtmosphereResourceEvent event) {
-					fire(new Event("close").socket(id));
+					fire(new SocketEvent("close").setSocket(id));
 				}
 			});
 			resource.suspend(20 * 1000, false);
@@ -74,7 +74,7 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 			String data = request.getReader().readLine();
 			if (data != null) {
 				data = data.startsWith("data=") ? data.substring("data=".length()) : data;
-				fire(new Gson().fromJson(data, Event.class));
+				fire(new Gson().fromJson(data, SocketEvent.class));
 			}
 		}
 	}
@@ -110,38 +110,13 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 
 	}
 
-	private void fire(Event event) {
+	private void fire(SocketEvent event) {
 		handle(event);
 	}
 
-	private void handle(Event event) {
-		if (event.type.equals("message")) {
-			BroadcasterFactory.getDefault().lookup("/chat", true).broadcast(new Event("message").data(event.data));
-		}
-	}
-
-	private static class Event {
-		private String socket;
-		private String type;
-		private Object data;
-		
-		@SuppressWarnings("unused")
-		public Event() {
-
-		}
-
-		public Event(String type) {
-			this.type = type;
-		}
-
-		public Event data(Object data) {
-			this.data = data;
-			return this;
-		}
-
-		public Event socket(String socket) {
-			this.socket = socket;
-			return this;
+	private void handle(SocketEvent event) {
+		if (event.getType().equals("message")) {
+			BroadcasterFactory.getDefault().lookup("/chat").broadcast(new SocketEvent("message").setData(event.getData()));
 		}
 	}
 

@@ -2,17 +2,13 @@ package org.flowersinthesand.chat;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.concurrent.atomic.AtomicLong;
 
-import org.atmosphere.cache.BroadcasterCacheBase;
 import org.atmosphere.cpr.AtmosphereHandler;
 import org.atmosphere.cpr.AtmosphereRequest;
 import org.atmosphere.cpr.AtmosphereResource;
 import org.atmosphere.cpr.AtmosphereResourceEvent;
 import org.atmosphere.cpr.AtmosphereResourceEventListener;
-import org.atmosphere.cpr.AtmosphereResourceImpl;
 import org.atmosphere.cpr.AtmosphereResponse;
-import org.atmosphere.cpr.BroadcastFilter;
 import org.atmosphere.cpr.BroadcasterFactory;
 
 import com.google.gson.Gson;
@@ -44,7 +40,7 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 				@Override
 				public void onSuspend(AtmosphereResourceEvent event) {
 					if (first) {
-						fire(new Event("open").socket(id));
+						fire(new SocketEvent("open").setSocket(id));
 					}
 				}
 
@@ -70,7 +66,7 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 
 				private void cleanup(AtmosphereResourceEvent event) {
 					if (!first && !event.getResource().getResponse().isCommitted()) {
-						fire(new Event("close").socket(id));
+						fire(new SocketEvent("close").setSocket(id));
 					}
 				}
 			});
@@ -85,7 +81,7 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 			String data = request.getReader().readLine();
 			if (data != null) {
 				data = data.substring("data=".length());
-				fire(new Gson().fromJson(data, Event.class));
+				fire(new Gson().fromJson(data, SocketEvent.class));
 			}
 		}
 	}
@@ -120,97 +116,14 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 
 	}
 
-	private void fire(Event event) {
+	private void fire(SocketEvent event) {
 		handle(event);
 	}
 
-	private void handle(Event event) {
-		if (event.type.equals("message")) {
-			BroadcasterFactory.getDefault().lookup("/chat", true).broadcast(new Event("message").data(event.data));
+	private void handle(SocketEvent event) {
+		if (event.getType().equals("message")) {
+			BroadcasterFactory.getDefault().lookup("/chat").broadcast(new SocketEvent("message").setData(event.getData()));
 		}
-	}
-
-	private static class Event {
-		private long id;
-		private String socket;
-		private String type;
-		private Object data;
-
-		@SuppressWarnings("unused")
-		public Event() {
-
-		}
-
-		public Event(String type) {
-			this.type = type;
-		}
-		
-		public Event id(long id) {
-			this.id = id;
-			return this;
-		}
-
-		public Event data(Object data) {
-			this.data = data;
-			return this;
-		}
-
-		public Event socket(String socket) {
-			this.socket = socket;
-			return this;
-		}
-	}
-
-	public static class EventIdBroadcasterFilter implements BroadcastFilter {
-
-		private AtomicLong id = new AtomicLong();
-
-		@Override
-		public BroadcastAction filter(Object originalMessage, Object message) {
-			if (message instanceof Event) {
-				((Event) message).id(id.incrementAndGet());
-			}
-
-			return new BroadcastAction(message);
-		}
-
-	}
-
-	public static class EventIdBroadcasterCache extends BroadcasterCacheBase {
-
-		public void cache(AtmosphereResource resource, CachedMessage cm) {
-
-		}
-
-		public CachedMessage retrieveLastMessage(AtmosphereResource resource) {
-			AtmosphereResourceImpl r = AtmosphereResourceImpl.class.cast(resource);
-
-			if (!r.isInScope()) {
-				return null;
-			}
-
-			return retrieveUsingEventId(r.getRequest().getParameter("lastEventId"));
-		}
-
-		private CachedMessage retrieveUsingEventId(String lastEventIdString) {
-			if ("".equals(lastEventIdString)) {
-				return null;
-			}
-
-			long lastEventId = Long.valueOf(lastEventIdString);
-			CachedMessage prev = null;
-			for (CachedMessage cm : queue) {
-				long id = ((Event) cm.message()).id;
-				if (id > lastEventId) {
-					return prev;
-				}
-				
-				prev = cm;
-			}
-
-			return prev;
-		}
-
 	}
 
 }

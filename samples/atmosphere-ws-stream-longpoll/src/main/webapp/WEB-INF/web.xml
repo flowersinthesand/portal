@@ -6,11 +6,11 @@
 		<servlet-class>org.atmosphere.cpr.AtmosphereServlet</servlet-class>
 		<init-param>
 			<param-name>org.atmosphere.cpr.broadcastFilterClasses</param-name>
-			<param-value>org.flowersinthesand.chat.ChatAtmosphereHandler$EventIdBroadcasterFilter</param-value>
+			<param-value>org.flowersinthesand.chat.EventIdBroadcasterFilter</param-value>
 		</init-param>
 		<init-param>
 			<param-name>org.atmosphere.cpr.broadcasterCacheClass</param-name>
-			<param-value>org.flowersinthesand.chat.ChatAtmosphereHandler$EventIdBroadcasterCache</param-value>
+			<param-value>org.flowersinthesand.chat.EventIdBroadcasterCache</param-value>
 		</init-param>
 	</servlet>
 	<servlet-mapping>
