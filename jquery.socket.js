@@ -936,8 +936,16 @@
 			var EventSource = window.EventSource,
 				es;
 			
-			if (!EventSource || options.crossDomain) {
+			if (!EventSource) {
 				return;
+			} else if (options.crossDomain) {
+				try {
+					if (!("withCredentials" in new EventSource("about:blank"))) {
+						return;
+					}
+				} catch(e) {
+					return;
+				}
 			}
 			
 			return $.extend(transports.http(socket, options), {

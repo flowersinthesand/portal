@@ -1217,8 +1217,16 @@ function testTransport(transport, fn) {
 	}
 	
 	if (QUnit.urlParams.crossdomain) {
-		if (/sse|streamiframe/.test(transport) || (/streamxhr|longpollajax/.test(transport) && !$.support.cors)) {
+		if (/streamiframe/.test(transport) || (/streamxhr|longpollajax/.test(transport) && !$.support.cors)) {
 			return;
+		} else if (/sse/.test(transport)) {
+			try {
+				if (!("withCredentials" in new EventSource("about:blank"))) {
+					return;
+				}
+			} catch (e) {
+				return;
+			}
 		}
 		
 		url = remoteURL + url;
