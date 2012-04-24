@@ -172,7 +172,9 @@ public abstract class DispatcherServlet extends WebSocketServlet {
 			fire(event);
 		}
 		// CORS
-		response.setHeader("Access-Control-Allow-Origin", "*");
+		String origin = request.getHeader("Origin");
+		response.setHeader("Access-Control-Allow-Origin", origin != null ? origin : "*");
+		response.setHeader("Access-Control-Allow-Credentials", "true");
 	}
 
 	// Handles ws transport
@@ -235,7 +237,9 @@ public abstract class DispatcherServlet extends WebSocketServlet {
 		response.setCharacterEncoding("utf-8");
 		// streamxdr requires 'Access-Control-Allow-Origin' header to be set to '*'
 		// http://msdn.microsoft.com/en-us/library/cc288060%28v=VS.85%29.aspx
-		response.setHeader("Access-Control-Allow-Origin", "*");
+		String origin = request.getHeader("Origin");
+		response.setHeader("Access-Control-Allow-Origin", origin != null ? origin : "*");
+		response.setHeader("Access-Control-Allow-Credentials", "true");
 		// sse requires the content type to be 'text/event-stream'
 		// http://dev.w3.org/html5/eventsource/#parsing-an-event-stream
 		// streamiframe requires the content type to be 'text/plain'
@@ -325,7 +329,9 @@ public abstract class DispatcherServlet extends WebSocketServlet {
 		response.setCharacterEncoding("utf-8");
 		// longpollxdr requires 'Access-Control-Allow-Origin' header to be set to '*'
 		// http://msdn.microsoft.com/en-us/library/cc288060%28v=VS.85%29.aspx
-		response.setHeader("Access-Control-Allow-Origin", "*");
+		String origin = request.getHeader("Origin");
+		response.setHeader("Access-Control-Allow-Origin", origin != null ? origin : "*");
+		response.setHeader("Access-Control-Allow-Credentials", "true");
 		// longpolljsonp requires the content type to be 'text/javascript'
 		response.setContentType("text/" + (transport.equals("longpolljsonp") ? "javascript" : "plain"));
 

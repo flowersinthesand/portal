@@ -664,7 +664,8 @@
 			}
 			
 			return array;
-		}
+		},
+		credentials: false
 	};
 	
 	// Transports
@@ -727,7 +728,15 @@
 			// See the fourth at http://blogs.msdn.com/b/ieinternals/archive/2010/05/13/xdomainrequest-restrictions-limitations-and-workarounds.aspx
 			send = !options.crossDomain || $.support.cors ? 
 			function(url, data) {
-				$.ajax(url, {type: "POST", contentType: "text/plain; charset=UTF-8", data: "data=" + data, async: true, timeout: 0}).always(post);
+				$.ajax(url, {
+					type: "POST", 
+					contentType: "text/plain; charset=UTF-8", 
+					data: "data=" + data, 
+					async: true, 
+					timeout: false, 
+					xhrFields: {withCredentials: options.credentials}
+				})
+				.always(post);
 			} : window.XDomainRequest && options.xdrURL && (options.xdrURL.call(socket, "") !== false) ? 
 			function(url, data) {
 				var xdr = new window.XDomainRequest();
@@ -812,6 +821,8 @@
 					};
 					
 					xhr.open("GET", socket.data("url"));
+					xhr.withCredentials = options.credentials;
+					
 					xhr.send(null);
 				},
 				close: function() {
@@ -950,7 +961,7 @@
 			
 			return $.extend(transports.http(socket, options), {
 				open: function() {
-					es = new EventSource(socket.data("url"));
+					es = new EventSource(socket.data("url"), {withCredentials: options.credentials});
 					es.onopen = function(event) {
 						socket.data("event", event).fire("open");
 					};
@@ -999,7 +1010,15 @@
 					};
 				
 				socket.data("url", url);
-				xhr = $.ajax(url, {type: "GET", dataType: "text", async: true, cache: true, timeout: 0}).then(done, fail);
+				xhr = $.ajax(url, {
+					type: "GET", 
+					dataType: "text", 
+					async: true, 
+					cache: true, 
+					timeout: false,
+					xhrFields: {withCredentials: options.credentials}
+				})
+				.then(done, fail);
 			}
 			
 			return $.extend(transports.http(socket, options), {
@@ -1084,7 +1103,13 @@
 					};
 				
 				socket.data("url", url);
-				xhr = $.ajax(url, {dataType: "script", crossDomain: true, cache: true, timeout: 0}).then(done, fail);
+				xhr = $.ajax(url, {
+					dataType: "script", 
+					crossDomain: true, 
+					cache: true, 
+					timeout: false
+				})
+				.then(done, fail);
 			}
 			
 			return $.extend(transports.http(socket, options), {
