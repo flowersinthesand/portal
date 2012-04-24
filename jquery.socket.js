@@ -453,7 +453,11 @@
 			parts = /^([\w\+\.\-]+:)(?:\/\/([^\/?#:]*)(?::(\d+))?)?/.exec(url.toLowerCase());
 		
 		opts = $.extend(true, {}, defaults, options);
-		opts.transports = options.transports;
+		if (options) {
+			if (options.transports) {
+				opts.transports = options.transports;
+			}
+		}
 		opts._url = url;
 		opts._id = id = opts.id.call(self);
 		opts.crossDomain = !!(parts && 
