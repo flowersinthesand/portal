@@ -220,14 +220,10 @@
 		};
 	}
 	
-	function queryOrAmpersand(string) {
-		return /\?/.test(string) ? "&" : "?";
-	}
-		
 	// Socket function
 	function socket(url, options) {
 		var	// Final options object
-			opts = $.extend(true, {}, defaults, options),
+			opts,
 			// Socket id,
 			id,
 			// Transport
@@ -456,6 +452,8 @@
 			// From jQuery.ajax
 			parts = /^([\w\+\.\-]+:)(?:\/\/([^\/?#:]*)(?::(\d+))?)?/.exec(url.toLowerCase());
 		
+		opts = $.extend(true, {}, defaults, options);
+		opts.transports = options.transports;
 		opts._url = url;
 		opts._id = id = opts.id.call(self);
 		opts.crossDomain = !!(parts && 
@@ -610,7 +608,7 @@
 		url: function(url, params) {
 			// Adds the current timestamp for this request not to be cached 
 			params._ = $.now();
-			return url + queryOrAmpersand(url) + $.param(params);
+			return url + (/\?/.test(url) ? "&" : "?") + $.param(params);
 		},
 		inbound: $.parseJSON,
 		outbound: $.stringifyJSON,
