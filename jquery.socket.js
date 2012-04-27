@@ -736,7 +736,7 @@
 					data: "data=" + data, 
 					async: true, 
 					timeout: false, 
-					xhrFields: {withCredentials: options.credentials}
+					xhrFields: $.support.cors ? {withCredentials: options.credentials} : null
 				})
 				.always(post);
 			} : window.XDomainRequest && options.xdrURL && (options.xdrURL.call(socket, "") !== false) ? 
@@ -1018,7 +1018,7 @@
 					async: true, 
 					cache: true, 
 					timeout: false,
-					xhrFields: {withCredentials: options.credentials}
+					xhrFields: $.support.cors ? {withCredentials: options.credentials} : null
 				})
 				.then(done, fail);
 			}
