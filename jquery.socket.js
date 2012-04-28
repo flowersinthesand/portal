@@ -997,11 +997,13 @@
 			function poll() {
 				var url = socket._url({count: ++count}),
 					done = function(data) {
-						if (count === 1) {
-							socket.fire("open");
-							poll();
-						} else if (data) {
-							socket._notify(data);
+						if (data || count === 1) {
+							if (count === 1) {
+								socket.fire("open");
+							}
+							if (data) {
+								socket._notify(data);
+							}
 							poll();
 						} else {
 							socket.fire("close", ["done"]);
@@ -1043,11 +1045,13 @@
 					done = function() {
 						var data = xdr.responseText;
 						
-						if (count === 1) {
-							socket.fire("open");
-							poll();
-						} else if (data) {
-							socket._notify(data);
+						if (data || count === 1) {
+							if (count === 1) {
+								socket.fire("open");
+							}
+							if (data) {
+								socket._notify(data);
+							}
 							poll();
 						} else {
 							socket.fire("close", ["done"]);
@@ -1080,6 +1084,9 @@
 			// Attaches callback
 			window[callback] = function(data) {
 				called = true;
+				if (count === 1) {
+					socket.fire("open");
+				}
 				socket._notify(data);
 			};
 			socket.one("close", function() {
@@ -1090,11 +1097,11 @@
 			function poll() {
 				var url = socket._url({callback: callback, count: ++count}),
 					done = function() {
-						if (count === 1) {
-							socket.fire("open");
-							poll();
-						} else if (called) {
+						if (called) {
 							called = false;
+							poll();
+						} else if (count === 1) {
+							socket.fire("open");
 							poll();
 						} else {
 							socket.fire("close", ["done"]);
