@@ -106,7 +106,9 @@
 		// Socket instances
 		sockets = {},
 		// A global identifier
-		guid = $.now();
+		guid = $.now(),
+		// Callback names for JSONP
+		jsonpCallbacks = [];
 	
 	// From jQuery.Callbacks
 	function callbacks(deferred) {
@@ -1079,7 +1081,7 @@
 		},
 		// Long polling - JSONP
 		longpolljsonp: function(socket, options) {
-			var count = 0, callback = "socket_" + (++guid), xhr, called;
+			var count = 0, callback = jsonpCallbacks.pop() || ("socket_" + (++guid)), xhr, called;
 			
 			// Attaches callback
 			window[callback] = function(data) {
@@ -1092,6 +1094,7 @@
 			socket.one("close", function() {
 				// Assings an empty function for browsers which are not able to cancel a request made from script tag
 				window[callback] = $.noop;
+				jsonpCallbacks.push(callback);
 			});
 			
 			function poll() {
