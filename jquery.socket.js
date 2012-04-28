@@ -590,8 +590,6 @@
 		return self.open();
 	}
 	
-	$.browser.android = /android/.test(navigator.userAgent.toLowerCase());
-	
 	// Default options
 	defaults = {
 		transports: ["ws", "sse", "stream", "longpoll"],
@@ -784,8 +782,7 @@
 			var XMLHttpRequest = window.XMLHttpRequest, 
 				xhr, aborted;
 			
-			if (!XMLHttpRequest || window.XDomainRequest || window.ActiveXObject || 
-					($.browser.android && $.browser.webkit) || (options.crossDomain && !$.support.cors)) {
+			if (!XMLHttpRequest || window.XDomainRequest || window.ActiveXObject || (options.crossDomain && !$.support.cors)) {
 				return;
 			}
 			
