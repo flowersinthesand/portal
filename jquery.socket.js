@@ -421,27 +421,24 @@
 						while (data.length) {
 							self._notify(data.shift());
 						}
-						
-						return this;
+					} else {
+						$.each(isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data)), 
+						function(i, event) {
+							lastEventId = event.id;
+							connection.result = null;
+							self.fire(event.type, [event.data]);
+							
+							if (event.reply) {
+								$.when(connection.result).done(function(result) {
+									self.send("reply", {id: event.id, data: result});
+								});
+							}
+						});
 					}
-					
-					var events = isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data));
-					
-					$.each(events, function(i, event) {
-						lastEventId = event.id;
-						connection.result = null;
-						self.fire(event.type, [event.data]);
-						
-						if (event.reply) {
-							$.when(connection.result).done(function(result) {
-								self.send("reply", {id: event.id, data: result});
-							});
-						}
-					});
 					
 					return this;
 				},
-				// Url generator
+				// URL generator
 				_url: function(params) {
 					return opts.url.call(self, url, $.extend({
 						id: id, 
@@ -501,20 +498,6 @@
 			}
 		})
 		.open(function() {
-			// Helper function for setting heartbeat timer
-			function setHeartbeatTimer() {
-				heartbeatTimer = setTimeout(function() {
-					self.send("heartbeat", null).one("heartbeat", function() {
-						clearTimeout(heartbeatTimer);
-						setHeartbeatTimer();
-					});
-					
-					heartbeatTimer = setTimeout(function() {
-						self.close("error");
-					}, opts._heartbeat);
-				}, opts.heartbeat - opts._heartbeat);
-			}
-			
 			state = "opened";
 			
 			// Clears timeout timer
@@ -525,7 +508,19 @@
 			
 			// Sets heartbeat timer
 			if (opts.heartbeat > opts._heartbeat) {
-				setHeartbeatTimer();
+				// Helper function for setting heartbeat timer
+				(function setHeartbeatTimer() {
+					heartbeatTimer = setTimeout(function() {
+						self.send("heartbeat", null).one("heartbeat", function() {
+							clearTimeout(heartbeatTimer);
+							setHeartbeatTimer();
+						});
+						
+						heartbeatTimer = setTimeout(function() {
+							self.close("error");
+						}, opts._heartbeat);
+					}, opts.heartbeat - opts._heartbeat);
+				})();
 			}
 			
 			// Locks the connecting event
@@ -739,7 +734,7 @@
 					xhrFields: $.support.cors ? {withCredentials: options.credentials} : null
 				})
 				.always(post);
-			} : window.XDomainRequest && options.xdrURL && (options.xdrURL.call(socket, "") !== false) ? 
+			} : window.XDomainRequest && options.xdrURL && options.xdrURL.call(socket, "t") ? 
 			function(url, data) {
 				var xdr = new window.XDomainRequest();
 				
@@ -905,7 +900,7 @@
 			var XDomainRequest = window.XDomainRequest,
 				xdr;
 			
-			if (!XDomainRequest || !options.xdrURL || (options.xdrURL.call(socket, "") === false)) {
+			if (!XDomainRequest || !options.xdrURL || !options.xdrURL.call(socket, "t")) {
 				return;
 			}
 			
@@ -1035,7 +1030,7 @@
 		longpollxdr: function(socket, options) {
 			var XDomainRequest = window.XDomainRequest, count = 0, xdr;
 			
-			if (!XDomainRequest || !options.xdrURL || (options.xdrURL.call(socket, "") === false)) {
+			if (!XDomainRequest || !options.xdrURL || !options.xdrURL.call(socket, "t")) {
 				return;
 			}
 			
