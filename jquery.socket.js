@@ -342,24 +342,26 @@
 					transport = undefined;
 					connection.candidates = candidates;
 					
-					while (candidates.length) {
+					while (!transport && candidates.length) {
 						type = candidates.shift();
 						
 						if (transports[type]) {
 							connection.transport = type;
 							connection.url = self._url();
 							transport = transports[type](self, opts);
-							
-							// Fires the connecting event and connects
-							if (transport) {
-								self.fire("connecting");
-								transport.open();
-								break;
-							}
 						}
 					}
 					
-					if (!transport) {
+					// Increases the number of reconnection attempts
+					if (reconnectTry) {
+						reconnectTry++;
+					}
+					
+					// Fires the connecting event and connects
+					if (transport) {
+						self.fire("connecting");
+						transport.open();
+					} else {
 						self.close("notransport");
 					}
 					
@@ -484,11 +486,6 @@
 		// Initializes
 		self.connecting(function() {
 			state = "connecting";
-			
-			// Increases the number of reconnection attempts
-			if (reconnectTry) {
-				reconnectTry++;
-			}
 			
 			// Sets timeout timer
 			if (opts.timeout > 0) {

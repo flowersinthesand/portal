@@ -780,6 +780,19 @@ asyncTest("in case of manual reconnection connecting event should be fired", fun
 	});
 });
 
+asyncTest("the number of reconnection attempts should increment even when there is no available transport", function() {
+	var oldAttempts;
+	
+	$.socket("url", {transports: []}).waiting(function(delay, attempts) {
+		if (!oldAttempts) {
+			oldAttempts = attempts;
+		} else {
+			ok(attempts > oldAttempts);
+			start();
+		}
+	});
+});
+
 module("Heartbeat", {
 	setup: function() {
 		setup();
