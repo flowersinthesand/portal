@@ -28,14 +28,7 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 			response.setCharacterEncoding("utf-8");
 			response.setHeader("Access-Control-Allow-Origin", "*");
 			response.setContentType("text/" + ("longpolljsonp".equals(transport) ? "javascript" : "plain"));
-			// TODO will be remove in version alpha 3
-			if (first) {
-				PrintWriter writer = response.getWriter();
-				writer.print(request.getParameter("callback"));
-				writer.print("()");
-				writer.flush();
-			}
-
+			
 			resource.addEventListener(new AtmosphereResourceEventListener() {
 				@Override
 				public void onSuspend(AtmosphereResourceEvent event) {

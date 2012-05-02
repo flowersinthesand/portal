@@ -38,13 +38,6 @@ public class ChatAtmosphereHandler implements AtmosphereHandler {
 				writer.flush();
 			} else if (transport.startsWith("longpoll")) {
 				response.setContentType("text/" + ("longpolljsonp".equals(transport) ? "javascript" : "plain"));
-				// TODO will be remove in version alpha 3
-				if (first) {
-					PrintWriter writer = response.getWriter();
-					writer.print(request.getParameter("callback"));
-					writer.print("()");
-					writer.flush();
-				}
 			}
 			
 			resource.addEventListener(new AtmosphereResourceEventListener() {

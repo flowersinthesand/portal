@@ -90,12 +90,6 @@ public class ChatServlet extends HttpServlet {
 		connections.put(id, asyncContext);
 
 		if (first) {
-			// TODO will be remove in version alpha 3
-			PrintWriter writer = response.getWriter();
-			writer.print(request.getParameter("callback"));
-			writer.print("()");
-			writer.flush();
-			
 			asyncContext.complete();
 			fire(new Event("open").socket(id));
 		}

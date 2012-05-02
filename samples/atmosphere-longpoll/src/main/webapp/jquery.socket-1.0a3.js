@@ -106,7 +106,9 @@
 		// Socket instances
 		sockets = {},
 		// A global identifier
-		guid = $.now();
+		guid = $.now(),
+		// Callback names for JSONP
+		jsonpCallbacks = [];
 	
 	// From jQuery.Callbacks
 	function callbacks(deferred) {
@@ -220,14 +222,10 @@
 		};
 	}
 	
-	function queryOrAmpersand(string) {
-		return /\?/.test(string) ? "&" : "?";
-	}
-		
 	// Socket function
 	function socket(url, options) {
 		var	// Final options object
-			opts = $.extend(true, {}, defaults, options),
+			opts,
 			// Socket id,
 			id,
 			// Transport
@@ -344,24 +342,26 @@
 					transport = undefined;
 					connection.candidates = candidates;
 					
-					while (candidates.length) {
+					while (!transport && candidates.length) {
 						type = candidates.shift();
 						
 						if (transports[type]) {
 							connection.transport = type;
 							connection.url = self._url();
 							transport = transports[type](self, opts);
-							
-							// Fires the connecting event and connects
-							if (transport) {
-								self.fire("connecting");
-								transport.open();
-								break;
-							}
 						}
 					}
 					
-					if (!transport) {
+					// Increases the number of reconnection attempts
+					if (reconnectTry) {
+						reconnectTry++;
+					}
+					
+					// Fires the connecting event and connects
+					if (transport) {
+						self.fire("connecting");
+						transport.open();
+					} else {
 						self.close("notransport");
 					}
 					
@@ -423,27 +423,24 @@
 						while (data.length) {
 							self._notify(data.shift());
 						}
-						
-						return this;
+					} else {
+						$.each(isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data)), 
+						function(i, event) {
+							lastEventId = event.id;
+							connection.result = null;
+							self.fire(event.type, [event.data]);
+							
+							if (event.reply) {
+								$.when(connection.result).done(function(result) {
+									self.send("reply", {id: event.id, data: result});
+								});
+							}
+						});
 					}
-					
-					var events = isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data));
-					
-					$.each(events, function(i, event) {
-						lastEventId = event.id;
-						connection.result = null;
-						self.fire(event.type, [event.data]);
-						
-						if (event.reply) {
-							$.when(connection.result).done(function(result) {
-								self.send("reply", {id: event.id, data: result});
-							});
-						}
-					});
 					
 					return this;
 				},
-				// Url generator
+				// URL generator
 				_url: function(params) {
 					return opts.url.call(self, url, $.extend({
 						id: id, 
@@ -456,6 +453,12 @@
 			// From jQuery.ajax
 			parts = /^([\w\+\.\-]+:)(?:\/\/([^\/?#:]*)(?::(\d+))?)?/.exec(url.toLowerCase());
 		
+		opts = $.extend(true, {}, defaults, options);
+		if (options) {
+			if (options.transports) {
+				opts.transports = options.transports;
+			}
+		}
 		opts._url = url;
 		opts._id = id = opts.id.call(self);
 		opts.crossDomain = !!(parts && 
@@ -484,11 +487,6 @@
 		self.connecting(function() {
 			state = "connecting";
 			
-			// Increases the number of reconnection attempts
-			if (reconnectTry) {
-				reconnectTry++;
-			}
-			
 			// Sets timeout timer
 			if (opts.timeout > 0) {
 				timeoutTimer = setTimeout(function() {
@@ -497,20 +495,6 @@
 			}
 		})
 		.open(function() {
-			// Helper function for setting heartbeat timer
-			function setHeartbeatTimer() {
-				heartbeatTimer = setTimeout(function() {
-					self.send("heartbeat", null).one("heartbeat", function() {
-						clearTimeout(heartbeatTimer);
-						setHeartbeatTimer();
-					});
-					
-					heartbeatTimer = setTimeout(function() {
-						self.close("error");
-					}, opts._heartbeat);
-				}, opts.heartbeat - opts._heartbeat);
-			}
-			
 			state = "opened";
 			
 			// Clears timeout timer
@@ -521,7 +505,19 @@
 			
 			// Sets heartbeat timer
 			if (opts.heartbeat > opts._heartbeat) {
-				setHeartbeatTimer();
+				// Helper function for setting heartbeat timer
+				(function setHeartbeatTimer() {
+					heartbeatTimer = setTimeout(function() {
+						self.send("heartbeat", null).one("heartbeat", function() {
+							clearTimeout(heartbeatTimer);
+							setHeartbeatTimer();
+						});
+						
+						heartbeatTimer = setTimeout(function() {
+							self.close("error");
+						}, opts._heartbeat);
+					}, opts.heartbeat - opts._heartbeat);
+				})();
 			}
 			
 			// Locks the connecting event
@@ -586,8 +582,6 @@
 		return self.open();
 	}
 	
-	$.browser.android = /android/.test(navigator.userAgent.toLowerCase());
-	
 	// Default options
 	defaults = {
 		transports: ["ws", "sse", "stream", "longpoll"],
@@ -610,7 +604,7 @@
 		url: function(url, params) {
 			// Adds the current timestamp for this request not to be cached 
 			params._ = $.now();
-			return url + queryOrAmpersand(url) + $.param(params);
+			return url + (/\?/.test(url) ? "&" : "?") + $.param(params);
 		},
 		inbound: $.parseJSON,
 		outbound: $.stringifyJSON,
@@ -664,7 +658,8 @@
 			}
 			
 			return array;
-		}
+		},
+		credentials: false
 	};
 	
 	// Transports
@@ -727,8 +722,16 @@
 			// See the fourth at http://blogs.msdn.com/b/ieinternals/archive/2010/05/13/xdomainrequest-restrictions-limitations-and-workarounds.aspx
 			send = !options.crossDomain || $.support.cors ? 
 			function(url, data) {
-				$.ajax(url, {type: "POST", contentType: "text/plain; charset=UTF-8", data: "data=" + data, async: true, timeout: 0}).always(post);
-			} : window.XDomainRequest && options.xdrURL && (options.xdrURL.call(socket, "") !== false) ? 
+				$.ajax(url, {
+					type: "POST", 
+					contentType: "text/plain; charset=UTF-8", 
+					data: "data=" + data, 
+					async: true, 
+					timeout: false, 
+					xhrFields: $.support.cors ? {withCredentials: options.credentials} : null
+				})
+				.always(post);
+			} : window.XDomainRequest && options.xdrURL && options.xdrURL.call(socket, "t") ? 
 			function(url, data) {
 				var xdr = new window.XDomainRequest();
 				
@@ -771,8 +774,7 @@
 			var XMLHttpRequest = window.XMLHttpRequest, 
 				xhr, aborted;
 			
-			if (!XMLHttpRequest || window.XDomainRequest || window.ActiveXObject || 
-					($.browser.android && $.browser.webkit) || (options.crossDomain && !$.support.cors)) {
+			if (!XMLHttpRequest || window.XDomainRequest || window.ActiveXObject || (options.crossDomain && !$.support.cors)) {
 				return;
 			}
 			
@@ -812,6 +814,8 @@
 					};
 					
 					xhr.open("GET", socket.data("url"));
+					xhr.withCredentials = options.credentials;
+					
 					xhr.send(null);
 				},
 				close: function() {
@@ -893,7 +897,7 @@
 			var XDomainRequest = window.XDomainRequest,
 				xdr;
 			
-			if (!XDomainRequest || !options.xdrURL || (options.xdrURL.call(socket, "") === false)) {
+			if (!XDomainRequest || !options.xdrURL || !options.xdrURL.call(socket, "t")) {
 				return;
 			}
 			
@@ -936,13 +940,21 @@
 			var EventSource = window.EventSource,
 				es;
 			
-			if (!EventSource || options.crossDomain) {
+			if (!EventSource) {
 				return;
+			} else if (options.crossDomain) {
+				try {
+					if (!("withCredentials" in new EventSource("about:blank"))) {
+						return;
+					}
+				} catch(e) {
+					return;
+				}
 			}
 			
 			return $.extend(transports.http(socket, options), {
 				open: function() {
-					es = new EventSource(socket.data("url"));
+					es = new EventSource(socket.data("url"), {withCredentials: options.credentials});
 					es.onopen = function(event) {
 						socket.data("event", event).fire("open");
 					};
@@ -976,10 +988,11 @@
 			function poll() {
 				var url = socket._url({count: ++count}),
 					done = function(data) {
-						if (data) {
+						if (data || count === 1) {
 							if (count === 1) {
 								socket.fire("open");
-							} else {
+							}
+							if (data) {
 								socket._notify(data);
 							}
 							poll();
@@ -992,7 +1005,15 @@
 					};
 				
 				socket.data("url", url);
-				xhr = $.ajax(url, {type: "GET", dataType: "text", async: true, cache: true, timeout: 0}).then(done, fail);
+				xhr = $.ajax(url, {
+					type: "GET", 
+					dataType: "text", 
+					async: true, 
+					cache: true, 
+					timeout: false,
+					xhrFields: $.support.cors ? {withCredentials: options.credentials} : null
+				})
+				.then(done, fail);
 			}
 			
 			return $.extend(transports.http(socket, options), {
@@ -1006,18 +1027,21 @@
 		longpollxdr: function(socket, options) {
 			var XDomainRequest = window.XDomainRequest, count = 0, xdr;
 			
-			if (!XDomainRequest || !options.xdrURL || (options.xdrURL.call(socket, "") === false)) {
+			if (!XDomainRequest || !options.xdrURL || !options.xdrURL.call(socket, "t")) {
 				return;
 			}
 			
 			function poll() {
 				var url = options.xdrURL.call(socket, socket._url({count: ++count})),
 					done = function() {
-						if (xdr.responseText) {
+						var data = xdr.responseText;
+						
+						if (data || count === 1) {
 							if (count === 1) {
 								socket.fire("open");
-							} else {
-								socket._notify(xdr.responseText);
+							}
+							if (data) {
+								socket._notify(data);
 							}
 							poll();
 						} else {
@@ -1046,20 +1070,20 @@
 		},
 		// Long polling - JSONP
 		longpolljsonp: function(socket, options) {
-			var count = 0, callback = "socket_" + (++guid), xhr, called;
+			var count = 0, callback = jsonpCallbacks.pop() || ("socket_" + (++guid)), xhr, called;
 			
 			// Attaches callback
 			window[callback] = function(data) {
 				called = true;
 				if (count === 1) {
 					socket.fire("open");
-				} else {
-					socket._notify(data);
 				}
+				socket._notify(data);
 			};
 			socket.one("close", function() {
 				// Assings an empty function for browsers which are not able to cancel a request made from script tag
 				window[callback] = $.noop;
+				jsonpCallbacks.push(callback);
 			});
 			
 			function poll() {
@@ -1067,6 +1091,9 @@
 					done = function() {
 						if (called) {
 							called = false;
+							poll();
+						} else if (count === 1) {
+							socket.fire("open");
 							poll();
 						} else {
 							socket.fire("close", ["done"]);
@@ -1077,7 +1104,13 @@
 					};
 				
 				socket.data("url", url);
-				xhr = $.ajax(url, {dataType: "script", crossDomain: true, cache: true, timeout: 0}).then(done, fail);
+				xhr = $.ajax(url, {
+					dataType: "script", 
+					crossDomain: true, 
+					cache: true, 
+					timeout: false
+				})
+				.then(done, fail);
 			}
 			
 			return $.extend(transports.http(socket, options), {
