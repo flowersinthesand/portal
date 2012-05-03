@@ -1275,7 +1275,7 @@ function testTransport(transport, fn) {
 	asyncTest("send method should work properly with big data", function() {
 		var i, text = "A";
 		
-		for (i = 0; i < 32768; i++) {
+		for (i = 0; i < Math.pow(2, transport === "ws" ? 12 : 15); i++) {
 			text += "A";
 		}
 		
