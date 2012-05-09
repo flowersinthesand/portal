@@ -247,8 +247,8 @@
 			reconnectTimer,
 			reconnectDelay,
 			reconnectTry,
-			// Map of the connection-scoped values
-			connection = {},
+			// Map of the session-scoped values
+			session = {},
 			// Last event id
 			lastEventId,
 			// Socket object
@@ -257,13 +257,13 @@
 				option: function(key) {
 					return opts[({id: "_id", url: "_url"})[key] || key] || null;
 				},
-				// Gets or sets a connection-scoped value
-				data: function(key, value) {
+				// Gets or sets a session-scoped value
+				session: function(key, value) {
 					if (value === undefined) {
-						return connection[key] || null;
+						return session[key] || null;
 					}
 					
-					connection[key] = value;
+					session[key] = value;
 					
 					return this;
 				},
@@ -316,7 +316,7 @@
 					var event = events[type];
 					
 					if (event) {
-						connection.result = event.fire(self, args);
+						session.result = event.fire(self, args);
 					}
 					
 					return this;
@@ -332,22 +332,22 @@
 						reconnectTimer = null;
 					}
 					
-					// Resets the connection scope and event helpers
-					connection = {};
+					// Resets the session scope and event helpers
+					session = {};
 					for (type in events) {
 						events[type].unlock();
 					}
 					
 					// Chooses transport
 					transport = undefined;
-					connection.candidates = candidates;
+					session.candidates = candidates;
 					
 					while (!transport && candidates.length) {
 						type = candidates.shift();
 						
 						if (transports[type]) {
-							connection.transport = type;
-							connection.url = self._url();
+							session.transport = type;
+							session.url = self._url();
 							transport = transports[type](self, opts);
 						}
 					}
@@ -427,11 +427,11 @@
 						$.each(isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data)), 
 						function(i, event) {
 							lastEventId = event.id;
-							connection.result = null;
+							session.result = null;
 							self.fire(event.type, [event.data]);
 							
 							if (event.reply) {
-								$.when(connection.result).done(function(result) {
+								$.when(session.result).done(function(result) {
 									self.send("reply", {id: event.id, data: result});
 								});
 							}
@@ -444,7 +444,7 @@
 				_url: function(params) {
 					return opts.url.call(self, url, $.extend({
 						id: id, 
-						transport: connection.transport, 
+						transport: session.transport, 
 						heartbeat: opts.heartbeat || false, 
 						lastEventId: lastEventId || ""
 					}, params));
@@ -625,7 +625,7 @@
 		chunkParser: function(chunk) {
 			// Chunks are formatted according to the event stream format 
 			// http://www.w3.org/TR/eventsource/#event-stream-interpretation
-			var reol = /\r\n|\r|\n/g, lines = [], data = this.data("data"), array = [], i = 0, 
+			var reol = /\r\n|\r|\n/g, lines = [], data = this.session("data"), array = [], i = 0, 
 				match, line;
 			
 			// String.prototype.split is not reliable cross-browser
@@ -637,7 +637,7 @@
 			
 			if (!data) {
 				data = [];
-				this.data("data", data);
+				this.session("data", data);
 			}
 			
 			// Processes the data field only
@@ -647,7 +647,7 @@
 					// Finish
 					array.push(data.join("\n"));
 					data = [];
-					this.data("data", data);
+					this.session("data", data);
 				} else if (/^data:\s/.test(line)) {
 					// A single data field
 					data.push(line.substring("data: ".length));
@@ -677,22 +677,22 @@
 				feedback: true,
 				open: function() {
 					// Makes an absolute url whose scheme is ws or wss
-					var url = decodeURI($('<a href="' + socket.data("url") + '"/>')[0].href.replace(/^http/, "ws"));
+					var url = decodeURI($('<a href="' + socket.session("url") + '"/>')[0].href.replace(/^http/, "ws"));
 					
-					socket.data("url", url);
+					socket.session("url", url);
 					
 					ws = new WebSocket(url);
 					ws.onopen = function(event) {
-						socket.data("event", event).fire("open");
+						socket.session("event", event).fire("open");
 					};
 					ws.onmessage = function(event) {
-						socket.data("event", event)._notify(event.data);
+						socket.session("event", event)._notify(event.data);
 					};
 					ws.onerror = function(event) {
-						socket.data("event", event).fire("close", [aborted ? "close" : "error"]);
+						socket.session("event", event).fire("close", [aborted ? "close" : "error"]);
 					};
 					ws.onclose = function(event) {
-						socket.data("event", event).fire.call(socket, "close", [aborted ? "close" : event.wasClean  ? "done" : "error"]);
+						socket.session("event", event).fire.call(socket, "close", [aborted ? "close" : event.wasClean  ? "done" : "error"]);
 					};
 				},
 				send: function(data) {
@@ -767,7 +767,7 @@
 		},
 		// Streaming facade
 		stream: function(socket) {
-			socket.data("candidates").unshift("streamxdr", "streamiframe", "streamxhr");
+			socket.session("candidates").unshift("streamxdr", "streamiframe", "streamxhr");
 		},
 		// Streaming - XMLHttpRequest
 		streamxhr: function(socket, options) {
@@ -785,7 +785,7 @@
 					xhr = new XMLHttpRequest();
 					xhr.onreadystatechange = function() {
 						function onprogress() {
-							var index = socket.data("index"),
+							var index = socket.session("index"),
 								length = xhr.responseText.length;
 							
 							if (!index) {
@@ -794,7 +794,7 @@
 								socket._notify(xhr.responseText.substring(index, length), true);
 							}
 							
-							socket.data("index", length);
+							socket.session("index", length);
 						}
 						
 						if (xhr.readyState === 3 && xhr.status === 200) {
@@ -813,7 +813,7 @@
 						}
 					};
 					
-					xhr.open("GET", socket.data("url"));
+					xhr.open("GET", socket.session("url"));
 					xhr.withCredentials = options.credentials;
 					
 					xhr.send(null);
@@ -842,7 +842,7 @@
 					doc.close();
 					
 					iframe = doc.createElement("iframe");
-					iframe.src = socket.data("url");
+					iframe.src = socket.session("url");
 					doc.body.appendChild(iframe);
 					
 					cdoc = iframe.contentDocument || iframe.contentWindow.document;
@@ -903,13 +903,13 @@
 			
 			return $.extend(transports.http(socket, options), {
 				open: function() {
-					var url = options.xdrURL.call(socket, socket.data("url"));
+					var url = options.xdrURL.call(socket, socket.session("url"));
 					
-					socket.data("url", url);
+					socket.session("url", url);
 					
 					xdr = new XDomainRequest();
 					xdr.onprogress = function() {
-						var index = socket.data("index"), 
+						var index = socket.session("index"), 
 							length = xdr.responseText.length;
 						
 						if (!index) {
@@ -918,7 +918,7 @@
 							socket._notify(xdr.responseText.substring(index, length), true);
 						}
 						
-						socket.data("index", length);
+						socket.session("index", length);
 					};
 					xdr.onerror = function() {
 						socket.fire("close", ["error"]);
@@ -954,18 +954,18 @@
 			
 			return $.extend(transports.http(socket, options), {
 				open: function() {
-					es = new EventSource(socket.data("url"), {withCredentials: options.credentials});
+					es = new EventSource(socket.session("url"), {withCredentials: options.credentials});
 					es.onopen = function(event) {
-						socket.data("event", event).fire("open");
+						socket.session("event", event).fire("open");
 					};
 					es.onmessage = function(event) {
-						socket.data("event", event)._notify(event.data);
+						socket.session("event", event)._notify(event.data);
 					};
 					es.onerror = function(event) {
 						es.close();
 						
 						// There is no way to find whether this connection closed normally or not 
-						socket.data("event", event).fire("close", ["done"]);
+						socket.session("event", event).fire("close", ["done"]);
 					};
 				},
 				close: function() {
@@ -975,7 +975,7 @@
 		},
 		// Long polling facade
 		longpoll: function(socket) {
-			socket.data("candidates").unshift("longpollajax", "longpollxdr", "longpolljsonp");
+			socket.session("candidates").unshift("longpollajax", "longpollxdr", "longpolljsonp");
 		},
 		// Long polling - AJAX
 		longpollajax: function(socket, options) {
@@ -1004,7 +1004,7 @@
 						socket.fire("close", [reason === "abort" ? "close" : "error"]);
 					};
 				
-				socket.data("url", url);
+				socket.session("url", url);
 				xhr = $.ajax(url, {
 					type: "GET", 
 					dataType: "text", 
@@ -1056,7 +1056,7 @@
 				xdr.onload = done;
 				xdr.onerror = fail;
 				
-				socket.data("url", url);
+				socket.session("url", url);
 				xdr.open("GET", url);
 				xdr.send();
 			}
@@ -1103,7 +1103,7 @@
 						socket.fire("close", [reason === "abort" ? "close" : "error"]);
 					};
 				
-				socket.data("url", url);
+				socket.session("url", url);
 				xhr = $.ajax(url, {
 					dataType: "script", 
 					crossDomain: true, 

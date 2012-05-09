@@ -7,7 +7,7 @@ function setup() {
 		transports: "test",
 		reconnect: function() {
 			var delay = reconnect.apply(this, arguments);
-			return $.isNumeric(delay) ? delay * (this.data("transport") === "test" ? 0.01 : 1) : delay;
+			return $.isNumeric(delay) ? delay * (this.session("transport") === "test" ? 0.01 : 1) : delay;
 		}
 	});
 }
@@ -192,14 +192,14 @@ asyncTest("close method should close a connection", function() {
 	.close();
 });
 
-test("data method should set and get a connection-scoped value", function() {
-	strictEqual($.socket("url").data("string", "value"), $.socket());
-	strictEqual($.socket("url").data("boolean"), null);
-	strictEqual($.socket("url").data("string"), "value");
+test("session method should set and get a session-scoped value", function() {
+	strictEqual($.socket("url").session("string", "value"), $.socket());
+	strictEqual($.socket("url").session("boolean"), null);
+	strictEqual($.socket("url").session("string"), "value");
 });
 
-test("data method should be reset when open method has been called", function() {
-	ok(!$.socket("url").data("key", "value").open().data("key"));
+test("session scope should be reset when open method has been called", function() {
+	ok(!$.socket("url").session("key", "value").open().session("key"));
 });
 
 module("Transport", {
@@ -922,8 +922,8 @@ test("id handler should return a unique id within the server", function() {
 	strictEqual($.socket("url").option("id"), "flowersinthesand");
 });
 
-test("url used for connection should be exposed by data('url')", function() {
-	ok($.socket("url").data("url"));
+test("url used for connection should be exposed by session('url')", function() {
+	ok($.socket("url").session("url"));
 });
 
 test("url handler should receive the original url and the parameters object and return a url to be used to establish a connection", function() {
@@ -934,7 +934,7 @@ test("url handler should receive the original url and the parameters object and 
 		return "modified";
 	};
 	
-	strictEqual($.socket("url").data("url"), "modified");
+	strictEqual($.socket("url").session("url"), "modified");
 });
 
 asyncTest("lastEventId parameter should be the id of the last event which is sent by the server", function() {
@@ -952,7 +952,7 @@ asyncTest("lastEventId parameter should be the id of the last event which is sen
 	})
 	.connecting(function() {
 		if (i) {
-			strictEqual(param(this.data("url"), "lastEventId"), "" + i);
+			strictEqual(param(this.session("url"), "lastEventId"), "" + i);
 			start();
 		}
 	});
@@ -1078,8 +1078,8 @@ asyncTest("event object should contain a event type and optional id, reply, sock
 	});
 });
 
-test("transport used for connection should be exposed by data('transport')", function() {
-	ok($.socket("url").data("transport"));
+test("transport used for connection should be exposed by session('transport')", function() {
+	ok($.socket("url").session("transport"));
 });
 
 if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKitBlobBuilder)) {
@@ -1116,17 +1116,17 @@ if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKit
 	});
 }
 
-test("xdrURL handler should receive data('url') and return a new url containing session id", function() {
+test("xdrURL handler should receive session('url') and return a new url containing session id", function() {
 	$.socket.defaults.xdrURL = function(url) {
-		strictEqual(url, this.data("url"));
+		strictEqual(url, this.session("url"));
 		
 		return "modified";
 	};
 	$.socket.transports.test = function(socket, options) {
-		socket.data("url", options.xdrURL.call(socket, socket.data("url")));
+		socket.session("url", options.xdrURL.call(socket, socket.session("url")));
 	};
 	
-	strictEqual($.socket("url").data("url"), "modified");
+	strictEqual($.socket("url").session("url"), "modified");
 });
 
 test("chunkParser handler should receive a chunk and return an array of data", function() {
@@ -1145,10 +1145,10 @@ module("Protocol default", {
 });
 
 test("effective url should contain id, transport and heartbeat as query string parameters", function() {
-	var url = $.socket("url").data("url");
+	var url = $.socket("url").session("url");
 	
 	strictEqual(param(url, "id"), $.socket().option("id"));
-	strictEqual(param(url, "transport"), $.socket().data("transport"));
+	strictEqual(param(url, "transport"), $.socket().session("transport"));
 	strictEqual(param(url, "heartbeat"), String($.socket().option("heartbeat") || false));
 	strictEqual(param(url, "lastEventId"), "");
 });
@@ -1302,11 +1302,11 @@ function testTransport(transport, fn) {
 	});
 	
 	if (/^longpoll/.test(transport)) {
-		asyncTest("data('url') should be modified whenever trying to connect to the server", 6, function() {
+		asyncTest("session('url') should be modified whenever trying to connect to the server", 6, function() {
 			var oldCount, oldLastEventId;
 			
 			$.socket(url).send(0).message(function(i) {
-				var url = this.data("url"), 
+				var url = this.session("url"), 
 					count = param(url, "count"), 
 					lastEventId = param(url, "lastEventId");
 				
@@ -1338,20 +1338,20 @@ if (!isLocal) {
 	
 	testTransport("ws", function(url) {
 		test("url should be converted to accord with WebSocket specification", function() {
-			ok(/^(?:ws|wss):\/\/.+/.test($.socket(url).data("url")));
+			ok(/^(?:ws|wss):\/\/.+/.test($.socket(url).session("url")));
 		});
 		
-		asyncTest("WebSocket event should be able to be accessed by data('event')", function() {
+		asyncTest("WebSocket event should be able to be accessed by session('event')", function() {
 			$.socket(url).open(function() {
-				strictEqual(this.data("event").type, "open");
+				strictEqual(this.session("event").type, "open");
 				this.send("data");
 			})
 			.message(function() {
-				strictEqual(this.data("event").type, "message");
+				strictEqual(this.session("event").type, "message");
 				this.close();
 			})
 			.close(function() {
-				strictEqual(this.data("event").type, "close");
+				strictEqual(this.session("event").type, "close");
 				start();
 			});
 		});
@@ -1431,16 +1431,16 @@ if (!isLocal) {
 	});
 	
 	testTransport("sse", function(url) {
-		asyncTest("Server-Sent Events event should be able to be accessed by data('event')", function() {
+		asyncTest("Server-Sent Events event should be able to be accessed by session('event')", function() {
 			$.socket(url + "?close=true", {reconnect: false}).open(function() {
-				strictEqual(this.data("event").type, "open");
+				strictEqual(this.session("event").type, "open");
 				this.send("data");
 			})
 			.message(function() {
-				strictEqual(this.data("event").type, "message");
+				strictEqual(this.session("event").type, "message");
 			})
 			.close(function() {
-				strictEqual(this.data("event").type, "error");
+				strictEqual(this.session("event").type, "error");
 				start();
 			});
 		});
@@ -1493,8 +1493,8 @@ if (!isLocal) {
 			});
 		}, 
 		longpolljsonp: function(url) {
-			test("window should have a function whose name is equals to data('url')'s callback parameter", function() {
-				ok($.isFunction(window[param($.socket(url).data("url"), "callback")]));
+			test("window should have a function whose name is equals to session('url')'s callback parameter", function() {
+				ok($.isFunction(window[param($.socket(url).session("url"), "callback")]));
 			});
 		}
 	}, function(transport, fn) {
