@@ -765,6 +765,44 @@
 				}
 			};
 		},
+		// Server-Sent Events
+		sse: function(socket, options) {
+			var EventSource = window.EventSource,
+				es;
+			
+			if (!EventSource) {
+				return;
+			} else if (options.crossDomain) {
+				try {
+					if (!("withCredentials" in new EventSource("about:blank"))) {
+						return;
+					}
+				} catch(e) {
+					return;
+				}
+			}
+			
+			return $.extend(transports.http(socket, options), {
+				open: function() {
+					es = new EventSource(socket.session("url"), {withCredentials: options.credentials});
+					es.onopen = function(event) {
+						socket.session("event", event).fire("open");
+					};
+					es.onmessage = function(event) {
+						socket.session("event", event)._notify(event.data);
+					};
+					es.onerror = function(event) {
+						es.close();
+						
+						// There is no way to find whether this connection closed normally or not 
+						socket.session("event", event).fire("close", ["done"]);
+					};
+				},
+				close: function() {
+					es.close();
+				}
+			});
+		},
 		// Streaming facade
 		stream: function(socket) {
 			socket.session("candidates").unshift("streamxdr", "streamiframe", "streamxhr");
@@ -932,44 +970,6 @@
 				},
 				close: function() {
 					xdr.abort();
-				}
-			});
-		},
-		// Server-Sent Events
-		sse: function(socket, options) {
-			var EventSource = window.EventSource,
-				es;
-			
-			if (!EventSource) {
-				return;
-			} else if (options.crossDomain) {
-				try {
-					if (!("withCredentials" in new EventSource("about:blank"))) {
-						return;
-					}
-				} catch(e) {
-					return;
-				}
-			}
-			
-			return $.extend(transports.http(socket, options), {
-				open: function() {
-					es = new EventSource(socket.session("url"), {withCredentials: options.credentials});
-					es.onopen = function(event) {
-						socket.session("event", event).fire("open");
-					};
-					es.onmessage = function(event) {
-						socket.session("event", event)._notify(event.data);
-					};
-					es.onerror = function(event) {
-						es.close();
-						
-						// There is no way to find whether this connection closed normally or not 
-						socket.session("event", event).fire("close", ["done"]);
-					};
-				},
-				close: function() {
-					es.close();
 				}
 			});
 		},
