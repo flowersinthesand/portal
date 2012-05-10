@@ -249,8 +249,6 @@
 			reconnectTry,
 			// Map of the session-scoped values
 			session = {},
-			// Last event id
-			lastEventId,
 			// Socket object
 			self = {
 				// Finds the value of an option
@@ -426,7 +424,7 @@
 					} else {
 						$.each(isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data)), 
 						function(i, event) {
-							lastEventId = event.id;
+							opts.lastEventId = event.id;
 							session.result = null;
 							self.fire(event.type, [event.data]);
 							
@@ -446,7 +444,7 @@
 						id: id, 
 						transport: session.transport, 
 						heartbeat: opts.heartbeat || false, 
-						lastEventId: lastEventId || ""
+						lastEventId: opts.lastEventId || ""
 					}, params));
 				}
 			},
@@ -588,6 +586,7 @@
 		timeout: false,
 		heartbeat: false,
 		_heartbeat: 5000,
+		lastEventId: "",
 		reconnect: function(lastDelay) {
 			return 2 * (lastDelay || 250);
 		},
