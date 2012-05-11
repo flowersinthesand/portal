@@ -194,7 +194,6 @@ asyncTest("close method should close a connection", function() {
 
 test("session method should set and get a session-scoped value", function() {
 	strictEqual($.socket("url").session("string", "value"), $.socket());
-	strictEqual($.socket("url").session("boolean"), null);
 	strictEqual($.socket("url").session("string"), "value");
 });
 

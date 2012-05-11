@@ -253,12 +253,12 @@
 			self = {
 				// Finds the value of an option
 				option: function(key) {
-					return opts[({id: "_id", url: "_url"})[key] || key] || null;
+					return opts[({id: "_id", url: "_url"})[key] || key];
 				},
 				// Gets or sets a session-scoped value
 				session: function(key, value) {
 					if (value === undefined) {
-						return session[key] || null;
+						return session[key];
 					}
 					
 					session[key] = value;
