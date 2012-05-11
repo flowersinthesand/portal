@@ -1130,14 +1130,14 @@ test("xdrURL handler should receive session('url') and return a new url containi
 	strictEqual($.socket("url").session("url"), "modified");
 });
 
-test("chunkParser handler should receive a chunk and return an array of data", function() {
-	$.socket.defaults.chunkParser = function(chunk) {
+test("streamParser handler should receive a chunk and return an array of data", function() {
+	$.socket.defaults.streamParser = function(chunk) {
 		return chunk.split("@@");
 	};
 	
 	$.socket("url");
-	deepEqual($.socket.defaults.chunkParser.call($.socket(), "A"), ["A"]);
-	deepEqual($.socket.defaults.chunkParser.call($.socket(), "A@@B@@C"), ["A", "B", "C"]);
+	deepEqual($.socket.defaults.streamParser.call($.socket(), "A"), ["A"]);
+	deepEqual($.socket.defaults.streamParser.call($.socket(), "A@@B@@C"), ["A", "B", "C"]);
 });
 
 module("Protocol default", {
@@ -1213,8 +1213,8 @@ test("xdrURL handler should be able to handle JSESSIONID and PHPSESSID in cookie
 	});
 });
 
-test("chunks for streaming should accord with the event stream format", function() {
-	deepEqual($.socket.defaults.chunkParser.call($.socket("url"), "data: A\r\n\r\ndata: A\r\ndata: B\rdata: C\n\r\ndata: \r\n"), ["A", "A\nB\nC", ""]);
+test("stream response should accord with the event stream format", function() {
+	deepEqual($.socket.defaults.streamParser.call($.socket("url"), "data: A\r\n\r\ndata: A\r\ndata: B\rdata: C\n\r\ndata: \r\n"), ["A", "A\nB\nC", ""]);
 });
 
 function testTransport(transport, fn) {

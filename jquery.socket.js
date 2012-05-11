@@ -417,7 +417,7 @@
 				// Fires events from the server
 				_notify: function(data, isChunk) {
 					if (isChunk) {
-						data = opts.chunkParser.call(self, data);
+						data = opts.streamParser.call(self, data);
 						while (data.length) {
 							self._notify(data.shift());
 						}
@@ -621,7 +621,7 @@
 				return false;
 			}
 		},
-		chunkParser: function(chunk) {
+		streamParser: function(chunk) {
 			// Chunks are formatted according to the event stream format 
 			// http://www.w3.org/TR/eventsource/#event-stream-interpretation
 			var reol = /\r\n|\r|\n/g, lines = [], data = this.session("data"), array = [], i = 0, 
