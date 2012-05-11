@@ -443,8 +443,8 @@
 					return opts.url.call(self, url, $.extend({
 						id: id, 
 						transport: session.transport, 
-						heartbeat: opts.heartbeat || false, 
-						lastEventId: opts.lastEventId || ""
+						heartbeat: opts.heartbeat, 
+						lastEventId: opts.lastEventId
 					}, params));
 				}
 			},

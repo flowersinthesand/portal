@@ -929,7 +929,7 @@ test("url used for connection should be exposed by session('url')", function() {
 test("url handler should receive the original url and the parameters object and return a url to be used to establish a connection", function() {
 	$.socket.defaults.url = function(url, params) {
 		strictEqual(url, "url");
-		deepEqual(params, {id: this.option("id"), heartbeat: this.option("heartbeat") || false, transport: "test", lastEventId: ""});
+		deepEqual(params, {id: this.option("id"), heartbeat: this.option("heartbeat"), transport: "test", lastEventId: this.option("lastEventId")});
 		
 		return "modified";
 	};
@@ -937,24 +937,26 @@ test("url handler should receive the original url and the parameters object and 
 	strictEqual($.socket("url").session("url"), "modified");
 });
 
-asyncTest("lastEventId parameter should be the id of the last event which is sent by the server", function() {
-	var i;
-	
+asyncTest("lastEventId option should be the id of the last event which is sent by the server", function() {
 	$.socket("url", {
+		lastEventId: 25,
 		server: function(request) {
 			request.accept().on("open", function() {
+				var i;
 				for (i = 0; i < 10; i++) {
-					this.send(i);
+					this.send(i + 1);
 				}
-				this.close();
 			});
 		}
 	})
-	.connecting(function() {
-		if (i) {
-			strictEqual(param(this.session("url"), "lastEventId"), "" + i);
+	.message(function(eventId) {
+		strictEqual(this.option("lastEventId"), eventId);
+		if (eventId === 10) {
 			start();
 		}
+	})
+	.connecting(function() {
+		strictEqual(this.option("lastEventId"), 25);
 	});
 });
 
@@ -1149,8 +1151,8 @@ test("effective url should contain id, transport and heartbeat as query string p
 	
 	strictEqual(param(url, "id"), $.socket().option("id"));
 	strictEqual(param(url, "transport"), $.socket().session("transport"));
-	strictEqual(param(url, "heartbeat"), String($.socket().option("heartbeat") || false));
-	strictEqual(param(url, "lastEventId"), "");
+	strictEqual(param(url, "heartbeat"), String($.socket().option("heartbeat")));
+	strictEqual(param(url, "lastEventId"), $.socket().option("lastEventId"));
 });
 
 test("a final data to be sent to the server should be a JSON string representing a event object", function() {
