@@ -634,7 +634,7 @@
 				var r = Math.random() * 16 | 0,
 					v = c === "x" ? r : (r & 0x3 | 0x8);
 				
-			    return v.toString(16);
+				return v.toString(16);
 			});
 		},
 		url: function(url, params) {
@@ -666,8 +666,8 @@
 			
 			// String.prototype.split is not reliable cross-browser
 			while (match = reol.exec(chunk)) {
-			    lines.push(chunk.substring(i, match.index));
-			    i = match.index + match[0].length;
+				lines.push(chunk.substring(i, match.index));
+				i = match.index + match[0].length;
 			}
 			lines.push(chunk.length === i ? "" : chunk.substring(i));
 			
