@@ -63,6 +63,15 @@ test("option method should find the value of an option", function() {
 	strictEqual($.socket("url", {version: $.fn.jquery}).option("version"), $.fn.jquery);
 });
 
+test("session method should set and get a session-scoped value", function() {
+	strictEqual($.socket("url").session("string", "value"), $.socket());
+	strictEqual($.socket("url").session("string"), "value");
+});
+
+test("session scope should be reset when open method has been called", function() {
+	ok(!$.socket("url").session("key", "value").open().session("key"));
+});
+
 test("on method should add a event handler", 5, function() {
 	var type, 
 		yes = function() {
@@ -192,13 +201,8 @@ asyncTest("close method should close a connection", function() {
 	.close();
 });
 
-test("session method should set and get a session-scoped value", function() {
-	strictEqual($.socket("url").session("string", "value"), $.socket());
-	strictEqual($.socket("url").session("string"), "value");
-});
-
-test("session scope should be reset when open method has been called", function() {
-	ok(!$.socket("url").session("key", "value").open().session("key"));
+test("ns method should return a namespaced socket", function() {
+	ok($.isFunction($.socket("url").ns("chat").send));
 });
 
 module("Transport", {
@@ -567,6 +571,21 @@ asyncTest("close event's reason should be 'done' if the socket has been closed n
 	});
 });
 
+asyncTest("close event's reason should be 'cascaded' if the namespaced socket has been closed because of the close of the root socket", function() {
+	$.socket("url", {
+		reconnect: false,
+		server: function(request) {
+			request.accept().on("open", function() {
+				this.close();
+			});
+		}
+	})
+	.ns("chat").close(function(reason) {
+		strictEqual(reason, "cascaded");
+		start();
+	});
+});
+
 asyncTest("waiting event handler should be executed with delay and attempts when a reconnection has scheduled and the socket has started waiting for connection", function() {
 	$.socket("url", {
 		server: function(request) {
@@ -908,6 +927,108 @@ asyncTest("socket should require the server to reply if a reply callback is prov
 	});
 });
 
+module("Namespaced socket", {
+	setup: setup,
+	teardown: teardown
+});
+
+asyncTest("namespaced socket should send the open event when being open", function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("chat@open", function() {
+				ok(true);
+				start();
+			});
+		}
+	})
+	.ns("chat");
+});
+
+asyncTest("namespaced socket should send the close event when being closed by the user", function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("chat@close", function() {
+				ok(true);
+				start();
+			});
+		}
+	})
+	.ns("chat").open(function() {
+		this.close();
+	});
+});
+
+asyncTest("send method of the namespaced socket should work properly", function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("chat@custom", function(data) {
+				return data;
+			});
+		}
+	})
+	.ns("chat").send("custom", "Planetarium Sphere", function(data) {
+		strictEqual(data, "Planetarium Sphere");
+		start();
+	});
+});
+
+asyncTest("namespaced socket should connect following the root socket's re-opening", function() {
+	var latch, result = "";
+	
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("open", function() {
+				if (!latch) {
+					latch = true;
+					this.close();
+				}
+			});
+		}
+	})
+	.open(function() {
+		result += "A";
+	})
+	.ns("chat").open(function() {
+		result += "B";
+		if (latch) {
+			strictEqual(result, "ABAB");
+			start();
+		}
+	});
+});
+
+asyncTest("namespaced socket closed by the user should not open following the root socket's re-opening", function() {
+	var latch, result = "";
+	
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("open", function() {
+				if (!latch) {
+					latch = true;
+					this.close();
+				}
+			});
+		}
+	})
+	.open(function() {
+		result += "A";
+		if (latch) {
+			setTimeout(function() {
+				strictEqual("ABA", result);
+				start();
+			}, 10);
+		}
+	})
+	.ns("chat").open(function() {
+		result += "B";
+		if (!latch) {
+			this.close();
+		} else {
+			ok(false);
+		}
+	});
+});
+
 module("Protocol", {
 	setup: setup,
 	teardown: teardown
@@ -961,7 +1082,7 @@ asyncTest("lastEventId option should be the id of the last event which is sent b
 
 asyncTest("outbound handler should receive a event object and return a final data to be sent to the server", function() {
 	$.socket.defaults.outbound = function(event) {
-		deepEqual(event, {id: 1, socket: this.option("id"), reply: false, type: "message", data: "data"});
+		deepEqual(event, {id: 1, socket: this.option("id"), reply: false, namespace: "", type: "message", data: "data"});
 		return $.stringifyJSON(event);
 	};
 	
@@ -978,7 +1099,7 @@ asyncTest("outbound handler should receive a event object and return a final dat
 
 asyncTest("inbound handler should receive a raw data from the server and return a event object", function() {
 	$.socket.defaults.inbound = function(data) {
-		deepEqual($.parseJSON(data), {id: 1, reply: false, type: "message", data: "data"});
+		deepEqual($.parseJSON(data), {id: 1, reply: false, namespace: "", type: "message", data: "data"});
 		return $.parseJSON(data);
 	};
 	
@@ -1051,17 +1172,17 @@ asyncTest("event object should contain a event type and optional id, reply, sock
 		var self = this, id = self.option("id");
 		
 		outbound = function(event) {
-			deepEqual(event, {id: 1, socket: id, reply: false, type: "message", data: {key: "value"}});
+			deepEqual(event, {id: 1, socket: id, reply: false, namespace: "", type: "message", data: {key: "value"}});
 		};
 		this.send({key: "value"});
 		
 		outbound = function(event) {
-			deepEqual(event, {id: 2, socket: id, reply: false, type: "chat", data: "data"});
+			deepEqual(event, {id: 2, socket: id, reply: false, namespace: "", type: "chat", data: "data"});
 		};
 		this.send("chat", "data");
 		
 		outbound = function(event) {
-			deepEqual(event, {id: 3, socket: id, reply: true, type: "news", data: "data"});
+			deepEqual(event, {id: 3, socket: id, reply: true, namespace: "", type: "news", data: "data"});
 		};
 		this.send("news", "data", $.noop);
 		
@@ -1162,7 +1283,7 @@ test("a final data to be sent to the server should be a JSON string representing
 			},
 			send: function(data) {
 				try {
-					deepEqual($.parseJSON(data), {id: 1, socket: socket.option("id"), reply: false, type: "message", data: "data"});
+					deepEqual($.parseJSON(data), {id: 1, socket: socket.option("id"), reply: false, namespace: "", type: "message", data: "data"});
 				} catch (e) {
 					ok(false);
 				}
