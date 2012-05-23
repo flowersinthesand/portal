@@ -935,7 +935,7 @@ module("Namespaced socket", {
 asyncTest("namespaced socket should send the open event when being open", function() {
 	$.socket("url", {
 		server: function(request) {
-			request.accept().on("chat@open", function() {
+			request.accept().on("chat:open", function() {
 				ok(true);
 				start();
 			});
@@ -947,7 +947,7 @@ asyncTest("namespaced socket should send the open event when being open", functi
 asyncTest("namespaced socket should send the close event when being closed by the user", function() {
 	$.socket("url", {
 		server: function(request) {
-			request.accept().on("chat@close", function() {
+			request.accept().on("chat:close", function() {
 				ok(true);
 				start();
 			});
@@ -961,7 +961,7 @@ asyncTest("namespaced socket should send the close event when being closed by th
 asyncTest("send method of the namespaced socket should work properly", function() {
 	$.socket("url", {
 		server: function(request) {
-			request.accept().on("chat@custom", function(data) {
+			request.accept().on("chat:custom", function(data) {
 				return data;
 			});
 		}
@@ -1026,6 +1026,20 @@ asyncTest("namespaced socket closed by the user should not open following the ro
 		} else {
 			ok(false);
 		}
+	});
+});
+
+asyncTest("namespace:type event of the root socket should be fired if there is no corresponding namespaced socket", function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("open", function() {
+				this.send("music:message", "Pierce A Knife In My Heart With Your Hands");
+			});
+		}
+	})
+	.on("music:message", function(song) {
+		strictEqual(song, "Pierce A Knife In My Heart With Your Hands");
+		start();
 	});
 });
 

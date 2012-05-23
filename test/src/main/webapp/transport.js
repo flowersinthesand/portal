@@ -79,7 +79,7 @@
 									event = "message";
 								}
 								
-								match = /(.+)@([^\.]+)$/.exec(event) || [null, "", event];
+								match = /^([^:]+):(.+)/.exec(event) || [null, "", event];
 								eventId++;
 								if (callback) {
 									callbacks[eventId] = callback;
@@ -135,7 +135,7 @@
 				setTimeout(function() {
 					if (accepted) {
 						var event = isBinary(data) ? {type: "message", data: data} : $.parseJSON(data);
-						connection.event.triggerHandler((event.namespace ? (event.namespace + "@") : "") + event.type, [event.data]);
+						connection.event.triggerHandler((event.namespace ? (event.namespace + ":") : "") + event.type, [event.data]);
 						
 						if (event.reply) {
 							connection.send("reply", {id: event.id, data: connection.reply});

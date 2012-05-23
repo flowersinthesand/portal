@@ -384,7 +384,7 @@
 							event = "message";
 						}
 						
-						match = /(.+)@([^\.]+)$/.exec(event) || [null, "", event];
+						match = /^([^:]+):(.+)/.exec(event) || [null, "", event];
 						eventId++;
 						if (callback) {
 							replyCallbacks[eventId] = callback;
@@ -457,8 +457,17 @@
 					} else {
 						$.each(isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data)), 
 						function(i, event) {
+							var socket = event.namespace ? namespaces[event.namespace] : self, 
+								type = event.type;
+							
+							if (!socket) {
+								socket = self;
+								type = event.namespace + ":" + event.type;
+							}
+							
 							opts.lastEventId = event.id;
-							session.result = (namespaces[event.namespace] || self).fire(event.type, [event.data]).session("result");
+							session.result = null;
+							session.result = socket.fire(type, [event.data]).session("result");
 							
 							if (event.reply) {
 								$.when(session.result).done(function(result) {
@@ -712,8 +721,8 @@
 					});
 				},
 				send: function(event) {
-					// namespace@event is a temporary format for passing namespace
-					options.root.send(options.namespace + "@" + event.type, event.data, event.reply ? function(data) {
+					// namespace:event is a temporary format for passing namespace
+					options.root.send(options.namespace + ":" + event.type, event.data, event.reply ? function(data) {
 						socket.fire("reply", [{id: event.id, data: data}]);
 					} : null);
 				},
