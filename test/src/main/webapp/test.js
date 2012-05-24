@@ -4,7 +4,7 @@ function setup() {
 	var reconnect = $.socket.defaults.reconnect;
 	
 	$.extend($.socket.defaults, {
-		transports: "test",
+		transports: ["test"],
 		reconnect: function() {
 			var delay = reconnect.apply(this, arguments);
 			return $.isNumeric(delay) ? delay * (this.session("transport") === "test" ? 0.01 : 1) : delay;
@@ -219,7 +219,7 @@ test("transport function should receive the socket and the options", function() 
 		soc = socket;
 	};
 	
-	$.socket("url", {transports: "subway"});
+	$.socket("url", {transports: ["subway"]});
 	strictEqual(soc, $.socket());
 });
 
@@ -237,7 +237,7 @@ test("transport function should be executed after the socket.open()", function()
 		};
 	};
 	
-	$.socket("url", {transports: "subway"}).open();
+	$.socket("url", {transports: ["subway"]}).open();
 	strictEqual(result, "ABAB");
 });
 
@@ -254,7 +254,7 @@ test("transport's send method should be executed with data after the socket.send
 		};
 	};
 	
-	$.socket("url", {transports: "subway"}).send("data");
+	$.socket("url", {transports: ["subway"]}).send("data");
 });
 
 test("transport's close method should be executed after the socket.close()", 1, function() {
@@ -270,7 +270,7 @@ test("transport's close method should be executed after the socket.close()", 1, 
 		};
 	};
 	
-	$.socket("url", {transports: "subway"}).close();
+	$.socket("url", {transports: ["subway"]}).close();
 });
 
 test("transport function should be able to pass the responsibility onto the next transport function by returning void or false", function() {
@@ -519,7 +519,7 @@ asyncTest("close event handler should be executed with a reason when the connect
 });
 
 asyncTest("close event's reason should be 'notransport' if there is no available transport", function() {
-	$.socket("url", {transports: "what"})
+	$.socket("url", {transports: ["what"]})
 	.close(function(reason) {
 		strictEqual(reason, "notransport");
 		start();
