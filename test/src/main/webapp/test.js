@@ -866,30 +866,25 @@ module("Reply", {
 	teardown: teardown
 });
 
-asyncTest("socket should reply if the server requires to reply", 2, function() {
+asyncTest("callback for replying should be provided if the server requires reply", function() {
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
-				this.send("data", function(reply) {
-					strictEqual(reply, "Heaven Shall Burn");
-					start();
-				})
-				.on("reply", function(data) {
-					deepEqual(data, {id: 1, data: "Heaven Shall Burn"});
-				});
+				this.send("An Ode to My Friend", $.noop);
 			});
 		}
 	})
-	.message(function() {
-		return "Heaven Shall Burn";
+	.message(function(data, callback) {
+		ok(callback);
+		start();
 	});
 });
 
-asyncTest("socket should be able to handle a deferred object as reply data", 2, function() {
+asyncTest("callback for replying should send a reply event", 2, function() {
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
-				this.send("data", function(reply) {
+				this.send("Heaven Shall Burn", function(reply) {
 					strictEqual(reply, "Heaven Shall Burn");
 					start();
 				})
@@ -899,14 +894,10 @@ asyncTest("socket should be able to handle a deferred object as reply data", 2, 
 			});
 		}
 	})
-	.message(function() {
-		var deferred = $.Deferred();
-		
+	.message(function(data, callback) {
 		setTimeout(function() {
-			deferred.resolve("Heaven Shall Burn");
+			callback(data);
 		}, 10);
-		
-		return deferred;
 	});
 });
 

@@ -115,7 +115,6 @@
 		var list = [],
 			stack = [],
 			memory,
-			result,
 			firing,
 			firingStart,
 			firingLength,
@@ -128,7 +127,7 @@
 				firingStart = 0;
 				firingLength = list.length;
 				for (; firingIndex < firingLength; firingIndex++) {
-					result = list[firingIndex].apply(context, args);
+					list[firingIndex].apply(context, args);
 				}
 				firing = false;
 			},
@@ -166,8 +165,6 @@
 					}
 				},
 				fire: function(context, args) {
-					var ret;
-					
 					if (stack) {
 						if (firing) {
 							if (!deferred) {
@@ -176,11 +173,7 @@
 						} else if (!(deferred && memory)) {
 							fire(context, args);
 						}
-						ret = result;
-						result = undefined;
 					}
-					
-					return ret;
 				},
 				lock: function() {
 					stack = undefined;
@@ -318,7 +311,7 @@
 					var event = events[type];
 					
 					if (event) {
-						session.result = event.fire(self, args);
+						event.fire(self, args);
 					}
 					
 					return this;
@@ -458,22 +451,25 @@
 						$.each(isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data)), 
 						function(i, event) {
 							var socket = event.namespace ? namespaces[event.namespace] : self, 
-								type = event.type;
+								type = event.type,
+								args = [event.data],
+								latch;
 							
+							opts.lastEventId = event.id;
 							if (!socket) {
 								socket = self;
 								type = event.namespace + ":" + event.type;
 							}
-							
-							opts.lastEventId = event.id;
-							session.result = null;
-							session.result = socket.fire(type, [event.data]).session("result");
-							
 							if (event.reply) {
-								$.when(session.result).done(function(result) {
-									self.send("reply", {id: event.id, data: result});
+								args.push(function(result) {
+									if (!latch) {
+										latch = true;
+										self.send("reply", {id: event.id, data: result});
+									}
 								});
 							}
+							
+							socket.fire(type, args);
 						});
 					}
 					
