@@ -526,10 +526,10 @@ asyncTest("close event's reason should be 'notransport' if there is no available
 	});
 });
 
-asyncTest("close event's reason should be 'close' if the socket's close method has been called", function() {
+asyncTest("close event's reason should be 'aborted' if the socket has been closed by the close method", function() {
 	$.socket("url")
 	.close(function(reason) {
-		strictEqual(reason, "close");
+		strictEqual(reason, "aborted");
 		start();
 	})
 	.close();
@@ -1415,7 +1415,7 @@ function testTransport(transport, fn) {
 	
 	asyncTest("close method should work properly", function() {
 		$.socket(url).close(function(reason) {
-			strictEqual(reason, "close");
+			strictEqual(reason, "aborted");
 			start();
 		})
 		.close();

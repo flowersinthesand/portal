@@ -146,7 +146,7 @@
 			},
 			close: function() {
 				setTimeout(function() {
-					socket.fire("close", ["close"]);
+					socket.fire("close", ["aborted"]);
 					if (accepted) {
 						connection.event.triggerHandler("close");
 					}

@@ -414,7 +414,7 @@
 					
 					// Fires the close event immediately for transport which doesn't give feedback on disconnection
 					if (reason || !transport || !transport.feedback) {
-						self.fire("close", [reason || "close"]);
+						self.fire("close", [reason || "aborted"]);
 					}
 					
 					return this;
@@ -434,7 +434,7 @@
 					};
 					
 					return (namespaces[name] = socket(name, options)).close(function(reason) {
-						if (reason === "close") {
+						if (reason === "aborted") {
 							delete namespaces[name];
 						}
 					});
@@ -754,10 +754,10 @@
 						socket.session("event", event)._notify(event.data);
 					};
 					ws.onerror = function(event) {
-						socket.session("event", event).fire("close", [aborted ? "close" : "error"]);
+						socket.session("event", event).fire("close", [aborted ? "aborted" : "error"]);
 					};
 					ws.onclose = function(event) {
-						socket.session("event", event).fire("close", [aborted ? "close" : event.wasClean ? "done" : "error"]);
+						socket.session("event", event).fire("close", [aborted ? "aborted" : event.wasClean ? "done" : "error"]);
 					};
 				},
 				send: function(data) {
@@ -912,7 +912,7 @@
 								stop();
 							}
 							
-							socket.fire("close", [aborted ? "close" : xhr.status === 200 ? "done" : "error"]);
+							socket.fire("close", [aborted ? "aborted" : xhr.status === 200 ? "done" : "error"]);
 						}
 					};
 					
@@ -1066,7 +1066,7 @@
 						}
 					},
 					fail = function(jqXHR, reason) {
-						socket.fire("close", [reason === "abort" ? "close" : "error"]);
+						socket.fire("close", [reason === "abort" ? "aborted" : "error"]);
 					};
 				
 				socket.session("url", url);
@@ -1165,7 +1165,7 @@
 						}
 					},
 					fail = function(jqXHR, reason) {
-						socket.fire("close", [reason === "abort" ? "close" : "error"]);
+						socket.fire("close", [reason === "abort" ? "aborted" : "error"]);
 					};
 				
 				socket.session("url", url);
