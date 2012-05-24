@@ -433,7 +433,7 @@
 						return arg;
 					};
 					
-					return (namespaces[name] = socket(name, options)).one("close", function(reason) {
+					return (namespaces[name] = socket(name, options)).close(function(reason) {
 						if (reason === "close") {
 							delete namespaces[name];
 						}
