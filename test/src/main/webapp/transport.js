@@ -70,8 +70,6 @@
 					event: $({}),
 					send: function(event, data, callback) {
 						setTimeout(function() {
-							var match;
-							
 							if (accepted) {
 								if (data === undefined || $.isFunction(data)) {
 									callback = data;
@@ -79,7 +77,6 @@
 									event = "message";
 								}
 								
-								match = /^([^:]+):(.+)/.exec(event) || [null, "", event];
 								eventId++;
 								if (callback) {
 									callbacks[eventId] = callback;
@@ -87,8 +84,7 @@
 								socket._notify(isBinary(data) ? data : $.stringifyJSON({
 									id: eventId, 
 									reply: !!callback,
-									namespace: match[1],
-									type: match[2], 
+									type: event, 
 									data: data
 								}));
 							}
@@ -135,7 +131,7 @@
 				setTimeout(function() {
 					if (accepted) {
 						var event = isBinary(data) ? {type: "message", data: data} : $.parseJSON(data);
-						connection.event.triggerHandler((event.namespace ? (event.namespace + ":") : "") + event.type, [event.data]);
+						connection.event.triggerHandler(event.type, [event.data]);
 						
 						if (event.reply) {
 							connection.send("reply", {id: event.id, data: connection.reply});

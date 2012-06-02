@@ -242,8 +242,6 @@
 			reconnectTry,
 			// Map of the session-scoped values
 			session = {},
-			// Namespaced sockets
-			namespaces = {},
 			// From jQuery.ajax
 			parts = /^([\w\+\.\-]+:)(?:\/\/([^\/?#:]*)(?::(\d+))?)?/.exec(url.toLowerCase()),
 			// Socket object
@@ -364,8 +362,6 @@
 				},
 				// Transmits event using the connection
 				send: function(event, data, callback) {
-					var match;
-					
 					// Defers sending an event until the state become opened
 					if (state !== "opened") {
 						buffer.push(arguments);
@@ -377,7 +373,6 @@
 							event = "message";
 						}
 						
-						match = /^([^:]+):(.+)/.exec(event) || [null, "", event];
 						eventId++;
 						if (callback) {
 							replyCallbacks[eventId] = callback;
@@ -387,8 +382,7 @@
 						transport.send(isBinary(data) ? data : opts.outbound.call(self, {
 							id: eventId, 
 							socket: id, 
-							namespace: match[1],
-							type: match[2], 
+							type: event, 
 							data: data,
 							reply: !!callback
 						}));
@@ -419,26 +413,6 @@
 					
 					return this;
 				},
-				// Builds a namespaced socket
-				ns: function(name) {
-					if (namespaces[name]) {
-						return namespaces[name];
-					}
-					
-					var options = {transports: ["ns"], root: self, namespace: name};
-					
-					// Prevents side effect
-					options.timeout = options.heartbeat = options.reconnect = false;
-					options.id = options.url = options.outbound = function(arg) {
-						return arg;
-					};
-					
-					return (namespaces[name] = socket(name, options)).close(function(reason) {
-						if (reason === "aborted") {
-							delete namespaces[name];
-						}
-					});
-				},
 				// For internal use only
 				// Fires events from the server
 				_notify: function(data, isChunk) {
@@ -450,16 +424,9 @@
 					} else {
 						$.each(isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data)), 
 						function(i, event) {
-							var socket = event.namespace ? namespaces[event.namespace] : self, 
-								type = event.type,
-								args = [event.data],
-								latch;
+							var args = [event.data], latch;
 							
 							opts.lastEventId = event.id;
-							if (!socket) {
-								socket = self;
-								type = event.namespace + ":" + event.type;
-							}
 							if (event.reply) {
 								args.push(function(result) {
 									if (!latch) {
@@ -469,7 +436,7 @@
 								});
 							}
 							
-							socket.fire(type, args);
+							self.fire(event.type, args);
 						});
 					}
 					
@@ -528,8 +495,6 @@
 			}
 		})
 		.open(function() {
-			var i;
-			
 			state = "opened";
 			
 			// Clears timeout timer
@@ -560,11 +525,6 @@
 			
 			// Initializes variables related with reconnection
 			reconnectTimer = reconnectDelay = reconnectTry = null;
-			
-			// Opens namespaced sockets
-			for (i in namespaces) {
-				namespaces[i].open();
-			}
 			
 			// Flushes buffer
 			while (buffer.length) {
@@ -705,30 +665,6 @@
 	
 	// Transports
 	transports = {
-		// Namespaced socket
-		ns: function(socket, options) {
-			return {
-				open: function() {
-					options.root.one("open", function() {
-						socket.send("open", null).fire("open");
-					})
-					.one("close", function() {
-						socket.fire("close", ["cascaded"]);
-					});
-				},
-				send: function(event) {
-					// namespace:event is a temporary format for passing namespace
-					options.root.send(options.namespace + ":" + event.type, event.data, event.reply ? function(data) {
-						socket.fire("reply", [{id: event.id, data: data}]);
-					} : null);
-				},
-				close: function() {
-					if (options.root.state() === "opened") {
-						socket.send("close", null);
-					}
-				}
-			};
-		},
 		// WebSocket
 		ws: function(socket) {
 			var WebSocket = window.WebSocket || window.MozWebSocket,
