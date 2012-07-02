@@ -927,12 +927,28 @@ test("url used for connection should be exposed by session('url')", function() {
 test("url handler should receive the absoulte form of original url and the parameters object and return a url to be used to establish a connection", function() {
 	$.socket.defaults.url = function(url, params) {
 		strictEqual(url, getAbsoluteURL("url"));
+		ok(params._ && delete params._);
 		deepEqual(params, {id: this.option("id"), heartbeat: this.option("heartbeat"), transport: "test", lastEventId: this.option("lastEventId")});
 		
 		return "modified";
 	};
 	
 	strictEqual($.socket("url").session("url"), "modified");
+});
+
+test("params option should be merged with default params object", function() {
+	$.socket.defaults.url = function(url, params) {
+		strictEqual(params.id, "fixed");
+		strictEqual(params.noop, $.noop);
+		return url;
+	};
+	
+	$.socket("url", {
+		params: {
+			id: "fixed",
+			noop: $.noop
+		}
+	});
 });
 
 asyncTest("lastEventId option should be the id of the last event which is sent by the server", function() {

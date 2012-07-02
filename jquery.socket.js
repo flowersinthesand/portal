@@ -252,7 +252,7 @@
 			self = {
 				// Finds the value of an option
 				option: function(key) {
-					return opts[({id: "_id", url: "_url"})[key] || key];
+					return opts[({id: "origId", url: "origUrl"})[key] || key];
 				},
 				// Gets or sets a session-scoped value
 				session: function(key, value) {
@@ -344,7 +344,7 @@
 						
 						if (transports[type]) {
 							session.transport = type;
-							session.url = self._url();
+							session.url = self.makeURL();
 							transport = transports[type](self, opts);
 						}
 					}
@@ -447,13 +447,14 @@
 					return this;
 				},
 				// URL generator
-				_url: function(params) {
+				makeURL: function(params) {
 					return opts.url.call(self, url, $.extend({
 						id: id, 
 						transport: session.transport, 
 						heartbeat: opts.heartbeat, 
-						lastEventId: opts.lastEventId
-					}, params));
+						lastEventId: opts.lastEventId,
+						_: $.now()
+					}, params, opts.params));
 				}
 			};
 		
@@ -463,8 +464,8 @@
 				opts.transports = options.transports;
 			}
 		}
-		opts._url = url;
-		opts._id = id = opts.id.call(self);
+		opts.origUrl = url;
+		opts.origId = id = opts.id.call(self);
 		opts.crossDomain = !!(parts && 
 			// protocol and hostname
 			(parts[1] != location.protocol || parts[2] != location.hostname ||
@@ -607,8 +608,6 @@
 			});
 		},
 		url: function(url, params) {
-			// Adds the current timestamp for this request not to be cached 
-			params._ = $.now();
 			return url + (/\?/.test(url) ? "&" : "?") + $.param(params);
 		},
 		inbound: $.parseJSON,
@@ -717,7 +716,7 @@
 			
 			function post() {
 				if (queue.length) {
-					send(options._url, queue.shift());
+					send(options.origUrl, queue.shift());
 				} else {
 					sending = false;
 				}
@@ -991,7 +990,7 @@
 			}
 			
 			function poll() {
-				var url = socket._url({count: ++count}),
+				var url = socket.makeURL({count: ++count}),
 					done = function(data) {
 						if (data || count === 1) {
 							if (count === 1) {
@@ -1037,7 +1036,7 @@
 			}
 			
 			function poll() {
-				var url = options.xdrURL.call(socket, socket._url({count: ++count})),
+				var url = options.xdrURL.call(socket, socket.makeURL({count: ++count})),
 					done = function() {
 						var data = xdr.responseText;
 						
@@ -1092,7 +1091,7 @@
 			});
 			
 			function poll() {
-				var url = socket._url({callback: callback, count: ++count}),
+				var url = socket.makeURL({callback: callback, count: ++count}),
 					done = function() {
 						if (called) {
 							called = false;
