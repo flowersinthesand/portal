@@ -215,6 +215,10 @@
 		};
 	}
 	
+	function getAbsoluteURL(url) {
+		return decodeURI($('<a href="' + url + '"/>')[0].href);
+	}
+	
 	// Socket function
 	function socket(url, options) {
 		var	// Final options object
@@ -678,7 +682,7 @@
 				feedback: true,
 				open: function() {
 					// Makes an absolute url whose scheme is ws or wss
-					var url = decodeURI($('<a href="' + socket.session("url") + '"/>')[0].href.replace(/^http/, "ws"));
+					var url = getAbsoluteURL(socket.session("url")).replace(/^http/, "ws");
 					
 					socket.session("url", url);
 					
@@ -1151,12 +1155,14 @@
 			return null;
 		}
 		
+		// The url is a identifier of this socket within the document
+		url = getAbsoluteURL(url);
+		
 		// Socket to which the given url is mapped
 		if (sockets[url]) {
 			return sockets[url];
 		}
 		
-		// The url is a identifier of this socket within the document
 		return (sockets[url] = socket(url, options));
 	};
 	

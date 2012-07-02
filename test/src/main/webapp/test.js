@@ -31,6 +31,10 @@ function param(url, name) {
 	return match ? decodeURIComponent(match[1]) : null;
 }
 
+function getAbsoluteURL(url) {
+	return decodeURI($('<a href="' + url + '"/>')[0].href);
+}
+
 module("jQuery.socket", {
 	setup: setup,
 	teardown: teardown
@@ -45,6 +49,10 @@ test("jQuery.socket(url) should return a socket object which is mapped to the gi
 	
 	ok(socket);
 	strictEqual(socket, $.socket("url"));
+});
+
+test("jQuery.socket(url) should be able to be returned by absolute url and relative url", function() {
+	strictEqual($.socket("url"), $.socket(getAbsoluteURL("url")));
 });
 
 test("jQuery.socket() should return the first socket object", function() {
@@ -916,9 +924,9 @@ test("url used for connection should be exposed by session('url')", function() {
 	ok($.socket("url").session("url"));
 });
 
-test("url handler should receive the original url and the parameters object and return a url to be used to establish a connection", function() {
+test("url handler should receive the absoulte form of original url and the parameters object and return a url to be used to establish a connection", function() {
 	$.socket.defaults.url = function(url, params) {
-		strictEqual(url, "url");
+		strictEqual(url, getAbsoluteURL("url"));
 		deepEqual(params, {id: this.option("id"), heartbeat: this.option("heartbeat"), transport: "test", lastEventId: this.option("lastEventId")});
 		
 		return "modified";
