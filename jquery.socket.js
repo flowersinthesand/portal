@@ -320,8 +320,7 @@
 				},
 				// Establishes a connection
 				open: function() {
-					var candidates = $.makeArray(opts.transports),
-						type;
+					var type;
 					
 					// Cancels the scheduled connection
 					if (reconnectTimer) {
@@ -337,30 +336,36 @@
 					
 					// Chooses transport
 					transport = undefined;
-					session.candidates = candidates;
 					
-					while (!transport && candidates.length) {
-						type = candidates.shift();
+					// Executes the prepare handler
+					opts.prepare.call(self, function() {
+						var candidates = $.makeArray(opts.transports),
+							type;
 						
-						if (transports[type]) {
-							session.transport = type;
-							session.url = self.makeURL();
-							transport = transports[type](self, opts);
+						session.candidates = candidates;						
+						while (!transport && candidates.length) {
+							type = candidates.shift();
+							
+							if (transports[type]) {
+								session.transport = type;
+								session.url = self.makeURL();
+								transport = transports[type](self, opts);
+							}
 						}
-					}
-					
-					// Increases the number of reconnection attempts
-					if (reconnectTry) {
-						reconnectTry++;
-					}
-					
-					// Fires the connecting event and connects
-					if (transport) {
-						self.fire("connecting");
-						transport.open();
-					} else {
-						self.close("notransport");
-					}
+						
+						// Increases the number of reconnection attempts
+						if (reconnectTry) {
+							reconnectTry++;
+						}
+						
+						// Fires the connecting event and connects
+						if (transport) {
+							self.fire("connecting");
+							transport.open();
+						} else {
+							self.close("notransport");
+						}
+					}, opts);
 					
 					return this;
 				},
@@ -594,6 +599,9 @@
 		heartbeat: false,
 		_heartbeat: 5000,
 		lastEventId: "",
+		prepare: function(connect) {
+			connect();
+		},
 		reconnect: function(lastDelay) {
 			return 2 * (lastDelay || 250);
 		},

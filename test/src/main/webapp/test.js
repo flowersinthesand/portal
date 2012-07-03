@@ -912,6 +912,22 @@ module("Protocol", {
 	teardown: teardown
 });
 
+asyncTest("prepare handler should receive connect function and options, and be executed before the socket tries to connect", function() {
+	var executed;
+	
+	$.socket.defaults.prepare = function(connect, options) {
+		executed = true;
+		ok($.isFunction(connect));
+		ok(options);
+		connect();
+	};
+	
+	$.socket("url").connecting(function() {
+		ok(executed);
+		start();
+	});
+});
+
 test("id handler should return a unique id within the server", function() {
 	$.socket.defaults.id = function() {
 		return "flowersinthesand";
