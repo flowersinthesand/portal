@@ -62,7 +62,7 @@ test("jQuery.socket() should return the first socket object", function() {
 	notStrictEqual(second, $.socket());
 });
 
-module("Socket object", {
+module("Socket", {
 	setup: setup,
 	teardown: teardown
 });
@@ -433,7 +433,7 @@ asyncTest("connection's close event should be fired if opened socket's close eve
 	});
 });
 
-module("Socket event", {
+module("Event", {
 	setup: setup,
 	teardown: teardown
 });
@@ -601,18 +601,14 @@ asyncTest("waiting event handler should be executed with delay and attempts when
 	});
 });
 
-module("Socket state", {
+module("State", {
 	setup: setup,
 	teardown: teardown
 });
 
-asyncTest("state should be 'preparing' before connecting event", function() {
-	$.socket.defaults.prepare = function() {
-		strictEqual(this.state(), "preparing");
-		start();
-	};
-	
-	$.socket("url");
+test("state should be 'preparing' before connecting event", function() {
+	$.socket.defaults.prepare = $.noop;	
+	strictEqual($.socket("url").state(), "preparing");
 });
 
 asyncTest("state should be 'connecting' after connecting event", function() {
