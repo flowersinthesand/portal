@@ -462,7 +462,7 @@
 						heartbeat: opts.heartbeat, 
 						lastEventId: opts.lastEventId,
 						_: $.now()
-					}, params, opts.params));
+					}, opts.params, params));
 				}
 			};
 		
