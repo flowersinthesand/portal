@@ -363,7 +363,7 @@
 							self.fire("connecting");
 							transport.open();
 						} else {
-							self.close("notransport");
+							self.fire("close", ["notransport"]);
 						}
 					}, opts);
 					
@@ -400,14 +400,12 @@
 					return this;
 				},
 				// Disconnects the connection
-				close: function(/* internal */ reason) {
+				close: function() {
 					// Prevents reconnection
-					if (!reason) {
-						opts.reconnect = false;
-						if (reconnectTimer) {
-							clearTimeout(reconnectTimer);
-							reconnectTimer = null;
-						}
+					opts.reconnect = false;
+					if (reconnectTimer) {
+						clearTimeout(reconnectTimer);
+						reconnectTimer = null;
 					}
 					
 					// Delegates to the transport
@@ -416,8 +414,8 @@
 					}
 					
 					// Fires the close event immediately for transport which doesn't give feedback on disconnection
-					if (reason || !transport || !transport.feedback) {
-						self.fire("close", [reason || "aborted"]);
+					if (!transport || !transport.feedback) {
+						self.fire("close", ["aborted"]);
 					}
 					
 					return this;
@@ -500,7 +498,8 @@
 			// Sets timeout timer
 			if (opts.timeout > 0) {
 				timeoutTimer = setTimeout(function() {
-					self.close("timeout");
+					transport.close();
+					self.fire("close", ["timeout"]);
 				}, opts.timeout);
 			}
 		})
@@ -524,7 +523,8 @@
 						});
 						
 						heartbeatTimer = setTimeout(function() {
-							self.close("error");
+							transport.close();
+							self.fire("close", ["error"]);
 						}, opts._heartbeat);
 					}, opts.heartbeat - opts._heartbeat);
 				})();
