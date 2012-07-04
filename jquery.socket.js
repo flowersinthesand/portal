@@ -320,7 +320,38 @@
 				},
 				// Establishes a connection
 				open: function() {
-					var type;
+					var type,
+						connect = function() {
+							var candidates = $.makeArray(opts.transports),
+								type;
+							
+							session.candidates = candidates;						
+							while (!transport && candidates.length) {
+								type = candidates.shift();
+								
+								if (transports[type]) {
+									session.transport = type;
+									session.url = self.makeURL();
+									transport = transports[type](self, opts);
+								}
+							}
+							
+							// Increases the number of reconnection attempts
+							if (reconnectTry) {
+								reconnectTry++;
+							}
+							
+							// Fires the connecting event and connects
+							if (transport) {
+								self.fire("connecting");
+								transport.open();
+							} else {
+								self.fire("close", ["notransport"]);
+							}
+						},
+						cancel = function() {
+							self.fire("close", ["canceled"]);
+						};
 					
 					// Cancels the scheduled connection
 					if (reconnectTimer) {
@@ -338,34 +369,8 @@
 					transport = undefined;
 					
 					// Executes the prepare handler
-					opts.prepare.call(self, function() {
-						var candidates = $.makeArray(opts.transports),
-							type;
-						
-						session.candidates = candidates;						
-						while (!transport && candidates.length) {
-							type = candidates.shift();
-							
-							if (transports[type]) {
-								session.transport = type;
-								session.url = self.makeURL();
-								transport = transports[type](self, opts);
-							}
-						}
-						
-						// Increases the number of reconnection attempts
-						if (reconnectTry) {
-							reconnectTry++;
-						}
-						
-						// Fires the connecting event and connects
-						if (transport) {
-							self.fire("connecting");
-							transport.open();
-						} else {
-							self.fire("close", ["notransport"]);
-						}
-					}, opts);
+					state = "preparing";
+					opts.prepare.call(self, connect, cancel, opts);
 					
 					return this;
 				},

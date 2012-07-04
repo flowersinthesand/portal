@@ -522,6 +522,17 @@ asyncTest("close event handler should be executed with a reason when the connect
 	});
 });
 
+asyncTest("close event's reason should be 'canceled' if the preparation is failed", function() {
+	$.socket.defaults.prepare = function(connect, cancel) {
+		cancel();
+	};
+	
+	$.socket("url").close(function(reason) {
+		strictEqual(reason, "canceled");
+		start();
+	});
+});
+
 asyncTest("close event's reason should be 'notransport' if there is no available transport", function() {
 	$.socket("url", {transports: ["what"]})
 	.close(function(reason) {
@@ -588,6 +599,20 @@ asyncTest("waiting event handler should be executed with delay and attempts when
 		ok($.isNumeric(attempts));
 		start();
 	});
+});
+
+module("Socket state", {
+	setup: setup,
+	teardown: teardown
+});
+
+asyncTest("state should be 'preparing' before connecting event", function() {
+	$.socket.defaults.prepare = function() {
+		strictEqual(this.state(), "preparing");
+		start();
+	};
+	
+	$.socket("url");
 });
 
 asyncTest("state should be 'connecting' after connecting event", function() {
@@ -912,12 +937,13 @@ module("Protocol", {
 	teardown: teardown
 });
 
-asyncTest("prepare handler should receive connect function and options, and be executed before the socket tries to connect", function() {
+asyncTest("prepare handler should receive connect and cancel function and options, and be executed before the socket tries to connect", function() {
 	var executed;
 	
-	$.socket.defaults.prepare = function(connect, options) {
+	$.socket.defaults.prepare = function(connect, cancel, options) {
 		executed = true;
 		ok($.isFunction(connect));
+		ok($.isFunction(cancel));
 		ok(options);
 		connect();
 	};
