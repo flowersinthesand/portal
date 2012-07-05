@@ -604,6 +604,7 @@
 		heartbeat: false,
 		_heartbeat: 5000,
 		lastEventId: "",
+		credentials: false,
 		prepare: function(connect) {
 			connect();
 		},
@@ -675,8 +676,7 @@
 			}
 			
 			return array;
-		},
-		credentials: false
+		}
 	};
 	
 	// Transports
@@ -1148,10 +1148,10 @@
 			if (socket.state() !== "closed") {
 				socket.close();
 			}
+			
+			// To run the test suite
+			delete sockets[url];
 		}
-		
-		// To run the test suite
-		sockets = {};
 	});
 	
 	$.socket = function(url, options) {
@@ -1178,6 +1178,7 @@
 		return (sockets[url] = socket(url, options));
 	};
 	
+	$.socket.sockets = sockets;
 	$.socket.defaults = defaults;
 	$.socket.transports = transports;
 	
