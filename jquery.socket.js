@@ -321,36 +321,42 @@
 				// Establishes a connection
 				open: function() {
 					var type,
+						latch,
 						connect = function() {
-							var candidates = $.makeArray(opts.transports),
-								type;
+							var candidates, type;
 							
-							session.candidates = candidates;						
-							while (!transport && candidates.length) {
-								type = candidates.shift();
-								
-								if (transports[type]) {
-									session.transport = type;
-									session.url = self.makeURL();
-									transport = transports[type](self, opts);
+							if (!latch) {
+								latch = true;
+								candidates = session.candidates = $.makeArray(opts.transports);						
+								while (!transport && candidates.length) {
+									type = candidates.shift();
+									
+									if (transports[type]) {
+										session.transport = type;
+										session.url = self.makeURL();
+										transport = transports[type](self, opts);
+									}
 								}
-							}
-							
-							// Increases the number of reconnection attempts
-							if (reconnectTry) {
-								reconnectTry++;
-							}
-							
-							// Fires the connecting event and connects
-							if (transport) {
-								self.fire("connecting");
-								transport.open();
-							} else {
-								self.fire("close", ["notransport"]);
+								
+								// Increases the number of reconnection attempts
+								if (reconnectTry) {
+									reconnectTry++;
+								}
+								
+								// Fires the connecting event and connects
+								if (transport) {
+									self.fire("connecting");
+									transport.open();
+								} else {
+									self.fire("close", ["notransport"]);
+								}
 							}
 						},
 						cancel = function() {
-							self.fire("close", ["canceled"]);
+							if (!latch) {
+								latch = true;
+								self.fire("close", ["canceled"]);
+							}
 						};
 					
 					// Cancels the scheduled connection
