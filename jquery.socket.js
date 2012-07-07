@@ -252,7 +252,7 @@
 			self = {
 				// Finds the value of an option
 				option: function(key) {
-					return opts[({id: "origId", url: "origUrl"})[key] || key];
+					return opts[({id: "origId", url: "origURL"})[key] || key];
 				},
 				// Gets or sets a session-scoped value
 				session: function(key, value) {
@@ -472,7 +472,7 @@
 				opts.transports = options.transports;
 			}
 		}
-		opts.origUrl = url;
+		opts.origURL = url;
 		opts.origId = id = opts.id.call(self);
 		opts.crossDomain = !!(parts && 
 			// protocol and hostname
@@ -729,7 +729,7 @@
 			
 			function post() {
 				if (queue.length) {
-					send(options.origUrl, queue.shift());
+					send(options.origURL, queue.shift());
 				} else {
 					sending = false;
 				}
