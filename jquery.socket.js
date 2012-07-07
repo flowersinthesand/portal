@@ -227,10 +227,6 @@
 			id,
 			// Transport
 			transport,
-			// Timeout
-			timeoutTimer,
-			// Heartbeat
-			heartbeatTimer,
 			// The state of the connection
 			state,
 			// Event helpers
@@ -504,41 +500,56 @@
 		
 		// Initializes
 		self.connecting(function() {
-			state = "connecting";
-			
+			var timeoutTimer;
+
 			// Sets timeout timer
-			if (opts.timeout > 0) {
+			function setTimeoutTimer() {
 				timeoutTimer = setTimeout(function() {
 					transport.close();
 					self.fire("close", ["timeout"]);
 				}, opts.timeout);
 			}
-		})
-		.open(function() {
-			state = "opened";
-			
+
 			// Clears timeout timer
-			if (timeoutTimer) {
+			function clearTimeoutTimer() {
 				clearTimeout(timeoutTimer);
-				timeoutTimer = null;
 			}
 			
+			state = "connecting";
+			
+			if (opts.timeout > 0) {
+				setTimeoutTimer();				
+				self.one("open", clearTimeoutTimer).one("close", clearTimeoutTimer);
+			}
+		})
+		.open(function() {
+			var heartbeatTimer;
+
 			// Sets heartbeat timer
-			if (opts.heartbeat > opts._heartbeat) {
-				// Helper function for setting heartbeat timer
-				(function setHeartbeatTimer() {
+			function setHeartbeatTimer() {
+				heartbeatTimer = setTimeout(function() {
+					self.send("heartbeat", null).one("heartbeat", function() {
+						clearHeartbeatTimer();
+						setHeartbeatTimer();
+					});
+					
 					heartbeatTimer = setTimeout(function() {
-						self.send("heartbeat", null).one("heartbeat", function() {
-							clearTimeout(heartbeatTimer);
-							setHeartbeatTimer();
-						});
-						
-						heartbeatTimer = setTimeout(function() {
-							transport.close();
-							self.fire("close", ["error"]);
-						}, opts._heartbeat);
-					}, opts.heartbeat - opts._heartbeat);
-				})();
+						transport.close();
+						self.fire("close", ["error"]);
+					}, opts._heartbeat);
+				}, opts.heartbeat - opts._heartbeat);
+			}
+
+			// Clears heartbeat timer
+			function clearHeartbeatTimer() {
+				clearTimeout(heartbeatTimer);
+			}
+			
+			state = "opened";
+			
+			if (opts.heartbeat > opts._heartbeat) {
+				setHeartbeatTimer();
+				self.one("close", clearHeartbeatTimer);
 			}
 			
 			// Locks the connecting event
@@ -556,16 +567,6 @@
 			var type, event, order = events.close.order;
 			
 			state = "closed";
-			
-			// Clears timers
-			if (timeoutTimer) {
-				clearTimeout(timeoutTimer);
-				timeoutTimer = null;
-			}
-			if (heartbeatTimer) {
-				clearTimeout(heartbeatTimer);
-				heartbeatTimer = null;
-			}
 			
 			// Locks event whose order is lower than close event
 			for (type in events) {
