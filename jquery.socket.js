@@ -108,7 +108,9 @@
 		// A global identifier
 		guid = $.now(),
 		// Callback names for JSONP
-		jsonpCallbacks = [];
+		jsonpCallbacks = [],
+		// Is the unload event being processed?
+		unloading;
 	
 	// From jQuery.Callbacks
 	function callbacks(deferred) {
@@ -421,8 +423,8 @@
 					}
 					
 					// Fires the close event immediately for transport which doesn't give feedback on disconnection
-					if (!transport || !transport.feedback) {
-						self.fire("close", ["aborted"]);
+					if (unloading || !transport || !transport.feedback) {
+						self.fire("close", [unloading ? "error" : "aborted"]);
 					}
 					
 					return this;
@@ -1147,7 +1149,10 @@
 	};
 	
 	// Closes all socket when the document is unloaded 
-	$(window).on("unload.socket", function() {
+	$(window).on("unload.socket", function(event) {
+		// Check the unload event is fired by the browser
+		unloading = !!event.originalEvent;
+		
 		var url, socket;
 		
 		for (url in sockets) {
