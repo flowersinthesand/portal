@@ -417,14 +417,14 @@
 						reconnectTimer = null;
 					}
 					
-					// Delegates to the transport
-					if (transport) {
-						transport.close();
-					}
-					
 					// Fires the close event immediately for transport which doesn't give feedback on disconnection
 					if (unloading || !transport || !transport.feedback) {
 						self.fire("close", [unloading ? "error" : "aborted"]);
+					}
+					
+					// Delegates to the transport
+					if (transport) {
+						transport.close();
 					}
 					
 					return this;
