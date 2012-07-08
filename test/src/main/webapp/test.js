@@ -1349,7 +1349,7 @@ function testTransport(transport, fn) {
 	});
 	
 	asyncTest("close event whose the reason attribute is done should be fired when the server disconnects a connection cleanly", function() {
-		$.socket(url + "?close=true", {reconnect: false}).close(function(reason) {
+		$.socket(url + "?close=1000", {reconnect: false}).close(function(reason) {
 			strictEqual(reason, "done");
 			start();
 		});
@@ -1486,7 +1486,7 @@ if (!isLocal) {
 	
 	testTransport("sse", function(url) {
 		asyncTest("Server-Sent Events event should be able to be accessed by session('event')", function() {
-			$.socket(url + "?close=true", {reconnect: false}).open(function() {
+			$.socket(url + "?close=1000", {reconnect: false}).open(function() {
 				strictEqual(this.session("event").type, "open");
 				this.send("data");
 			})

@@ -246,6 +246,9 @@
 			session = {},
 			// From jQuery.ajax
 			parts = /^([\w\+\.\-]+:)(?:\/\/([^\/?#:]*)(?::(\d+))?)?/.exec(url.toLowerCase()),
+			// Sharing
+			sharable,
+			notify,
 			// Socket object
 			self = {
 				// Finds the value of an option
@@ -312,6 +315,11 @@
 					
 					if (event) {
 						event.fire(self, args);
+					}
+					
+					// Propagates the event to child sockets unless the event belongs to the pseudo event
+					if (sharable && type !== "connecting" && type !== "waiting") {
+						notify("propagate", {type: type, args: args});
 					}
 					
 					return this;
@@ -517,11 +525,70 @@
 				clearTimeout(timeoutTimer);
 			}
 			
+			// Makes the socket sharable
+			function share() {
+				var name = "socket-" + url;
+				
+				function listener(event) {
+					var type = event.type, data = event.data;
+					
+					switch (type) {
+					case "new":
+						notify("propagate", {type: "open"});
+						break;
+					// TODO support a reply event
+					case "send":
+						self.send(data.type, data.data);
+						break;
+					case "close":
+						self.close();
+						break;
+					}
+				}
+				
+				function wrapper(event) {
+					event = event.originalEvent;
+					if (event.key === name && event.newValue) {
+						listener($.parseJSON(event.newValue));
+					}
+				}
+				
+				if ($.support.localStorage) {
+					// Powered by the storage event and the localStorage
+					// http://www.w3.org/TR/webstorage/#event-storage
+					$(window).on("storage", wrapper);
+					self.one("close", function() {
+						$(window).off("storage", wrapper);
+						window.localStorage.removeItem(name);
+					});
+					
+					notify = function(type, data) {
+						window.localStorage.setItem(name, $.stringifyJSON({type: type, data: data}));
+					};
+				} else {
+					// TODO workaround: getting window reference by window.open
+					sharable = false;
+					return;
+				}
+				
+				// Leaves traces
+				document.cookie = encodeURIComponent(name) + "=" + encodeURIComponent($.now());
+				self.one("close", function() {
+					document.cookie = encodeURIComponent(name) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+				});
+			}
+			
 			state = "connecting";
 			
 			if (opts.timeout > 0) {
 				setTimeoutTimer();				
 				self.one("open", clearTimeoutTimer).one("close", clearTimeoutTimer);
+			}
+			
+			// For now, opera is not supported due to the unload event
+			sharable = opts.sharing && session.transport !== "local" && !$.browser.opera;
+			if (sharable) {
+				share();
 			}
 		})
 		.open(function() {
@@ -606,14 +673,29 @@
 		return self.open();
 	}
 	
+	// In fact, we need to test the storage event is available or not
+	$.support.localStorage = (function() {
+		var storage = window.localStorage;
+		if (storage && Object.prototype.toString.call(storage) === "[object Storage]") {
+			try {
+				storage.setItem("t", "t");
+				storage.removeItem("t");
+				return true;
+			} catch (e) {}
+		}
+		
+		return false;
+	})();
+	
 	// Default options
 	defaults = {
-		transports: ["ws", "sse", "stream", "longpoll"],
+		transports: ["local", "ws", "sse", "stream", "longpoll"],
 		timeout: false,
 		heartbeat: false,
 		_heartbeat: 5000,
 		lastEventId: "",
 		credentials: false,
+		sharing: true,
 		prepare: function(connect) {
 			connect();
 		},
@@ -690,6 +772,75 @@
 	
 	// Transports
 	transports = {
+		// Local socket
+		local: function(socket, options) {
+			var name = "socket-" + options.origURL,
+				init, notify;
+			
+			function listener(event) {
+				var type = event.type, data = event.data;
+				
+				if (type === "propagate") {
+					if (data.type === "close" && data.args && data.args[0] === "aborted") {
+						socket.close();
+					} else {
+						socket.fire(data.type, data.args);
+					}
+				}
+			}
+			
+			// Finds the parent socket's traces from the cookie
+			if (!new RegExp("(?:^|;\s*)(" + encodeURIComponent(name) + ")=([^;]*)").test(document.cookie)) {
+				return;
+			}
+			
+			if ($.support.localStorage) {
+				init = function() {
+					function wrapper(event) {
+						event = event.originalEvent;
+						// When a deletion, newValue initialized to null
+						if (event.key === name && event.newValue) {
+							listener($.parseJSON(event.newValue));
+						}
+					}
+					
+					$(window).on("storage", wrapper);
+					socket.one("close", function() {
+						$(window).off("storage", wrapper);
+					});
+				};
+				notify = function(type, data) {
+					window.localStorage.setItem(name, $.stringifyJSON({type: type, data: data}));
+				};
+			} else {
+				// TODO workaround
+				return;
+			}
+			
+			return {
+				open: function() {
+					var outbound = options.outbound;
+					
+					options.outbound = function(arg) {
+						return arg;
+					};
+					socket.one("close", function() {
+						options.outbound = outbound;
+					});
+					
+					init();					
+					notify("new");
+				},
+				send: function(event) {
+					notify("send", event);
+				},
+				close: function() {
+					if (!unloading) {
+						notify("close");
+					}
+				}
+			};
+		},
 		// WebSocket
 		ws: function(socket) {
 			var WebSocket = window.WebSocket || window.MozWebSocket,

@@ -28,13 +28,13 @@ public class EchoServlet extends DispatcherServlet {
 		if (type.equals("open")) {
 			@SuppressWarnings("unchecked")
 			Map<String, String[]> params = (Map<String, String[]>) connection.data().get("parameters");
-			if (params.containsKey("close") && Boolean.valueOf(params.get("close")[0])) {
+			if (params.containsKey("close")) {
 				new Timer().schedule(new TimerTask() {
 					@Override
 					public void run() {
 						connection.close();
 					}
-				}, 1000);
+				}, Long.valueOf(params.get("close")[0]));
 			}
 		} else if (type.equals("message")) {
 			connection.send(data);
