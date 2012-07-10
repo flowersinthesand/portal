@@ -321,7 +321,7 @@
 							
 							if (!latch) {
 								latch = true;
-								candidates = session.candidates = $.makeArray(opts.transports);						
+								candidates = session.candidates = $.makeArray(opts.transports);
 								while (!transport && candidates.length) {
 									type = candidates.shift();
 									
@@ -499,7 +499,7 @@
 		// Initializes
 		self.connecting(function() {
 			var timeoutTimer;
-
+			
 			// Sets timeout timer
 			function setTimeoutTimer() {
 				timeoutTimer = setTimeout(function() {
@@ -507,7 +507,7 @@
 					self.fire("close", ["timeout"]);
 				}, opts.timeout);
 			}
-
+			
 			// Clears timeout timer
 			function clearTimeoutTimer() {
 				clearTimeout(timeoutTimer);
@@ -515,117 +515,130 @@
 			
 			// Makes the socket sharable
 			function share() {
-				var name = "socket-" + url,
-					propagate, storage, neim, win;
+				var server, 
+					name = "socket-" + url,
+					servers = {
+						// Powered by the storage event and the localStorage
+						// http://www.w3.org/TR/webstorage/#event-storage
+						storage: function() {
+							if (!$.support.storageEvent) {
+								return;
+							}
+							
+							var storage = window.localStorage;
+							
+							return {
+								init: function() {
+									// Handles the storage event 
+									$(window).on("storage.socket", function(event) {
+										event = event.originalEvent;
+										// When a deletion, newValue initialized to null
+										if (event.key === name && event.newValue) {
+											listener(event.newValue);
+										}
+									});									
+									self.one("close", function(reason) {
+										$(window).off("storage.socket");
+										// Defers again to clean the storage
+										self.one("close", function() {
+											storage.removeItem(name);
+											storage.removeItem(name + "-opened");
+											storage.removeItem(name + "-children");
+										});
+									});
+								},
+								signal: function(type, data) {
+									storage.setItem(name, $.stringifyJSON({target: "c", type: type, data: data}));
+								},
+								get: function(key) {
+									return $.parseJSON(storage.getItem(name + "-" + key));
+								},
+								set: function(key, value) {
+									storage.setItem(name + "-" + key, $.stringifyJSON(value));
+								}
+							};
+						},
+						// Powered by the window.open method
+						// https://developer.mozilla.org/en/DOM/window.open
+						windowref: function() {
+							// Internet Explorer raises an invalid argument error
+							// when calling the window.open method with the name containing non-word characters
+							var neim = name.replace(/\W/g, ""),
+								win = ($('iframe[name="' + neim + '"]')[0] 
+									|| $('<iframe name="' + neim + '" />').hide().appendTo("body")[0]).contentWindow;
+							
+							return {
+								init: function() {
+									// Callbacks from different windows
+									win.callbacks = [listener];
+									// In IE 8 and less, only string argument can be safely passed to the function in other window
+									win.fire = function(string) {
+										var i;
+										
+										for (i = 0; i < win.callbacks.length; i++) {
+											win.callbacks[i](string);
+										}
+									};
+								},
+								signal: function(type, data) {
+									if (!win.closed && win.fire) {
+										win.fire($.stringifyJSON({target: "c", type: type, data: data}));
+									}
+								},
+								get: function(key) {
+									return !win.closed ? win[key] : null;
+								},
+								set: function(key, value) {
+									if (!win.closed) {
+										win[key] = value;
+									}
+								}
+							};
+						}
+					};
 				
 				// Receives send and close command from the children
 				function listener(string) {
-					var command = $.parseJSON(string), type = command.type, data = command.data;
+					var command = $.parseJSON(string), data = command.data;
 					
-					switch (type) {
-					// TODO support a reply event
-					case "send":
-						self.send(data.type, data.data);
-						break;
-					case "close":
-						self.close();
-						break;
+					if (command.target === "p") {
+						switch (command.type) {
+						// TODO support a reply event
+						case "send":
+							self.send(data.type, data.data);
+							break;
+						case "close":
+							self.close();
+							break;
+						}
 					}
 				}
 				
-				if ($.support.storageEvent) {
-					// Powered by the storage event and the localStorage
-					// http://www.w3.org/TR/webstorage/#event-storage
-					storage = window.localStorage;
-					propagate = function(context) {
-						storage.setItem(name, $.stringifyJSON({type: "message", data: context}));
-					};
-					
-					// List of children sockets
-					storage.setItem(name + "-children", "[]");
-					
-					// Flag indicating the parent socket is opened
-					storage.setItem(name + "-opened", "false");
-					
-					// Handles the storage event 
-					$(window).on("storage.socket", function(event) {
-						event = event.originalEvent;
-						// When a deletion, newValue initialized to null
-						if (event.key === name && event.newValue) {
-							listener(event.newValue);
-						}
-					});
-					
-					self.one("open", function() {
-						storage.setItem(name + "-opened", "true");
-						storage.setItem(name, $.stringifyJSON({type: "open"}));
-					})
-					.one("close", function(reason) {
-						$(window).off("storage.socket");
-						// The heir is the parent unless unloading
-						storage.setItem(name, $.stringifyJSON({
-							type: "_close",
-							data: {
-								reason: reason, 
-								heir: !unloading ? id : $.parseJSON(storage.getItem(name + "-children"))[0]
-							}
-						}));
-						storage.removeItem(name);
-						storage.removeItem(name + "-opened");
-						storage.removeItem(name + "-children");
-					});
-				} else {
-					// Internet Explorer raises an invalid argument error
-					// when calling the window.open method with the name containing non-word characters
-					neim = name.replace(/\W/g, "");
-					
-					// Powered by the window.open method
-					// https://developer.mozilla.org/en/DOM/window.open
-					win = ($('iframe[name="' + neim + '"]')[0] || $('<iframe name="' + neim + '" />').hide().appendTo("body")[0]).contentWindow;
-					win.callbacks = [listener];
-					// In Internet Explorer 8 and less, only string argument can be safely passed to the function in other window
-					win.fire = function(string) {
-						var i;
-						
-						for (i = 0; i < win.callbacks.length; i++) {
-							win.callbacks[i](string);
-						}
-					};
-					propagate = function(context) {
-						win.fire($.stringifyJSON({type: "message", data: context}));
-					};
-					
-					win.children = [];
-					win.opened = false;
-					
-					win.callbacks.remove = win.children.remove = function(e) {
-						var index = $.inArray(e, this);
-						if (index > -1) {
-							this.splice(index, 1);
-						}
-					};
-					
-					self.one("open", function() {
-						win.opened = true;
-						win.fire($.stringifyJSON({type: "open"}));
-					})
-					.one("close", function(reason) {
-						// The heir is the parent unless unloading
-						win.fire($.stringifyJSON({
-							type: "_close",
-							data: {
-								reason: reason, 
-								heir: !unloading ? id : win.children[0]
-							}
-						}));
-					});
+				function propagateMessageEvent(context) {
+					server.signal("message", context);
 				}
 				
 				// Leaves traces
-				document.cookie = encodeURIComponent(name) + "=" + encodeURIComponent($.now());
-				self.on("_message", propagate)
-				.one("close", function() {
-					self.off("_message", propagate);
+				document.cookie = encodeURIComponent(name) + "=" + $.now();
+				
+				// Chooses a server
+				server = servers.storage() || servers.windowref();
+				server.init();
+				
+				// List of children sockets
+				server.set("children", []);
+				// Flag indicating the parent socket is opened
+				server.set("opened", false);
+				
+				self.on("_message", propagateMessageEvent)
+				.one("open", function() {
+					server.set("opened", true);
+					server.signal("open");
+				})
+				.one("close", function(reason) {
+					self.off("_message", propagateMessageEvent);
+					// The heir is the parent unless unloading
+					server.signal("close", {reason: reason, heir: !unloading ? id : server.get("children")[0]});
 					document.cookie = encodeURIComponent(name) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 				});
 			}
@@ -644,7 +657,7 @@
 		})
 		.open(function() {
 			var heartbeatTimer;
-
+			
 			// Sets heartbeat timer
 			function setHeartbeatTimer() {
 				heartbeatTimer = setTimeout(function() {
@@ -659,7 +672,7 @@
 					}, opts._heartbeat);
 				}, opts.heartbeat - opts._heartbeat);
 			}
-
+			
 			// Clears heartbeat timer
 			function clearHeartbeatTimer() {
 				clearTimeout(heartbeatTimer);
@@ -731,7 +744,7 @@
 				storage.setItem("t", "t");
 				storage.removeItem("t");
 				// Internet Explorer 9 has no StorageEvent object but supports the storage event
-				return  !!window.StorageEvent || Object.prototype.toString.call(storage) === "[object Storage]";
+				return !!window.StorageEvent || Object.prototype.toString.call(storage) === "[object Storage]";
 			} catch (e) {}
 		}
 		
@@ -825,42 +838,125 @@
 	transports = {
 		// Local socket
 		local: function(socket, options) {
-			var name = "socket-" + options.origURL,
-				init, notify, orphan, storage, win;
+			var connector, orphan,
+				name = "socket-" + options.origURL,
+				connectors = {
+					storage: function() {
+						if (!$.support.storageEvent) {
+							return;
+						}
+						
+						var storage = window.localStorage,
+							get = function(key) {
+								return $.parseJSON(storage.getItem(name + "-" + key));
+							},
+							set = function(key, value) {
+								storage.setItem(name + "-" + key, $.stringifyJSON(value));
+							};
+						
+						return {
+							init: function() {
+								set("children", get("children").concat([options.origId]));
+								$(window).on("storage.socket", function(event) {
+									event = event.originalEvent;
+									if (event.key === name && event.newValue) {
+										listener(event.newValue);
+									}
+								});
+								
+								socket.one("close", function() {
+									var index, children = get("children");
+									
+									$(window).off("storage.socket");
+									if (children) {
+										index = $.inArray(options.origId, children);
+										if (index > -1) {
+											children.splice(index, 1);
+											set("children", children);
+										}
+									}
+								});
+								
+								return get("opened");
+							},
+							signal: function(type, data) {
+								storage.setItem(name, $.stringifyJSON({target: "p", type: type, data: data}));
+							}
+						};
+					},
+					windowref: function() {
+						var win = window.open("", name.replace(/\W/g, ""));
+						
+						if (!win || win.closed || !win.callbacks) {
+							return;
+						}
+						
+						return {
+							init: function() {
+								win.callbacks.push(listener);
+								win.children.push(options.origId);
+								
+								socket.one("close", function() {
+									function remove(array, e) {
+										var index = $.inArray(e, array);
+										if (index > -1) {
+											array.splice(index, 1);
+										}
+									}
+									
+									// Removes traces only if the parent is alive
+									if (!orphan) {
+										remove(win.callbacks, listener);
+										remove(win.children, options.origId);
+									}
+								});
+								
+								return win.opened;
+							},
+							signal: function(type, data) {
+								if (!win.closed && win.fire) {
+									win.fire($.stringifyJSON({target: "p", type: type, data: data}));
+								}
+							}
+						};
+					}
+				};
 			
 			// Receives open, close and message command from the parent 
 			function listener(string) {
-				var command = $.parseJSON(string), type = command.type, data = command.data;
+				var command = $.parseJSON(string), data = command.data;
 				
-				switch (type) {
-				case "open":
-					socket.fire("open");
-					break;
-				case "_close":
-					orphan = true;
-					if (data.reason === "aborted") {
-						socket.close();
-					} else {
-						// Gives the heir some time to reconnect 
-						if (data.heir === options.origId) {
-							socket.fire("close", [data.reason]);
+				if (command.target === "c") {
+					switch (command.type) {
+					case "open":
+						socket.fire("open");
+						break;
+					case "close":
+						orphan = true;
+						if (data.reason === "aborted") {
+							socket.close();
 						} else {
-							setTimeout(function() {
+							// Gives the heir some time to reconnect 
+							if (data.heir === options.origId) {
 								socket.fire("close", [data.reason]);
-							}, 100);
+							} else {
+								setTimeout(function() {
+									socket.fire("close", [data.reason]);
+								}, 100);
+							}
 						}
-					}
-					break;
-				case "message":
-					// When using the local transport, message events could be sent before the open event
-					if (socket.state() === "connecting") {
-						socket.one("open", function() {
+						break;
+					case "message":
+						// When using the local transport, message events could be sent before the open event
+						if (socket.state() === "connecting") {
+							socket.one("open", function() {
+								socket.fire(data.type, data.args);
+							});
+						} else {
 							socket.fire(data.type, data.args);
-						});
-					} else {
-						socket.fire(data.type, data.args);
+						}
+						break;
 					}
-					break;
 				}
 			}
 			
@@ -869,66 +965,16 @@
 				return;
 			}
 			
-			if ($.support.storageEvent) {
-				storage = window.localStorage;
-				init = function() {
-					var childrenKey = name + "-children";
-					
-					storage.setItem(childrenKey, $.stringifyJSON($.parseJSON(storage.getItem(childrenKey)).concat([options.origId])));
-					$(window).on("storage.socket", function(event) {
-						event = event.originalEvent;
-						if (event.key === name && event.newValue) {
-							listener(event.newValue);
-						}
-					});
-					
-					socket.one("close", function() {
-						var children = storage.getItem(childrenKey), index;
-						
-						$(window).off("storage.socket");						
-						if (children) {
-							children = $.parseJSON(children);
-							index = $.inArray(options.origId, children);
-							if (index > -1) {
-								children.splice(index, 1);
-								storage.setItem(childrenKey, $.stringifyJSON(children));
-							}
-						}
-					});
-					
-					return $.parseJSON(storage.getItem(name + "-opened"));
-				};
-				notify = function(type, data) {
-					storage.setItem(name, $.stringifyJSON({type: type, data: data}));
-				};
-			} else {
-				win = window.open("", name.replace(/\W/g, ""));
-				if (!win || win.closed || !win.callbacks) {
-					return;
-				}
-				
-				init = function() {
-					win.callbacks.push(listener);
-					win.children.push(options.origId);
-					
-					socket.one("close", function() {
-						// Removes traces only if the parent is alive
-						if (!orphan) {
-							win.callbacks.remove(listener);
-							win.children.remove(options.origId);
-						}
-					});
-					
-					return win.opened;
-				};
-				notify = function(type, data) {
-					win.fire($.stringifyJSON({type: type, data: data}));
-				};
+			// Chooses a connector
+			connector = connectors.storage() || connectors.windowref();
+			if (!connector) {
+				return;
 			}
 			
 			return {
 				open: function() {
-					var timeout = options.timeout, 
+					var parentOpened,
+						timeout = options.timeout, 
 						heartbeat = options.heartbeat, 
 						outbound = options.outbound;
 					
@@ -945,7 +991,8 @@
 						options.outbound = outbound;
 					});
 					
-					if (init()) {
+					parentOpened = connector.init();
+					if (parentOpened) {
 						// Firing the open event without delay robs the user of the opportunity to bind connecting event handlers
 						setTimeout(function() {
 							socket.fire("open");
@@ -953,12 +1000,12 @@
 					}
 				},
 				send: function(event) {
-					notify("send", event);
+					connector.signal("send", event);
 				},
 				close: function() {
-					// Do not notify the parent if this method is executed by the unload event handler
+					// Do not signal the parent if this method is executed by the unload event handler
 					if (!unloading) {
-						notify("close");
+						connector.signal("close");
 					}
 				}
 			};
