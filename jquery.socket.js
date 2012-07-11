@@ -605,7 +605,6 @@
 					
 					if (command.target === "p") {
 						switch (command.type) {
-						// TODO support a reply event
 						case "send":
 							self.send(data.type, data.data);
 							break;
