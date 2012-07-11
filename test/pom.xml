@@ -15,7 +15,7 @@
 		<dependency>
 			<groupId>org.eclipse.jetty</groupId>
 			<artifactId>jetty-websocket</artifactId>
-			<version>8.1.2.v20120308</version>
+			<version>8.1.4.v20120524</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
