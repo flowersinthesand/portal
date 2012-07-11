@@ -1503,7 +1503,6 @@
 		return (sockets[url] = socket(url, options));
 	};
 	
-	$.socket.sockets = sockets;
 	$.socket.defaults = defaults;
 	$.socket.transports = transports;
 	
