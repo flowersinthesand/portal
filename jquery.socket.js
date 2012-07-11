@@ -317,12 +317,9 @@
 								candidates = session.candidates = $.makeArray(opts.transports);
 								while (!transport && candidates.length) {
 									type = candidates.shift();
-									
-									if (transports[type]) {
-										session.transport = type;
-										session.url = self.makeURL();
-										transport = transports[type](self, opts);
-									}
+									session.transport = type;
+									session.url = self.makeURL();
+									transport = transports[type](self, opts);
 								}
 								
 								// Increases the number of reconnection attempts
@@ -361,9 +358,21 @@
 					// Chooses transport
 					transport = undefined;
 					
-					// Executes the prepare handler
+					// Prepares opening
 					state = "preparing";
-					opts.prepare.call(self, connect, cancel, opts);
+					
+					// Check if possible to make use of a shared socket
+					if (opts.sharing) {
+						session.transport = "local";
+						transport = transports.local(self, opts);
+					}
+
+					// Executes the prepare handler if a physical connection is needed
+					if (transport) {
+						connect();
+					} else {
+						opts.prepare.call(self, connect, cancel, opts);
+					}
 					
 					return this;
 				},
@@ -644,7 +653,7 @@
 			}
 			
 			// For now, opera is not supported due to the unload event
-			if (opts.sharing && session.transport !== "local" && $.inArray("local", opts.transports) > -1 && !$.browser.opera) {
+			if (opts.sharing && session.transport !== "local" && !$.browser.opera) {
 				share();
 			}
 		})
@@ -746,7 +755,7 @@
 	
 	// Default options
 	defaults = {
-		transports: ["local", "ws", "sse", "stream", "longpoll"],
+		transports: ["ws", "sse", "stream", "longpoll"],
 		timeout: false,
 		heartbeat: false,
 		_heartbeat: 5000,

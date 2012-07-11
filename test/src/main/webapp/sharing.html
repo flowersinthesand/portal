@@ -9,7 +9,12 @@
 		$(function() {
 			var i = 1;
 			
-			$.socket("echo?close=10000")
+			$.socket("echo?close=10000", {
+				prepare: function(connect) {
+					$("<div />").text("preparing").appendTo("body");
+					connect();
+				}
+			})
 			.connecting(function() {
 				$("<div />").text(i++).appendTo("body");
 				$("<div />").text("Connecting with the transport [" + this.session("transport") + "]").appendTo("body");
