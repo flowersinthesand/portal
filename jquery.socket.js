@@ -115,7 +115,7 @@
 	// From jQuery.Callbacks
 	function callbacks(deferred) {
 		var list = [],
-			stack = [],
+			locked,
 			memory,
 			firing,
 			firingStart,
@@ -140,7 +140,7 @@
 					list.push(fn);
 					if (firing) {
 						firingLength = list.length;
-					} else if (memory && memory !== true) {
+					} else if (!locked && memory && memory !== true) {
 						firingStart = length;
 						fire(memory[0], memory[1]);
 					}
@@ -163,25 +163,18 @@
 					}
 				},
 				fire: function(context, args) {
-					if (stack) {
-						if (firing) {
-							if (!deferred) {
-								stack.push([context, args]);
-							}
-						} else if (!(deferred && memory)) {
-							fire(context, args);
-						}
+					if (!locked && !firing && !(deferred && memory)) {
+						fire(context, args);
 					}
 				},
 				lock: function() {
-					stack = undefined;
+					locked = true;
 				},
 				locked: function() {
-					return !stack;
+					return locked;
 				},
 				unlock: function() {
-					stack = [];
-					memory = firing = firingStart = firingLength = firingIndex = undefined;
+					locked = memory = firing = firingStart = firingLength = firingIndex = undefined;
 				}
 			};
 		

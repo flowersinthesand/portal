@@ -5,6 +5,7 @@ function setup() {
 	
 	$.extend($.socket.defaults, {
 		transports: ["test"],
+		sharing: false,
 		reconnect: function() {
 			var delay = reconnect.apply(this, arguments);
 			return $.isNumeric(delay) ? delay * (this.session("transport") === "test" ? 0.01 : 1) : delay;
