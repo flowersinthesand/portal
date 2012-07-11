@@ -12,7 +12,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 import org.apache.catalina.websocket.MessageInbound;
 import org.apache.catalina.websocket.StreamInbound;
@@ -25,7 +24,6 @@ import com.google.gson.Gson;
 public class ChatServlet extends WebSocketServlet {
 
 	private static final long serialVersionUID = -8348163963937728320L;
-	private static final ThreadLocal<HttpServletRequest> requestHolder = new ThreadLocal<HttpServletRequest>();
 
 	private Map<String, ChatMessageInbound> connections = new ConcurrentHashMap<String, ChatMessageInbound>();
 	private BlockingQueue<Event> queue = new LinkedBlockingQueue<Event>();
@@ -55,17 +53,9 @@ public class ChatServlet extends WebSocketServlet {
 		broadcaster.setDaemon(true);
 		broadcaster.start();
 	}
-
+	
 	@Override
-	protected void service(HttpServletRequest request, HttpServletResponse response)
-			throws ServletException, IOException {
-		requestHolder.set(request);
-		super.service(request, response);
-	}
-
-	@Override
-	protected StreamInbound createWebSocketInbound(String protocol) {
-		HttpServletRequest request = requestHolder.get();
+	protected StreamInbound createWebSocketInbound(String protocol, HttpServletRequest request) {
 		return new ChatMessageInbound(request.getParameter("id"));
 	}
 
