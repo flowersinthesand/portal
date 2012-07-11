@@ -210,6 +210,12 @@
 		return decodeURI($('<a href="' + url + '"/>')[0].href);
 	}
 	
+	function trimLeft(string) {
+		// Technically, regular expression, /\S/.test("\xA0") ? (/^[\s\xA0]+/g) : /^\s+/g, is right according to jQuery.trim
+		// but, I believe no one use non-breaking spaces when printing padding
+		return string.replace(/^\s+/g, "");
+	}
+	
 	// Socket function
 	function socket(url, options) {
 		var	// Final options object
@@ -1174,7 +1180,7 @@
 								length = xhr.responseText.length;
 							
 							if (!index) {
-								socket.fire("open");
+								socket.fire("open")._notify(trimLeft(xhr.responseText), true);
 							} else if (length > index) {
 								socket._notify(xhr.responseText.substring(index, length), true);
 							}
@@ -1238,16 +1244,7 @@
 						
 						var response = cdoc.body.lastChild;
 						
-						// Detects connection failure
-						if (!response) {
-							socket.fire("close", ["error"]);
-							return false;
-						}
-						
-						response.innerText = "";
-						socket.fire("open");
-						
-						stop = iterate(function() {
+						function readDirty() {
 							var clone = response.cloneNode(true), 
 								text;
 							
@@ -1255,7 +1252,21 @@
 							// If the contents of an element ends with one or more CR or LF, Internet Explorer ignores them in the innerText property 
 							clone.appendChild(cdoc.createTextNode("."));
 							text = clone.innerText;
-							text = text.substring(0, text.length - 1);
+							
+							return text.substring(0, text.length - 1);
+						}
+						
+						// Detects connection failure
+						if (!response) {
+							socket.fire("close", ["error"]);
+							return false;
+						}
+						
+						socket.fire("open")._notify(trimLeft(readDirty()), true);
+						response.innerText = "";
+						
+						stop = iterate(function() {
+							var text = readDirty();
 							
 							if (text) {
 								response.innerText = "";
@@ -1298,7 +1309,7 @@
 							length = xdr.responseText.length;
 						
 						if (!index) {
-							socket.fire("open");
+							socket.fire("open")._notify(trimLeft(xdr.responseText), true);
 						} else {
 							socket._notify(xdr.responseText.substring(index, length), true);
 						}

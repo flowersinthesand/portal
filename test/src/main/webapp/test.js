@@ -1348,6 +1348,14 @@ function testTransport(transport, fn) {
 		});
 	});
 	
+	if (/^stream/.test(transport)) {
+		asyncTest("non-whitespace characters printed in the first chunk should be regarded as data", function() {
+			$.socket(url + "?firstMessage=true").message(function(data) {
+				strictEqual(data, "hello");
+				start();
+			});
+		});
+	}
 	if (/^longpoll/.test(transport)) {
 		asyncTest("session('url') should be modified whenever trying to connect to the server", 6, function() {
 			var oldCount, oldLastEventId;

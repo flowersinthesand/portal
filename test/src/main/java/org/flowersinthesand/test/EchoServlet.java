@@ -35,6 +35,8 @@ public class EchoServlet extends DispatcherServlet {
 						connection.close();
 					}
 				}, Long.valueOf(params.get("close")[0]));
+			} else if (params.containsKey("firstMessage")) {
+				connection.send("hello");
 			}
 		} else if (type.equals("message")) {
 			connection.send(data);
