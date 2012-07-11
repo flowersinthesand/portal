@@ -644,7 +644,7 @@
 			}
 			
 			// For now, opera is not supported due to the unload event
-			if (opts.sharing && session.transport !== "local" && !$.browser.opera) {
+			if (opts.sharing && session.transport !== "local" && $.inArray("local", opts.transports) > -1 && !$.browser.opera) {
 				share();
 			}
 		})
