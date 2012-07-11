@@ -171,7 +171,7 @@
 					locked = true;
 				},
 				locked: function() {
-					return locked;
+					return !!locked;
 				},
 				unlock: function() {
 					locked = memory = firing = firingStart = firingLength = firingIndex = undefined;
