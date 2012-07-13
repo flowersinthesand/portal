@@ -921,6 +921,24 @@ asyncTest("socket should require the server to reply if a reply callback is prov
 	});
 });
 
+asyncTest("callback should be able to event name", 2, function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("message", function() {
+				return "Vassline";
+			});
+		}
+	})
+	.send("message", "data", "test")
+	.on("test", function(reply) {
+		strictEqual(reply, "Vassline");
+		start();
+	})
+	.on("reply", function(data) {
+		deepEqual(data, {id: 1, data: "Vassline"});
+	});
+});
+
 module("Protocol", {
 	setup: setup,
 	teardown: teardown

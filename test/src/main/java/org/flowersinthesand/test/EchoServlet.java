@@ -40,6 +40,8 @@ public class EchoServlet extends DispatcherServlet {
 			}
 		} else if (type.equals("message")) {
 			connection.send(data);
+		} else if (type.equals("timestamp")) {
+			return System.currentTimeMillis();
 		}
 
 		return null;

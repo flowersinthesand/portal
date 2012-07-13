@@ -383,7 +383,9 @@
 					return this;
 				},
 				// Transmits event using the connection
-				send: function(event, data, callback) {
+				send: function(type, data, callback) {
+					var event;
+					
 					// Defers sending an event until the state become opened
 					if (state !== "opened") {
 						buffer.push(arguments);
@@ -391,23 +393,31 @@
 						// Standardize .send(data) and .send(data, callback) into .send(event, data, callback)
 						if (data === undefined || $.isFunction(data)) {
 							callback = data;
-							data = event;
-							event = "message";
+							data = type;
+							type = "message";
 						}
 						
-						eventId++;
+						// Outbound event
+						event = {
+							id: ++eventId,
+							socket: id,
+							type: type,
+							data: data,
+							reply: !!callback
+						};
+						
 						if (callback) {
-							replyCallbacks[eventId] = callback;
+							// Shared socket needs to know the callback event name 
+							// because it fires the callback event directly instead of using reply event 
+							if (session.transport === "local") {
+								event.callback = callback;
+							} else {
+								replyCallbacks[eventId] = callback;
+							}
 						}
 						
 						// Delegates to the transport
-						transport.send(isBinary(data) ? data : opts.outbound.call(self, {
-							id: eventId, 
-							socket: id, 
-							type: event, 
-							data: data,
-							reply: !!callback
-						}));
+						transport.send(isBinary(data) ? data : opts.outbound.call(self, event));
 					}
 					
 					return this;
@@ -612,7 +622,7 @@
 					if (command.target === "p") {
 						switch (command.type) {
 						case "send":
-							self.send(data.type, data.data);
+							self.send(data.type, data.data, data.callback);
 							break;
 						case "close":
 							self.close();
@@ -735,9 +745,16 @@
 			state = "waiting";
 		})
 		.on("reply", function(reply) {
-			if (replyCallbacks[reply.id]) {
-				replyCallbacks[reply.id].call(self, reply.data);
-				delete replyCallbacks[reply.id];
+			var id = reply.id, data = reply.data, callback = replyCallbacks[id];
+			
+			if (callback) {
+				if (typeof callback === "string") {
+					self.fire(callback, [data]).fire("_message", [{type: callback, args: [data]}]);
+				} else if ($.isFunction(callback)) {
+					callback.call(self, data);
+				}
+				
+				delete replyCallbacks[id];
 			}
 		});
 		

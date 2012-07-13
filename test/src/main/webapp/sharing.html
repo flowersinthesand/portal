@@ -21,10 +21,13 @@
 			})
 			.open(function() {
 				$("<div />").text("Opened").appendTo("body");
-				this.send("Current timestamp: " + $.now());
+				this.send("Current timestamp: " + $.now()).send("timestamp", null, "timestamp");
 			})
 			.message(function(data) {
 				$("<div />").text(data).appendTo("body");
+			})
+			.on("timestamp", function(ts) {
+				$("<div />").text("Current timestamp of the server: " + ts).appendTo("body");
 			})
 			.close(function(reason) {
 				$("<div />").text("Closed by the reason [" + reason + "]").appendTo("body");
