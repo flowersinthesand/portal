@@ -534,6 +534,15 @@ asyncTest("close event's reason should be 'canceled' if the preparation is faile
 	});
 });
 
+asyncTest("close event's reason should be 'notransport' if there is no available transport", function() {
+	$.socket.transports.what = $.noop;	
+	$.socket("url", {transports: ["what"]})
+	.close(function(reason) {
+		strictEqual(reason, "notransport");
+		start();
+	});
+});
+
 asyncTest("close event's reason should be 'aborted' if the socket has been closed by the close method", function() {
 	$.socket("url")
 	.close(function(reason) {
