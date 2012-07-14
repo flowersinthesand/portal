@@ -220,8 +220,6 @@
 	function socket(url, options) {
 		var	// Final options object
 			opts,
-			// Socket id,
-			id,
 			// Transport
 			transport,
 			// The state of the connection
@@ -245,7 +243,7 @@
 			self = {
 				// Finds the value of an option
 				option: function(key) {
-					return opts[({id: "origId", url: "origURL"})[key] || key];
+					return opts[({url: "origURL"})[key] || key];
 				},
 				// Gets or sets a session-scoped value
 				session: function(key, value) {
@@ -400,7 +398,7 @@
 						// Outbound event
 						event = {
 							id: ++eventId,
-							socket: id,
+							socket: opts.id,
 							type: type,
 							data: data,
 							reply: !!callback
@@ -475,7 +473,7 @@
 				// URL generator
 				makeURL: function(params) {
 					return opts.url.call(self, url, $.extend({
-						id: id, 
+						id: opts.id, 
 						transport: session.transport, 
 						heartbeat: opts.heartbeat, 
 						lastEventId: opts.lastEventId,
@@ -490,8 +488,10 @@
 				opts.transports = options.transports;
 			}
 		}
+		// Saves original URL
 		opts.origURL = url;
-		opts.origId = id = opts.id.call(self);
+		// Generates socket id,
+		opts.id = opts.idGenerator.call(self);
 		opts.crossDomain = !!(parts && 
 			// protocol and hostname
 			(parts[1] != location.protocol || parts[2] != location.hostname ||
@@ -655,7 +655,7 @@
 				.one("close", function(reason) {
 					self.off("_message", propagateMessageEvent);
 					// The heir is the parent unless unloading
-					server.signal("close", {reason: reason, heir: !unloading ? id : server.get("children")[0]});
+					server.signal("close", {reason: reason, heir: !unloading ? opts.id : server.get("children")[0]});
 					document.cookie = encodeURIComponent(name) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 				});
 			}
@@ -790,7 +790,7 @@
 		reconnect: function(lastDelay) {
 			return 2 * (lastDelay || 250);
 		},
-		id: function() {
+		idGenerator: function() {
 			// Generates a random UUID 
 			// Logic borrowed from http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/2117523#2117523
 			return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
@@ -880,7 +880,7 @@
 						
 						return {
 							init: function() {
-								set("children", get("children").concat([options.origId]));
+								set("children", get("children").concat([options.id]));
 								$(window).on("storage.socket", function(event) {
 									event = event.originalEvent;
 									if (event.key === name && event.newValue) {
@@ -893,7 +893,7 @@
 									
 									$(window).off("storage.socket");
 									if (children) {
-										index = $.inArray(options.origId, children);
+										index = $.inArray(options.id, children);
 										if (index > -1) {
 											children.splice(index, 1);
 											set("children", children);
@@ -918,7 +918,7 @@
 						return {
 							init: function() {
 								win.callbacks.push(listener);
-								win.children.push(options.origId);
+								win.children.push(options.id);
 								
 								socket.one("close", function() {
 									function remove(array, e) {
@@ -931,7 +931,7 @@
 									// Removes traces only if the parent is alive
 									if (!orphan) {
 										remove(win.callbacks, listener);
-										remove(win.children, options.origId);
+										remove(win.children, options.id);
 									}
 								});
 								
@@ -961,7 +961,7 @@
 							socket.close();
 						} else {
 							// Gives the heir some time to reconnect 
-							if (data.heir === options.origId) {
+							if (data.heir === options.id) {
 								socket.fire("close", [data.reason]);
 							} else {
 								setTimeout(function() {

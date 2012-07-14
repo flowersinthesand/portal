@@ -970,8 +970,8 @@ asyncTest("prepare handler should receive connect and cancel function and option
 	});
 });
 
-test("id handler should return a unique id within the server", function() {
-	$.socket.defaults.id = function() {
+test("idGenerator should return a unique id within the server", function() {
+	$.socket.defaults.idGenerator = function() {
 		return "flowersinthesand";
 	};
 	
