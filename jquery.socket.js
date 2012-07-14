@@ -218,7 +218,7 @@
 	
 	// Socket function
 	function socket(url, options) {
-		var	// Final options object
+		var	// Final options
 			opts,
 			// Transport
 			transport,
@@ -243,7 +243,7 @@
 			self = {
 				// Finds the value of an option
 				option: function(key) {
-					return opts[({url: "origURL"})[key] || key];
+					return opts[key];
 				},
 				// Gets or sets a session-scoped value
 				session: function(key, value) {
@@ -472,7 +472,7 @@
 				},
 				// URL generator
 				makeURL: function(params) {
-					return opts.url.call(self, url, $.extend({
+					return opts.urlBuilder.call(self, url, $.extend({
 						id: opts.id, 
 						transport: session.transport, 
 						heartbeat: opts.heartbeat, 
@@ -489,7 +489,7 @@
 			}
 		}
 		// Saves original URL
-		opts.origURL = url;
+		opts.url = url;
 		// Generates socket id,
 		opts.id = opts.idGenerator.call(self);
 		opts.crossDomain = !!(parts && 
@@ -800,7 +800,7 @@
 				return v.toString(16);
 			});
 		},
-		url: function(url, params) {
+		urlBuilder: function(url, params) {
 			return url + (/\?/.test(url) ? "&" : "?") + $.param(params);
 		},
 		inbound: $.parseJSON,
@@ -863,7 +863,7 @@
 		// Local socket
 		local: function(socket, options) {
 			var connector, orphan,
-				name = "socket-" + options.origURL,
+				name = "socket-" + options.url,
 				connectors = {
 					storage: function() {
 						if (!$.support.storageEvent) {
@@ -1082,7 +1082,7 @@
 			
 			function post() {
 				if (queue.length) {
-					send(options.origURL, queue.shift());
+					send(options.url, queue.shift());
 				} else {
 					sending = false;
 				}

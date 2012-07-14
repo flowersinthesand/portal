@@ -854,7 +854,7 @@ asyncTest("heartbeat event should be sent to the server repeatedly", function() 
 });
 
 asyncTest("connection should be closed when the server makes no response to a heartbeat", function() {
-	$.socket.defaults.url = function(url) {
+	$.socket.defaults.urlBuilder = function(url) {
 		return url;
 	};
 	
@@ -982,8 +982,8 @@ test("url used for connection should be exposed by session('url')", function() {
 	ok($.socket("url").session("url"));
 });
 
-test("url handler should receive the absoulte form of original url and the parameters object and return a url to be used to establish a connection", function() {
-	$.socket.defaults.url = function(url, params) {
+test("urlBuilder should receive the absoulte form of original url and the parameters object and return a url to be used to establish a connection", function() {
+	$.socket.defaults.urlBuilder = function(url, params) {
 		strictEqual(url, getAbsoluteURL("url"));
 		ok(params._ && delete params._);
 		deepEqual(params, {id: this.option("id"), heartbeat: this.option("heartbeat"), transport: "test", lastEventId: this.option("lastEventId")});
@@ -995,7 +995,7 @@ test("url handler should receive the absoulte form of original url and the param
 });
 
 test("params option should be merged with default params object", function() {
-	$.socket.defaults.url = function(url, params) {
+	$.socket.defaults.urlBuilder = function(url, params) {
 		strictEqual(params.id, "fixed");
 		strictEqual(params.noop, $.noop);
 		return url;
