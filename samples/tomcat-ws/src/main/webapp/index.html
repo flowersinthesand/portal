@@ -5,27 +5,28 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, target-densitydpi=medium-dpi" />
 		<title>jQuery Socket Chat</title>
 		<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.js"></script>
-		<script type="text/javascript" src="jquery.socket-1.0a3.js"></script>
+		<script type="text/javascript" src="jquery.socket-1.0b1.js"></script>
 		<script type="text/javascript">
 		$.socket.defaults.transports = ["ws"];
 		
 		$(function() {
 			var username, 
 				lastUsername,
-				content = $("#content")[0];
+				content = $("#content")[0],
+				input = $("#editor input")[0], 
+				matcher = /(?:^|; )username=([^;]*)/.exec(document.cookie);
 			
 			function notify(text) {
 				$('<p class="message notice"/>').text(text).appendTo(content);
 				content.scrollTop = content.scrollHeight;
 			}
 			
-			$("#editor input").keyup(function(event) {
-				var self = this;
-				
-				if (event.which === 13 && $.trim(self.value)) {
+			$(input).keyup(function(event) {
+				if (event.which === 13 && $.trim(input.value)) {
 					if (!username) {
-						username = self.value;
+						username = input.value;
 						$("#editor p").addClass("user").removeClass("guide").text(username);
+						document.cookie = "username=" + encodeURIComponent(username);
 						
 						$.socket("chat")
 						.connecting(function() {
@@ -33,11 +34,11 @@
 						})
 						.open(function() {
 							notify("The connection has been opened");
-							$(self).removeAttr("disabled").focus();
+							$(input).removeAttr("disabled").focus();
 						})
 						.close(function(reason) {
 							notify("The connection has been closed due to '" + reason + "'");
-							$(self).attr("disabled", "disabled");
+							$(input).attr("disabled", "disabled");
 						})
 						.message(function(data) {
 							if (lastUsername !== data.username) {
@@ -53,14 +54,18 @@
 							notify("The total number of reconnection attempts is " + attempts);
 						});
 					} else {
-						$.socket().send({username: username, message: self.value});
+						$.socket().send({username: username, message: input.value});
 					}
 					
-					self.value = "";
+					input.value = "";
 				}
-			})
-			.focus();
+			});
 			
+			if (matcher) {
+				$(input).val(matcher[1]).trigger($.Event("keyup", {which: 13}));
+			}
+			
+			$(input).focus();
 			$(window).resize(function() {
 				$(content).height($(window).height() - $("#editor").outerHeight(true) - 15).scrollTop(content.scrollHeight);
 			})
