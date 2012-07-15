@@ -1141,12 +1141,12 @@ asyncTest("event object should contain a event type and optional id, reply, sock
 		inbound = function(event) {
 			deepEqual(event, {type: "message", data: {key: "value"}});
 		};
-		this._notify($.stringifyJSON({type: "message", data: {key: "value"}}));
+		this._fire($.stringifyJSON({type: "message", data: {key: "value"}}));
 		
 		inbound = function(event) {
 			deepEqual(event, {type: "chat", data: "data"});
 		};
-		this._notify($.stringifyJSON({type: "chat", data: "data"}));
+		this._fire($.stringifyJSON({type: "chat", data: "data"}));
 		
 		start();
 	});
@@ -1251,7 +1251,7 @@ test("a raw data sent by the server should be a JSON string representing a event
 	$.socket.transports.test = function(socket) {
 		return {
 			open: function() {
-				socket._notify($.stringifyJSON({type: "open", data: "data"}));
+				socket._fire($.stringifyJSON({type: "open", data: "data"}));
 			},
 			send: $.noop,
 			close: $.noop

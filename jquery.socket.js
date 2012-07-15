@@ -210,7 +210,7 @@
 		return decodeURI($('<a href="' + url + '"/>')[0].href);
 	}
 	
-	function trimLeft(string) {
+	function trimPadding(string) {
 		// Technically, regular expression, /\S/.test("\xA0") ? (/^[\s\xA0]+/g) : /^\s+/g, is right according to jQuery.trim
 		// but, I believe no one use non-breaking spaces when printing padding
 		return string.replace(/^\s+/g, "");
@@ -322,7 +322,7 @@
 								while (!transport && candidates.length) {
 									type = candidates.shift();
 									session.transport = type;
-									session.url = self.makeURL();
+									session.url = self.buildURL();
 									transport = transports[type](self, opts);
 								}
 								
@@ -362,7 +362,7 @@
 					// Chooses transport
 					transport = undefined;
 					
-					// Prepares opening
+					// From null or waiting state
 					state = "preparing";
 					
 					// Check if possible to make use of a shared socket
@@ -442,12 +442,12 @@
 					return this;
 				},
 				// For internal use only
-				// Fires events from the server
-				_notify: function(data, isChunk) {
+				// fires events from the server
+				_fire: function(data, isChunk) {
 					if (isChunk) {
 						data = opts.streamParser.call(self, data);
 						while (data.length) {
-							self._notify(data.shift());
+							self._fire(data.shift());
 						}
 					} else {
 						$.each(isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data)), 
@@ -470,8 +470,9 @@
 					
 					return this;
 				},
-				// URL generator
-				makeURL: function(params) {
+				// For internal use only
+				// builds an effective URL
+				buildURL: function(params) {
 					return opts.urlBuilder.call(self, url, $.extend({
 						id: opts.id, 
 						transport: session.transport, 
@@ -482,10 +483,12 @@
 				}
 			};
 		
+		// Create the final options
 		opts = $.extend(true, {}, defaults, options);
 		if (options) {
+			// Array should not be deep extended
 			if (options.transports) {
-				opts.transports = options.transports;
+				opts.transports = $.makeArray(options.transports);
 			}
 		}
 		// Saves original URL
@@ -516,6 +519,9 @@
 		
 		// Initializes
 		self.connecting(function() {
+			// From preparing state
+			state = "connecting";
+			
 			var timeoutTimer;
 			
 			// Sets timeout timer
@@ -660,8 +666,6 @@
 				});
 			}
 			
-			state = "connecting";
-			
 			if (opts.timeout > 0) {
 				setTimeoutTimer();				
 				self.one("open", clearTimeoutTimer).one("close", clearTimeoutTimer);
@@ -673,6 +677,9 @@
 			}
 		})
 		.open(function() {
+			// From connecting state
+			state = "opened";
+			
 			var heartbeatTimer;
 			
 			// Sets heartbeat timer
@@ -694,9 +701,7 @@
 			function clearHeartbeatTimer() {
 				clearTimeout(heartbeatTimer);
 			}
-			
-			state = "opened";
-			
+						
 			if (opts.heartbeat > opts._heartbeat) {
 				setHeartbeatTimer();
 				self.one("close", clearHeartbeatTimer);
@@ -714,9 +719,10 @@
 			}
 		})
 		.close(function() {
-			var type, event, order = events.close.order;
-			
+			// From preparing, connecting, or opened state 
 			state = "closed";
+			
+			var type, event, order = events.close.order;
 			
 			// Locks event whose order is lower than close event
 			for (type in events) {
@@ -726,7 +732,7 @@
 				}
 			}
 			
-			// Handles reconnection
+			// Schedules reconnection
 			if (opts.reconnect) {
 				self.one("close", function() {
 					reconnectTry = reconnectTry || 1;
@@ -742,6 +748,7 @@
 			}
 		})
 		.waiting(function() {
+			// From closed state
 			state = "waiting";
 		})
 		.on("reply", function(reply) {
@@ -1020,7 +1027,7 @@
 						// Firing the open event without delay robs the user of the opportunity to bind connecting event handlers
 						setTimeout(function() {
 							socket.fire("open");
-						}, 1);
+						}, 50);
 					}
 				},
 				send: function(event) {
@@ -1056,7 +1063,7 @@
 						socket.session("event", event).fire("open");
 					};
 					ws.onmessage = function(event) {
-						socket.session("event", event)._notify(event.data);
+						socket.session("event", event)._fire(event.data);
 					};
 					ws.onerror = function(event) {
 						socket.session("event", event).fire("close", [aborted ? "aborted" : "error"]);
@@ -1159,7 +1166,7 @@
 						socket.session("event", event).fire("open");
 					};
 					es.onmessage = function(event) {
-						socket.session("event", event)._notify(event.data);
+						socket.session("event", event)._fire(event.data);
 					};
 					es.onerror = function(event) {
 						es.close();
@@ -1197,9 +1204,9 @@
 								length = xhr.responseText.length;
 							
 							if (!index) {
-								socket.fire("open")._notify(trimLeft(xhr.responseText), true);
+								socket.fire("open")._fire(trimPadding(xhr.responseText), true);
 							} else if (length > index) {
-								socket._notify(xhr.responseText.substring(index, length), true);
+								socket._fire(xhr.responseText.substring(index, length), true);
 							}
 							
 							socket.session("index", length);
@@ -1279,7 +1286,7 @@
 							return false;
 						}
 						
-						socket.fire("open")._notify(trimLeft(readDirty()), true);
+						socket.fire("open")._fire(trimPadding(readDirty()), true);
 						response.innerText = "";
 						
 						stop = iterate(function() {
@@ -1287,7 +1294,7 @@
 							
 							if (text) {
 								response.innerText = "";
-								socket._notify(text, true);
+								socket._fire(text, true);
 							}
 							
 							if (cdoc.readyState === "complete") {
@@ -1326,9 +1333,9 @@
 							length = xdr.responseText.length;
 						
 						if (!index) {
-							socket.fire("open")._notify(trimLeft(xdr.responseText), true);
+							socket.fire("open")._fire(trimPadding(xdr.responseText), true);
 						} else {
-							socket._notify(xdr.responseText.substring(index, length), true);
+							socket._fire(xdr.responseText.substring(index, length), true);
 						}
 						
 						socket.session("index", length);
@@ -1361,14 +1368,14 @@
 			}
 			
 			function poll() {
-				var url = socket.makeURL({count: ++count}),
+				var url = socket.buildURL({count: ++count}),
 					done = function(data) {
 						if (data || count === 1) {
 							if (count === 1) {
 								socket.fire("open");
 							}
 							if (data) {
-								socket._notify(data);
+								socket._fire(data);
 							}
 							poll();
 						} else {
@@ -1407,7 +1414,7 @@
 			}
 			
 			function poll() {
-				var url = options.xdrURL.call(socket, socket.makeURL({count: ++count})),
+				var url = options.xdrURL.call(socket, socket.buildURL({count: ++count})),
 					done = function() {
 						var data = xdr.responseText;
 						
@@ -1416,7 +1423,7 @@
 								socket.fire("open");
 							}
 							if (data) {
-								socket._notify(data);
+								socket._fire(data);
 							}
 							poll();
 						} else {
@@ -1453,7 +1460,7 @@
 				if (count === 1) {
 					socket.fire("open");
 				}
-				socket._notify(data);
+				socket._fire(data);
 			};
 			socket.one("close", function() {
 				// Assings an empty function for browsers which are not able to cancel a request made from script tag
@@ -1462,7 +1469,7 @@
 			});
 			
 			function poll() {
-				var url = socket.makeURL({callback: callback, count: ++count}),
+				var url = socket.buildURL({callback: callback, count: ++count}),
 					done = function() {
 						if (called) {
 							called = false;
