@@ -815,7 +815,7 @@
 		xdrURL: function(url) {
 			// Maintaining session by rewriting URL
 			// http://stackoverflow.com/questions/6453779/maintaining-session-by-rewriting-url
-			var match = /(?:^|;\s*)(JSESSIONID|PHPSESSID)=([^;]*)/.exec(document.cookie);
+			var match = /(?:^|; )(JSESSIONID|PHPSESSID)=([^;]*)/.exec(document.cookie);
 			
 			switch (match && match[1]) {
 			case "JSESSIONID":
@@ -992,7 +992,7 @@
 			}
 			
 			// Finds the parent socket's traces from the cookie
-			if (!new RegExp("(?:^|;\s*)(" + encodeURIComponent(name) + ")=([^;]*)").test(document.cookie)) {
+			if (!new RegExp("(?:^|; )(" + encodeURIComponent(name) + ")=([^;]*)").test(document.cookie)) {
 				return;
 			}
 			
