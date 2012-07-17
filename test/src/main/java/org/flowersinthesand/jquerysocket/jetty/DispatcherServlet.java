@@ -287,7 +287,9 @@ public abstract class DispatcherServlet extends WebSocketServlet {
 		// sse requires padding of white space ending with \n
 		// streamxdr, streamiframe and streamxhr in Webkit require padding of any character
 		PrintWriter writer = response.getWriter();
-		writer.print(Arrays.toString(new float[400]).replaceAll(".", " "));
+		for (int i = 0; i < 4096; i++) {
+			writer.print(" ");
+		}
 		writer.print("\n");
 		writer.flush();
 
@@ -305,6 +307,14 @@ public abstract class DispatcherServlet extends WebSocketServlet {
 			// streamxdr, streamiframe, streamxhr and sse require a message to be formatted according to event stream format
 			// http://www.w3.org/TR/eventsource/#event-stream-interpretation
 			PrintWriter writer = asyncContext.getResponse().getWriter();
+			String userAgent = ((HttpServletRequest) asyncContext.getRequest()).getHeader("user-agent"); 
+			
+			// Android 3 and less need to print 4K padding even in sending event 
+			if (userAgent != null && (userAgent.indexOf("Android 2.") != -1 || userAgent.indexOf("Android 3.") != -1)) {
+				for (int i = 0; i < 4096; i++) {
+					writer.print(" ");
+				}
+			}
 
 			for (String datum : data.split("\r\n|\r|\n")) {
 				writer.print("data: ");

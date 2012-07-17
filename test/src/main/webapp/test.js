@@ -88,7 +88,7 @@ test("on method should add a event handler", 5, function() {
 		};
 	
 	for (type in {connecting: 1, open: 1, message: 1, close: 1, waiting: 1}) {
-		$.socket(type).on(type, yes).fire(type);
+		$.socket(type, {reconnect: false}).on(type, yes).fire(type);
 	}
 });
 
@@ -102,7 +102,7 @@ test("off method should remove a event handler", 4, function() {
 		};
 		
 	for (type in {open: 1, message: 1, close: 1, waiting: 1}) {
-		$.socket(type).on(type, no).off(type, no).on(type, yes).fire(type);
+		$.socket(type, {reconnect: false}).on(type, no).off(type, no).on(type, yes).fire(type);
 	}
 });
 

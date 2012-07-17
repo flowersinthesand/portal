@@ -829,7 +829,7 @@
 		streamParser: function(chunk) {
 			// Chunks are formatted according to the event stream format 
 			// http://www.w3.org/TR/eventsource/#event-stream-interpretation
-			var reol = /\r\n|\r|\n/g, lines = [], data = this.session("data"), array = [], i = 0, 
+			var reol = /\r\n|[\r\n]/g, lines = [], data = this.session("data"), array = [], i = 0, 
 				match, line;
 			
 			// String.prototype.split is not reliable cross-browser
@@ -846,7 +846,8 @@
 			
 			// Processes the data field only
 			for (i = 0; i < lines.length; i++) {
-				line = lines[i];
+				// Android 3 and less should print 4K padding at the top of each event
+				line = trimPadding(lines[i]);
 				if (!line) {
 					// Finish
 					array.push(data.join("\n"));
