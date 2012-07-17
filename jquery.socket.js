@@ -210,12 +210,6 @@
 		return decodeURI($('<a href="' + url + '"/>')[0].href);
 	}
 	
-	function trimPadding(string) {
-		// Technically, regular expression, /\S/.test("\xA0") ? (/^[\s\xA0]+/g) : /^\s+/g, is right according to jQuery.trim
-		// but, I believe no one use non-breaking spaces when printing padding
-		return string.replace(/^\s+/g, "");
-	}
-	
 	// Socket function
 	function socket(url, options) {
 		var	// Final options
@@ -445,7 +439,11 @@
 				// fires events from the server
 				_fire: function(data, isChunk) {
 					if (isChunk) {
-						data = opts.streamParser.call(self, data);
+						// Strips off the padding of the chunk
+						// the first chunk of some streaming transports and every chunk for Android browser 2 and 3 has padding
+						// technically, regular expression, /\S/.test("\xA0") ? (/^[\s\xA0]+/g) : /^\s+/g, is right according to jQuery.trim
+						// but, I believe no one use non-breaking spaces when printing padding
+						data = opts.streamParser.call(self, data.replace(/^\s+/g, ""));
 						while (data.length) {
 							self._fire(data.shift());
 						}
@@ -846,8 +844,7 @@
 			
 			// Processes the data field only
 			for (i = 0; i < lines.length; i++) {
-				// Android 3 and less should print 4K padding at the top of each event
-				line = trimPadding(lines[i]);
+				line = lines[i];
 				if (!line) {
 					// Finish
 					array.push(data.join("\n"));
@@ -1205,7 +1202,7 @@
 								length = xhr.responseText.length;
 							
 							if (!index) {
-								socket.fire("open")._fire(trimPadding(xhr.responseText), true);
+								socket.fire("open")._fire(xhr.responseText, true);
 							} else if (length > index) {
 								socket._fire(xhr.responseText.substring(index, length), true);
 							}
@@ -1287,7 +1284,7 @@
 							return false;
 						}
 						
-						socket.fire("open")._fire(trimPadding(readDirty()), true);
+						socket.fire("open")._fire(readDirty(), true);
 						response.innerText = "";
 						
 						stop = iterate(function() {
@@ -1334,7 +1331,7 @@
 							length = xdr.responseText.length;
 						
 						if (!index) {
-							socket.fire("open")._fire(trimPadding(xdr.responseText), true);
+							socket.fire("open")._fire(xdr.responseText, true);
 						} else {
 							socket._fire(xdr.responseText.substring(index, length), true);
 						}
