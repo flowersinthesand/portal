@@ -586,8 +586,8 @@
 							// Internet Explorer raises an invalid argument error
 							// when calling the window.open method with the name containing non-word characters
 							var neim = name.replace(/\W/g, ""),
-								win = ($('iframe[name="' + neim + '"]')[0] 
-									|| $('<iframe name="' + neim + '" />').hide().appendTo("body")[0]).contentWindow;
+								win = ($('iframe[name="' + neim + '"]')[0] || $('<iframe name="' + neim + '" />').hide().appendTo("body")[0])
+									.contentWindow;
 							
 							return {
 								init: function() {
