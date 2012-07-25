@@ -1295,9 +1295,9 @@ function testTransport(transport, fn) {
 	
 	if ((transport === "ws" && !window.WebSocket && !window.MozWebSocket) || 
 		(transport === "sse" && !window.EventSource) || 
-		(transport === "streamxhr" && (!window.XMLHttpRequest || window.ActiveXObject || window.XDomainRequest || ($.browser.android && $.browser.webkit))) || 
-		(transport === "streamiframe" && !window.ActiveXObject) || 
+		(transport === "streamxhr" && (!window.XMLHttpRequest || ($.browser.msie && +$.browser.version < 10))) || 
 		(transport === "streamxdr" && !window.XDomainRequest) ||
+		(transport === "streamiframe" && !window.ActiveXObject) || 
 		(transport === "longpollajax" && !$.support.ajax) ||
 		(transport === "longpollxdr" && !window.XDomainRequest)) {
 		return;
@@ -1413,7 +1413,7 @@ if (!isLocal) {
 	module("Transport WebSocket", {
 		setup: function() {
 			setup();
-			$.socket.defaults.transports = "ws";
+			$.socket.defaults.transports = ["ws"];
 		},
 		teardown: teardown
 	});
@@ -1443,7 +1443,7 @@ if (!isLocal) {
 	module("Transport HTTP Streaming", {
 		setup: function() {
 			setup();
-			$.socket.defaults.transports = "stream";
+			$.socket.defaults.transports = ["stream"];
 		},
 		teardown: teardown
 	});
@@ -1451,13 +1451,13 @@ if (!isLocal) {
 	test("stream transport should execute real transports", function() {
 		var result = "";
 		
-		$.socket.transports.streamxdr = function() {
+		$.socket.transports.streamxhr = function() {
 			result += "A";
 		};
-		$.socket.transports.streamiframe = function() {
+		$.socket.transports.streamxdr = function() {
 			result += "B";
 		};
-		$.socket.transports.streamxhr = function() {
+		$.socket.transports.streamiframe = function() {
 			result += "C";
 		};
 		
@@ -1467,6 +1467,7 @@ if (!isLocal) {
 	});
 	
 	$.each({
+		streamxhr: $.noop,
 		streamxdr: function(url) {
 			test("xdrURL which is false should stop streamxdr transport", function() {
 				$.socket.defaults.xdrURL = false;
@@ -1485,15 +1486,14 @@ if (!isLocal) {
 				});
 			});
 		},
-		streamiframe: $.noop,
-		streamxhr: $.noop
+		streamiframe: $.noop
 	}, function(transport, fn) {
 		var transportName = ({streamxdr: "XDomainRequest", streamiframe: "ActiveXObject('htmlfile')", streamxhr: "XMLHttpRequest"})[transport];
 		
 		module("Transport HTTP Streaming - " + transportName, {
 			setup: function() {
 				setup();
-				$.socket.defaults.transports = transport;
+				$.socket.defaults.transports = [transport];
 				$.socket.defaults.xdrURL = transport !== "streamxdr" ? false : function(url) {
 					return url;
 				};
@@ -1507,7 +1507,7 @@ if (!isLocal) {
 	module("Transport Server-Sent Events", {
 		setup: function() {
 			setup();
-			$.socket.defaults.transports = "sse";
+			$.socket.defaults.transports = ["sse"];
 		},
 		teardown: teardown
 	});
@@ -1531,7 +1531,7 @@ if (!isLocal) {
 	module("Transport Long Polling", {
 		setup: function() {
 			setup();
-			$.socket.defaults.transports = "longpoll";
+			$.socket.defaults.transports = ["longpoll"];
 		},
 		teardown: teardown
 	});
@@ -1585,7 +1585,7 @@ if (!isLocal) {
 		module("Transport HTTP Long Polling - " + transportName, {
 			setup: function() {
 				setup();
-				$.socket.defaults.transports = transport;
+				$.socket.defaults.transports = [transport];
 				$.socket.defaults.xdrURL = transport !== "longpollxdr" ? false : function(url) {
 					return url;
 				};

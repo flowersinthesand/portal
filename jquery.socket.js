@@ -1180,14 +1180,14 @@
 		},
 		// Streaming facade
 		stream: function(socket) {
-			socket.session("candidates").unshift("streamxdr", "streamiframe", "streamxhr");
+			socket.session("candidates").unshift("streamxhr", "streamxdr", "streamiframe");
 		},
 		// Streaming - XMLHttpRequest
 		streamxhr: function(socket, options) {
 			var XMLHttpRequest = window.XMLHttpRequest, 
 				xhr, aborted;
 			
-			if (!XMLHttpRequest || window.XDomainRequest || window.ActiveXObject || (options.crossDomain && !$.support.cors)) {
+			if (!XMLHttpRequest || ($.browser.msie && +$.browser.version < 10) || (options.crossDomain && !$.support.cors)) {
 				return;
 			}
 			
