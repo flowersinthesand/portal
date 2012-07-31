@@ -643,8 +643,8 @@
 				
 				function leaveTrace() {
 					document.cookie = encodeURIComponent(name) + "=" +
-						// Opera's JSON implementation ignores a numnber whose a last digit of 0 strangely
-						// but has no problem with a number whose a last digit of 9 + 1
+						// Opera's JSON implementation ignores a numnber whose last digit is 0 strangely
+						// but has no problem with a number whose last digit is 9 + 1
 						encodeURIComponent($.stringifyJSON({ts: $.now() + 1, heir: (server.get("children") || [])[0]}));
 				}
 				
