@@ -537,7 +537,8 @@
 			
 			// Makes the socket sharable
 			function share() {
-				var server, 
+				var traceTimer,
+					server, 
 					name = "socket-" + url,
 					servers = {
 						// Powered by the storage event and the localStorage
@@ -635,12 +636,17 @@
 					}
 				}
 				
+				// TODO will be dispatched directly by the fire method
 				function propagateMessageEvent(context) {
 					server.signal("message", context);
 				}
 				
-				// Leaves traces
-				document.cookie = encodeURIComponent(name) + "=" + $.now();
+				function leaveTrace() {
+					document.cookie = encodeURIComponent(name) + "=" +
+						// Opera's JSON implementation ignores a numnber whose a last digit of 0 strangely
+						// but has no problem with a number whose a last digit of 9 + 1
+						encodeURIComponent($.stringifyJSON({ts: $.now() + 1, heir: (server.get("children") || [])[0]}));
+				}
 				
 				// Chooses a server
 				server = servers.storage() || servers.windowref();
@@ -651,16 +657,24 @@
 				// Flag indicating the parent socket is opened
 				server.set("opened", false);
 				
+				// Leaves traces
+				leaveTrace();
+				traceTimer = setInterval(leaveTrace, 1000);
+				
 				self.on("_message", propagateMessageEvent)
 				.one("open", function() {
 					server.set("opened", true);
 					server.signal("open");
 				})
 				.one("close", function(reason) {
-					self.off("_message", propagateMessageEvent);
-					// The heir is the parent unless unloading
-					server.signal("close", {reason: reason, heir: !unloading ? opts.id : server.get("children")[0]});
+					// Clears trace timer 
+					clearInterval(traceTimer);
+					// Removes the trace
 					document.cookie = encodeURIComponent(name) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+					// The heir is the parent unless unloading
+					server.signal("close", {reason: reason, heir: !unloading ? opts.id : (server.get("children") || [])[0]});
+					// TODO remove
+					self.off("_message", propagateMessageEvent);
 				});
 			}
 			
@@ -669,8 +683,8 @@
 				self.one("open", clearTimeoutTimer).one("close", clearTimeoutTimer);
 			}
 			
-			// For now, opera is not supported due to the unload event
-			if (opts.sharing && session.transport !== "local" && !$.browser.opera) {
+			// Share the socket if possible
+			if (opts.sharing && session.transport !== "local") {
 				share();
 			}
 		})
@@ -867,7 +881,9 @@
 	transports = {
 		// Local socket
 		local: function(socket, options) {
-			var connector, orphan,
+			var trace,
+				orphan,
+				connector,
 				name = "socket-" + options.url,
 				connectors = {
 					storage: function() {
@@ -961,17 +977,19 @@
 						socket.fire("open");
 						break;
 					case "close":
-						orphan = true;
-						if (data.reason === "aborted") {
-							socket.close();
-						} else {
-							// Gives the heir some time to reconnect 
-							if (data.heir === options.id) {
-								socket.fire("close", [data.reason]);
+						if (!orphan) {
+							orphan = true;
+							if (data.reason === "aborted") {
+								socket.close();
 							} else {
-								setTimeout(function() {
+								// Gives the heir some time to reconnect 
+								if (data.heir === options.id) {
 									socket.fire("close", [data.reason]);
-								}, 100);
+								} else {
+									setTimeout(function() {
+										socket.fire("close", [data.reason]);
+									}, 100);
+								}
 							}
 						}
 						break;
@@ -989,8 +1007,16 @@
 				}
 			}
 			
-			// Finds the parent socket's traces from the cookie
-			if (!new RegExp("(?:^|; )(" + encodeURIComponent(name) + ")=([^;]*)").test(document.cookie)) {
+			function findTrace() {
+				var matcher = new RegExp("(?:^|; )(" + encodeURIComponent(name) + ")=([^;]*)").exec(document.cookie);
+				if (matcher) {
+					return $.parseJSON(decodeURIComponent(matcher[2]));
+				}
+			}
+			
+			// Finds and validates the parent socket's trace from the cookie
+			trace = findTrace();
+			if (!trace || $.now() - trace.ts > 1000) {
 				return;
 			}
 			
@@ -1002,7 +1028,8 @@
 			
 			return {
 				open: function() {
-					var parentOpened,
+					var traceTimer,
+						parentOpened,
 						timeout = options.timeout, 
 						heartbeat = options.heartbeat, 
 						outbound = options.outbound;
@@ -1013,8 +1040,19 @@
 						return arg;
 					};
 					
+					// Checks the shared one is alive
+					traceTimer = setInterval(function() {
+						var oldTrace = trace;
+						trace = findTrace();
+						if (!trace || oldTrace.ts === trace.ts) {
+							// Simulates a close signal
+							listener($.stringifyJSON({target: "c", type: "close", data: {reason: "error", heir: oldTrace.heir}}));
+						}
+					}, 1000);
+					
 					// Restores options
 					socket.one("close", function() {
+						clearInterval(traceTimer);
 						options.timeout = timeout;
 						options.heartbeat = heartbeat;
 						options.outbound = outbound;
