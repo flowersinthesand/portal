@@ -767,7 +767,7 @@
 			
 			if (callback) {
 				if (typeof callback === "string") {
-					self.fire(callback, data).fire("_message", {type: callback, args: [data]});
+					self.fire(callback, data).fire("_message", [callback, data]);
 				} else if ($.isFunction(callback)) {
 					callback.call(self, data);
 				}
