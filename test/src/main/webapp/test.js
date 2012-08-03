@@ -1423,7 +1423,7 @@ if (!isLocal) {
 			ok(/^(?:ws|wss):\/\/.+/.test($.socket(url).session("url")));
 		});
 		
-		asyncTest("WebSocket event should be able to be accessed by session('event')", function() {
+		asyncTest("WebSocket event should be able to be accessed by session('event')", 3, function() {
 			$.socket(url).open(function() {
 				strictEqual(this.session("event").type, "open");
 				this.send("data");
@@ -1513,7 +1513,7 @@ if (!isLocal) {
 	});
 	
 	testTransport("sse", function(url) {
-		asyncTest("Server-Sent Events event should be able to be accessed by session('event')", function() {
+		asyncTest("Server-Sent Events event should be able to be accessed by session('event')", 3, function() {
 			$.socket(url + "?close=1000", {reconnect: false}).open(function() {
 				strictEqual(this.session("event").type, "open");
 				this.send("data");
