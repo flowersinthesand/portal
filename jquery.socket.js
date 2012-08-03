@@ -294,11 +294,11 @@
 					return self.on(type, proxy);
 				},
 				// Fires event handlers
-				fire: function(type, args) {
+				fire: function(type) {
 					var event = events[type];
 					
 					if (event) {
-						event.fire(self, args);
+						event.fire(self, $.makeArray(arguments).slice(1));
 					}
 					
 					return this;
@@ -330,14 +330,14 @@
 									self.fire("connecting");
 									transport.open();
 								} else {
-									self.fire("close", ["notransport"]);
+									self.fire("close", "notransport");
 								}
 							}
 						},
 						cancel = function() {
 							if (!latch) {
 								latch = true;
-								self.fire("close", ["canceled"]);
+								self.fire("close", "canceled");
 							}
 						};
 					
@@ -425,7 +425,7 @@
 					
 					// Fires the close event immediately for transport which doesn't give feedback on disconnection
 					if (unloading || !transport || !transport.feedback) {
-						self.fire("close", [unloading ? "error" : "aborted"]);
+						self.fire("close", unloading ? "error" : "aborted");
 					}
 					
 					// Delegates to the transport
@@ -450,7 +450,7 @@
 					} else {
 						$.each(isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data)), 
 						function(i, event) {
-							var type = event.type, args = [event.data], latch;
+							var latch, args = [event.type, event.data];
 							
 							opts.lastEventId = event.id;
 							if (event.reply) {
@@ -462,7 +462,7 @@
 								});
 							}
 							
-							self.fire(type, args).fire("_message", [{type: type, args: args}]);
+							self.fire.apply(self, args).fire("_message", args);
 						});
 					}
 					
@@ -526,7 +526,7 @@
 			function setTimeoutTimer() {
 				timeoutTimer = setTimeout(function() {
 					transport.close();
-					self.fire("close", ["timeout"]);
+					self.fire("close", "timeout");
 				}, opts.timeout);
 			}
 			
@@ -636,9 +636,8 @@
 					}
 				}
 				
-				// TODO will be dispatched directly by the fire method
-				function propagateMessageEvent(context) {
-					server.signal("message", context);
+				function propagateMessageEvent(args) {
+					server.signal("message", args);
 				}
 				
 				function leaveTrace() {
@@ -674,7 +673,6 @@
 					document.cookie = encodeURIComponent(name) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 					// The heir is the parent unless unloading
 					server.signal("close", {reason: reason, heir: !unloading ? opts.id : (server.get("children") || [])[0]});
-					// TODO remove
 					self.off("_message", propagateMessageEvent);
 				});
 			}
@@ -705,7 +703,7 @@
 					
 					heartbeatTimer = setTimeout(function() {
 						transport.close();
-						self.fire("close", ["error"]);
+						self.fire("close", "error");
 					}, opts._heartbeat);
 				}, opts.heartbeat - opts._heartbeat);
 			}
@@ -755,7 +753,7 @@
 						reconnectTimer = setTimeout(function() {
 							self.open();
 						}, reconnectDelay);
-						self.fire("waiting", [reconnectDelay, reconnectTry]);
+						self.fire("waiting", reconnectDelay, reconnectTry);
 					}
 				});
 			}
@@ -769,7 +767,7 @@
 			
 			if (callback) {
 				if (typeof callback === "string") {
-					self.fire(callback, [data]).fire("_message", [{type: callback, args: [data]}]);
+					self.fire(callback, data).fire("_message", {type: callback, args: [data]});
 				} else if ($.isFunction(callback)) {
 					callback.call(self, data);
 				}
@@ -985,10 +983,10 @@
 							} else {
 								// Gives the heir some time to reconnect 
 								if (data.heir === options.id) {
-									socket.fire("close", [data.reason]);
+									socket.fire("close", data.reason);
 								} else {
 									setTimeout(function() {
-										socket.fire("close", [data.reason]);
+										socket.fire("close", data.reason);
 									}, 100);
 								}
 							}
@@ -998,10 +996,10 @@
 						// When using the local transport, message events could be sent before the open event
 						if (socket.state() === "connecting") {
 							socket.one("open", function() {
-								socket.fire(data.type, data.args);
+								socket.fire.apply(socket, data);
 							});
 						} else {
-							socket.fire(data.type, data.args);
+							socket.fire.apply(socket, data);
 						}
 						break;
 					}
@@ -1103,10 +1101,10 @@
 						socket.session("event", event)._fire(event.data);
 					};
 					ws.onerror = function(event) {
-						socket.session("event", event).fire("close", [aborted ? "aborted" : "error"]);
+						socket.session("event", event).fire("close", aborted ? "aborted" : "error");
 					};
 					ws.onclose = function(event) {
-						socket.session("event", event).fire("close", [aborted ? "aborted" : event.wasClean ? "done" : "error"]);
+						socket.session("event", event).fire("close", aborted ? "aborted" : event.wasClean ? "done" : "error");
 					};
 				},
 				send: function(data) {
@@ -1209,7 +1207,7 @@
 						es.close();
 						
 						// There is no way to find whether this connection closed normally or not 
-						socket.session("event", event).fire("close", ["done"]);
+						socket.session("event", event).fire("close", "done");
 					};
 				},
 				close: function() {
@@ -1261,7 +1259,7 @@
 								stop();
 							}
 							
-							socket.fire("close", [aborted ? "aborted" : xhr.status === 200 ? "done" : "error"]);
+							socket.fire("close", aborted ? "aborted" : xhr.status === 200 ? "done" : "error");
 						}
 					};
 					
@@ -1319,7 +1317,7 @@
 						
 						// Detects connection failure
 						if (!response) {
-							socket.fire("close", ["error"]);
+							socket.fire("close", "error");
 							return false;
 						}
 						
@@ -1335,7 +1333,7 @@
 							}
 							
 							if (cdoc.readyState === "complete") {
-								socket.fire("close", ["done"]);
+								socket.fire("close", "done");
 								return false;
 							}
 						});
@@ -1378,10 +1376,10 @@
 						socket.session("index", length);
 					};
 					xdr.onerror = function() {
-						socket.fire("close", ["error"]);
+						socket.fire("close", "error");
 					};
 					xdr.onload = function() {
-						socket.fire("close", ["done"]);
+						socket.fire("close", "done");
 					};
 					
 					xdr.open("GET", url);
@@ -1426,11 +1424,11 @@
 						}
 						poll();
 					} else {
-						socket.fire("close", ["done"]);
+						socket.fire("close", "done");
 					}
 				})
 				.fail(function(jqXHR, reason) {
-					socket.fire("close", [reason === "abort" ? "aborted" : "error"]);
+					socket.fire("close", reason === "abort" ? "aborted" : "error");
 				});
 			}
 			
@@ -1465,11 +1463,11 @@
 						}
 						poll();
 					} else {
-						socket.fire("close", ["done"]);
+						socket.fire("close", "done");
 					}
 				};
 				xdr.onerror = function() {
-					socket.fire("close", ["error"]);
+					socket.fire("close", "error");
 				};
 				
 				socket.session("url", url);
@@ -1520,11 +1518,11 @@
 						socket.fire("open");
 						poll();
 					} else {
-						socket.fire("close", ["done"]);
+						socket.fire("close", "done");
 					}
 				})
 				.fail(function(jqXHR, reason) {
-					socket.fire("close", [reason === "abort" ? "aborted" : "error"]);
+					socket.fire("close", reason === "abort" ? "aborted" : "error");
 				});
 			}
 			

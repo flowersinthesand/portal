@@ -36,7 +36,7 @@
 								heartbeat = param(socket.session("url"), "heartbeat");
 								if (heartbeat > 0) {
 									heartbeatTimer = setTimeout(function() {
-										socket.fire("close", ["error"]);
+										socket.fire("close", "error");
 									}, heartbeat);
 								}
 							})
@@ -44,7 +44,7 @@
 								if (heartbeatTimer) {
 									clearTimeout(heartbeatTimer);
 									heartbeatTimer = setTimeout(function() {
-										socket.fire("close", ["error"]);
+										socket.fire("close", "error");
 									}, heartbeat);
 									connection.send("heartbeat", null);
 								}
@@ -94,7 +94,7 @@
 					close: function() {
 						setTimeout(function() {
 							if (accepted) {
-								socket.fire("close", ["done"]);
+								socket.fire("close", "done");
 								connection.event.triggerHandler("close");
 							}
 						}, 5);
@@ -122,7 +122,7 @@
 						connection.event.triggerHandler("open");
 						break;
 					case false:
-						socket.fire("close", ["error"]);
+						socket.fire("close", "error");
 						break;
 					}
 				}, 5);
@@ -142,7 +142,7 @@
 			},
 			close: function() {
 				setTimeout(function() {
-					socket.fire("close", ["aborted"]);
+					socket.fire("close", "aborted");
 					if (accepted) {
 						connection.event.triggerHandler("close");
 					}
