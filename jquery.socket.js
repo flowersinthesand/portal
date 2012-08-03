@@ -293,6 +293,12 @@
 					
 					return self.on(type, proxy);
 				},
+				// Adds event handler which exists during the current life cycle
+				during: function(type, fn) {
+					return self.on(type, fn).one("close", function() {
+						self.off(type, fn);
+					});
+				},
 				// Fires event handlers
 				fire: function(type) {
 					var event = events[type];
@@ -636,10 +642,6 @@
 					}
 				}
 				
-				function propagateMessageEvent(args) {
-					server.signal("message", args);
-				}
-				
 				function leaveTrace() {
 					document.cookie = encodeURIComponent(name) + "=" +
 						// Opera's parseFloat and JSON.stringify causes a strange bug with a number larger than 10 digit
@@ -661,7 +663,9 @@
 				leaveTrace();
 				traceTimer = setInterval(leaveTrace, 1000);
 				
-				self.on("_message", propagateMessageEvent)
+				self.during("_message", function(args) {
+					server.signal("message", args);
+				})
 				.one("open", function() {
 					server.set("opened", true);
 					server.signal("open");
@@ -673,7 +677,6 @@
 					document.cookie = encodeURIComponent(name) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 					// The heir is the parent unless unloading
 					server.signal("close", {reason: reason, heir: !unloading ? opts.id : (server.get("children") || [])[0]});
-					self.off("_message", propagateMessageEvent);
 				});
 			}
 			

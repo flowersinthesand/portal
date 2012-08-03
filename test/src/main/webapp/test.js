@@ -113,8 +113,24 @@ test("one method should add an one time event handler", 5, function() {
 		};
 		
 	for (type in {connecting: 1, open: 1, message: 1, close: 1, waiting: 1}) {
-		$.socket(type).one(type, yes).fire(type).fire(type);
+		$.socket(type, {reconnect: false}).one(type, yes).fire(type).fire(type);
 	}
+});
+
+asyncTest("during method should add a event handler which exists during the current life cycle", 6, function() {
+	$.each(["connecting", "open", "message", "close", "waiting"], function(i, type) {
+		$.socket(type, {reconnect: false}).during(type, function() {
+			ok(true);
+		})
+		.fire(type).fire(type)
+		.one("close", function() {
+			this.open().fire(type);
+			if (type === "waiting") {
+				start();
+			}
+		})
+		.close();
+	});
 });
 
 test("handler attached by one method should be able to be detached by off method", 4, function() {
@@ -664,7 +680,7 @@ module("Custom event", {
 	teardown: teardown
 });
 
-test("on, off and one method should work with custom event", 2, function() {
+test("on and off method should work with custom event", 1, function() {
 	var yes = function() {
 			ok(true);
 		},
@@ -672,7 +688,7 @@ test("on, off and one method should work with custom event", 2, function() {
 			ok(false);
 		};
 	
-	$.socket("url").on("custom", yes).on("custom", no).off("custom", no).one("custom", yes).fire("custom").fire("custom");
+	$.socket("url").on("custom", yes).on("custom", no).off("custom", no).fire("custom");
 });
 
 asyncTest("custom event handler should be executed with data when a custom message has been received", function() {
