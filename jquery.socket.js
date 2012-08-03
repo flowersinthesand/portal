@@ -1196,7 +1196,10 @@
 			
 			return $.extend(transports.http(socket, options), {
 				open: function() {
-					es = new EventSource(socket.session("url"), {withCredentials: options.credentials});
+					var url = socket.session("url");
+					
+					// Uses proper constructor for Chrome 10-15
+					es = !options.crossDomain ? new EventSource(url) : new EventSource(url, {withCredentials: options.credentials});
 					es.onopen = function(event) {
 						socket.session("event", event).fire("open");
 					};
