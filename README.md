@@ -6,10 +6,10 @@ All you need to do to use the **jQuery Socket** is to prepare a [event-driven](h
 The **jQuery Socket** project is developed and maintained by [Donghwan Kim](http://twitter.com/flowersits). If you are interested, please subscribe to the [discussion group](https://groups.google.com/d/forum/jquery-socket).
 
 ## References
-* [[Socket API|API]]
-* [[Supported Transports and Browsers]]
-* [[Required Server Side Processing|Server Side Processing]]
-* [[Advanced Server Side Processing|Advanced Server Side Processing]]
+* [Socket API](https://github.com/flowersinthesand/jquery-socket/wiki/API)
+* [Supported Transports and Browsers](https://github.com/flowersinthesand/jquery-socket/wiki/Supported-Transports-and-Browsers)
+* [Required Server Side Processing](https://github.com/flowersinthesand/jquery-socket/wiki/Server-Side-Processing)
+* [Advanced Server Side Processing](https://github.com/flowersinthesand/jquery-socket/wiki/Advanced-Server-Side-Processing)
 
 ## Features
 
