@@ -328,7 +328,10 @@
 								// Fires the connecting event and connects
 								if (transport) {
 									self.fire("connecting");
-									transport.open();
+									// Gives the user the opportunity to bind connecting event handlers
+									setTimeout(function() {
+										transport.open();
+									}, 50);
 								} else {
 									self.fire("close", "notransport");
 								}
@@ -435,6 +438,16 @@
 					
 					return this;
 				},
+				// Broadcasts event to session sockets
+				broadcast: function(type, data) {
+					// TODO rename
+					var broadcastable = session.broadcastable;
+					if (broadcastable) {
+						broadcastable.broadcast({type: "fire", data: {type: type, data: data}});
+					}
+					
+					return this;
+				},
 				// For internal use only
 				// fires events from the server
 				_fire: function(data, isChunk) {
@@ -536,6 +549,7 @@
 			}
 			
 			// Makes the socket sharable
+			// TODO to be extracted as plugin
 			function share() {
 				var traceTimer,
 					server, 
@@ -570,8 +584,17 @@
 										});
 									});
 								},
-								signal: function(type, data) {
-									storage.setItem(name, $.stringifyJSON({target: "c", type: type, data: data}));
+								broadcast: function(obj) {
+									var string = $.stringifyJSON(obj);
+									storage.setItem(name, string);
+									// Storage event is not fired in window which did trigger that event
+									// but, IE does not
+									// TODO remove and use identifier instead
+									if (!$.browser.msie) {
+										setTimeout(function() {
+											listener(string);
+										}, 50);
+									}
 								},
 								get: function(key) {
 									return $.parseJSON(storage.getItem(name + "-" + key));
@@ -603,9 +626,9 @@
 										}
 									};
 								},
-								signal: function(type, data) {
+								broadcast: function(obj) {
 									if (!win.closed && win.fire) {
-										win.fire($.stringifyJSON({target: "c", type: type, data: data}));
+										win.fire($.stringifyJSON(obj));
 									}
 								},
 								get: function(key) {
@@ -624,7 +647,11 @@
 				function listener(string) {
 					var command = $.parseJSON(string), data = command.data;
 					
-					if (command.target === "p") {
+					if (!command.target) {
+						if (command.type === "fire") {
+							self.fire(data.type, data.data);
+						}
+					} else if (command.target === "p") {
 						switch (command.type) {
 						case "send":
 							self.send(data.type, data.data, data.callback);
@@ -637,7 +664,7 @@
 				}
 				
 				function propagateMessageEvent(args) {
-					server.signal("message", args);
+					server.broadcast({target: "c", type: "message", data: args});
 				}
 				
 				function leaveTrace() {
@@ -652,6 +679,9 @@
 				server = servers.storage() || servers.windowref();
 				server.init();
 				
+				// For broadcast method
+				session.broadcastable = server;
+				
 				// List of children sockets
 				server.set("children", []);
 				// Flag indicating the parent socket is opened
@@ -664,7 +694,7 @@
 				self.on("_message", propagateMessageEvent)
 				.one("open", function() {
 					server.set("opened", true);
-					server.signal("open");
+					server.broadcast({target: "c", type: "open"});
 				})
 				.one("close", function(reason) {
 					// Clears trace timer 
@@ -672,7 +702,7 @@
 					// Removes the trace
 					document.cookie = encodeURIComponent(name) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 					// The heir is the parent unless unloading
-					server.signal("close", {reason: reason, heir: !unloading ? opts.id : (server.get("children") || [])[0]});
+					server.broadcast({target: "c", type: "close", data: {reason: reason, heir: !unloading ? opts.id : (server.get("children") || [])[0]}});
 					self.off("_message", propagateMessageEvent);
 				});
 			}
@@ -884,6 +914,7 @@
 				orphan,
 				connector,
 				name = "socket-" + options.url,
+				// TODO to be extracted as plugin
 				connectors = {
 					storage: function() {
 						if (!$.support.storageEvent) {
@@ -923,8 +954,15 @@
 								
 								return get("opened");
 							},
-							signal: function(type, data) {
-								storage.setItem(name, $.stringifyJSON({target: "p", type: type, data: data}));
+							broadcast: function(obj) {
+								var string = $.stringifyJSON(obj);
+								
+								storage.setItem(name, string);
+								if (!$.browser.msie) {
+									setTimeout(function() {
+										listener(string);
+									}, 50);
+								}
 							}
 						};
 					},
@@ -957,9 +995,9 @@
 								
 								return win.opened;
 							},
-							signal: function(type, data) {
+							broadcast: function(obj) {
 								if (!win.closed && win.fire) {
-									win.fire($.stringifyJSON({target: "p", type: type, data: data}));
+									win.fire($.stringifyJSON(obj));
 								}
 							}
 						};
@@ -970,7 +1008,11 @@
 			function listener(string) {
 				var command = $.parseJSON(string), data = command.data;
 				
-				if (command.target === "c") {
+				if (!command.target) {
+					if (command.type === "fire") {
+						socket.fire(data.type, data.data);
+					}
+				} else if (command.target === "c") {
 					switch (command.type) {
 					case "open":
 						socket.fire("open");
@@ -1025,6 +1067,9 @@
 				return;
 			}
 			
+			// For broadcast method
+			socket.session("broadcastable", connector);
+			
 			return {
 				open: function() {
 					var traceTimer,
@@ -1059,19 +1104,16 @@
 					
 					parentOpened = connector.init();
 					if (parentOpened) {
-						// Firing the open event without delay robs the user of the opportunity to bind connecting event handlers
-						setTimeout(function() {
-							socket.fire("open");
-						}, 50);
+						socket.fire("open");
 					}
 				},
 				send: function(event) {
-					connector.signal("send", event);
+					connector.broadcast({target: "p", type: "send", data: event});
 				},
 				close: function() {
 					// Do not signal the parent if this method is executed by the unload event handler
 					if (!unloading) {
-						connector.signal("close");
+						connector.broadcast({target: "p", type: "close"});
 					}
 				}
 			};
