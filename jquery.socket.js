@@ -328,10 +328,7 @@
 								// Fires the connecting event and connects
 								if (transport) {
 									self.fire("connecting");
-									// Gives the user the opportunity to bind connecting event handlers
-									setTimeout(function() {
-										transport.open();
-									}, 50);
+									transport.open();
 								} else {
 									self.fire("close", "notransport");
 								}
@@ -1104,7 +1101,10 @@
 					
 					parentOpened = connector.init();
 					if (parentOpened) {
-						socket.fire("open");
+						// Gives the user the opportunity to bind connecting event handlers
+						setTimeout(function() {
+							socket.fire("open");
+						}, 50);
 					}
 				},
 				send: function(event) {
