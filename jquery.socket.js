@@ -584,14 +584,9 @@
 								broadcast: function(obj) {
 									var string = $.stringifyJSON(obj);
 									storage.setItem(name, string);
-									// Storage event is not fired in window which did trigger that event
-									// but, IE does not
-									// TODO remove and use identifier instead
-									if (!$.browser.msie) {
-										setTimeout(function() {
-											listener(string);
-										}, 50);
-									}
+									setTimeout(function() {
+										listener(string);
+									}, 50);
 								},
 								get: function(key) {
 									return $.parseJSON(storage.getItem(name + "-" + key));
@@ -812,8 +807,8 @@
 			try {
 				storage.setItem("t", "t");
 				storage.removeItem("t");
-				// Internet Explorer 9 has no StorageEvent object but supports the storage event
-				return !!window.StorageEvent || Object.prototype.toString.call(storage) === "[object Storage]";
+				// The storage event of Internet Explorer and Firefox 3 works strangely
+				return window.StorageEvent && !$.browser.msie && !($.browser.mozilla && $.browser.version.split(".")[0] === "1");
 			} catch (e) {}
 		}
 		
@@ -955,11 +950,9 @@
 								var string = $.stringifyJSON(obj);
 								
 								storage.setItem(name, string);
-								if (!$.browser.msie) {
-									setTimeout(function() {
-										listener(string);
-									}, 50);
-								}
+								setTimeout(function() {
+									listener(string);
+								}, 50);
 							}
 						};
 					},
