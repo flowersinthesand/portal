@@ -28,7 +28,7 @@
 						
 						$.socket("chat")
 						.connecting(function() {
-							notify("The connection has been tried");
+							notify("The connection has been tried by '" + this.session("transport") + "'");
 						})
 						.open(function() {
 							notify("The connection has been opened");
