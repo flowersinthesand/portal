@@ -60,7 +60,7 @@
 			});
 			
 			if (matcher) {
-				$(input).val(matcher[1]).trigger($.Event("keyup", {which: 13}));
+				$(input).val(decodeURIComponent(matcher[1])).trigger($.Event("keyup", {which: 13}));
 			}
 			
 			$(input).focus();
