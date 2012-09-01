@@ -210,12 +210,6 @@
 		return decodeURI($('<a href="' + url + '"/>')[0].href);
 	}
 	
-	function trimPadding(string) {
-		// Technically, regular expression, /\S/.test("\xA0") ? (/^[\s\xA0]+/g) : /^\s+/g, is right according to jQuery.trim
-		// but, I believe no one use non-breaking spaces when printing padding
-		return string.replace(/^\s+/g, "");
-	}
-	
 	// Socket function
 	function socket(url, options) {
 		var	// Final options
@@ -300,11 +294,11 @@
 					return self.on(type, proxy);
 				},
 				// Fires event handlers
-				fire: function(type, args) {
+				fire: function(type) {
 					var event = events[type];
 					
 					if (event) {
-						event.fire(self, args);
+						event.fire(self, $.makeArray(arguments).slice(1));
 					}
 					
 					return this;
@@ -336,14 +330,14 @@
 									self.fire("connecting");
 									transport.open();
 								} else {
-									self.fire("close", ["notransport"]);
+									self.fire("close", "notransport");
 								}
 							}
 						},
 						cancel = function() {
 							if (!latch) {
 								latch = true;
-								self.fire("close", ["canceled"]);
+								self.fire("close", "canceled");
 							}
 						};
 					
@@ -431,7 +425,7 @@
 					
 					// Fires the close event immediately for transport which doesn't give feedback on disconnection
 					if (unloading || !transport || !transport.feedback) {
-						self.fire("close", [unloading ? "error" : "aborted"]);
+						self.fire("close", unloading ? "error" : "aborted");
 					}
 					
 					// Delegates to the transport
@@ -441,18 +435,32 @@
 					
 					return this;
 				},
+				// Broadcasts event to session sockets
+				broadcast: function(type, data) {
+					// TODO rename
+					var broadcastable = session.broadcastable;
+					if (broadcastable) {
+						broadcastable.broadcast({type: "fire", data: {type: type, data: data}});
+					}
+					
+					return this;
+				},
 				// For internal use only
 				// fires events from the server
 				_fire: function(data, isChunk) {
 					if (isChunk) {
-						data = opts.streamParser.call(self, data);
+						// Strips off the padding of the chunk
+						// the first chunk of some streaming transports and every chunk for Android browser 2 and 3 has padding
+						// technically, regular expression, /\S/.test("\xA0") ? (/^[\s\xA0]+/g) : /^\s+/g, is right according to jQuery.trim
+						// but, I believe no one use non-breaking spaces when printing padding
+						data = opts.streamParser.call(self, data.replace(/^\s+/g, ""));
 						while (data.length) {
 							self._fire(data.shift());
 						}
 					} else {
 						$.each(isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data)), 
 						function(i, event) {
-							var type = event.type, args = [event.data], latch;
+							var latch, args = [event.type, event.data];
 							
 							opts.lastEventId = event.id;
 							if (event.reply) {
@@ -464,7 +472,7 @@
 								});
 							}
 							
-							self.fire(type, args).fire("_message", [{type: type, args: args}]);
+							self.fire.apply(self, args).fire("_message", args);
 						});
 					}
 					
@@ -528,7 +536,7 @@
 			function setTimeoutTimer() {
 				timeoutTimer = setTimeout(function() {
 					transport.close();
-					self.fire("close", ["timeout"]);
+					self.fire("close", "timeout");
 				}, opts.timeout);
 			}
 			
@@ -538,8 +546,10 @@
 			}
 			
 			// Makes the socket sharable
+			// TODO to be extracted as plugin
 			function share() {
-				var server, 
+				var traceTimer,
+					server, 
 					name = "socket-" + url,
 					servers = {
 						// Powered by the storage event and the localStorage
@@ -571,8 +581,12 @@
 										});
 									});
 								},
-								signal: function(type, data) {
-									storage.setItem(name, $.stringifyJSON({target: "c", type: type, data: data}));
+								broadcast: function(obj) {
+									var string = $.stringifyJSON(obj);
+									storage.setItem(name, string);
+									setTimeout(function() {
+										listener(string);
+									}, 50);
 								},
 								get: function(key) {
 									return $.parseJSON(storage.getItem(name + "-" + key));
@@ -588,8 +602,8 @@
 							// Internet Explorer raises an invalid argument error
 							// when calling the window.open method with the name containing non-word characters
 							var neim = name.replace(/\W/g, ""),
-								win = ($('iframe[name="' + neim + '"]')[0] 
-									|| $('<iframe name="' + neim + '" />').hide().appendTo("body")[0]).contentWindow;
+								win = ($('iframe[name="' + neim + '"]')[0] || $('<iframe name="' + neim + '" />').hide().appendTo("body")[0])
+									.contentWindow;
 							
 							return {
 								init: function() {
@@ -604,9 +618,9 @@
 										}
 									};
 								},
-								signal: function(type, data) {
+								broadcast: function(obj) {
 									if (!win.closed && win.fire) {
-										win.fire($.stringifyJSON({target: "c", type: type, data: data}));
+										win.fire($.stringifyJSON(obj));
 									}
 								},
 								get: function(key) {
@@ -625,7 +639,11 @@
 				function listener(string) {
 					var command = $.parseJSON(string), data = command.data;
 					
-					if (command.target === "p") {
+					if (!command.target) {
+						if (command.type === "fire") {
+							self.fire(data.type, data.data);
+						}
+					} else if (command.target === "p") {
 						switch (command.type) {
 						case "send":
 							self.send(data.type, data.data, data.callback);
@@ -637,32 +655,47 @@
 					}
 				}
 				
-				function propagateMessageEvent(context) {
-					server.signal("message", context);
+				function propagateMessageEvent(args) {
+					server.broadcast({target: "c", type: "message", data: args});
 				}
 				
-				// Leaves traces
-				document.cookie = encodeURIComponent(name) + "=" + $.now();
+				function leaveTrace() {
+					document.cookie = encodeURIComponent(name) + "=" +
+						// Opera's parseFloat and JSON.stringify causes a strange bug with a number larger than 10 digit
+						// JSON.stringify(parseFloat(10000000000) + 1).length === 11;
+						// JSON.stringify(parseFloat(10000000000 + 1)).length === 10;
+						encodeURIComponent($.stringifyJSON({ts: $.now() + 1, heir: (server.get("children") || [])[0]}));
+				}
 				
 				// Chooses a server
 				server = servers.storage() || servers.windowref();
 				server.init();
+				
+				// For broadcast method
+				session.broadcastable = server;
 				
 				// List of children sockets
 				server.set("children", []);
 				// Flag indicating the parent socket is opened
 				server.set("opened", false);
 				
+				// Leaves traces
+				leaveTrace();
+				traceTimer = setInterval(leaveTrace, 1000);
+				
 				self.on("_message", propagateMessageEvent)
 				.one("open", function() {
 					server.set("opened", true);
-					server.signal("open");
+					server.broadcast({target: "c", type: "open"});
 				})
 				.one("close", function(reason) {
-					self.off("_message", propagateMessageEvent);
-					// The heir is the parent unless unloading
-					server.signal("close", {reason: reason, heir: !unloading ? opts.id : server.get("children")[0]});
+					// Clears trace timer 
+					clearInterval(traceTimer);
+					// Removes the trace
 					document.cookie = encodeURIComponent(name) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+					// The heir is the parent unless unloading
+					server.broadcast({target: "c", type: "close", data: {reason: reason, heir: !unloading ? opts.id : (server.get("children") || [])[0]}});
+					self.off("_message", propagateMessageEvent);
 				});
 			}
 			
@@ -671,8 +704,8 @@
 				self.one("open", clearTimeoutTimer).one("close", clearTimeoutTimer);
 			}
 			
-			// For now, opera is not supported due to the unload event
-			if (opts.sharing && session.transport !== "local" && !$.browser.opera) {
+			// Share the socket if possible
+			if (opts.sharing && session.transport !== "local") {
 				share();
 			}
 		})
@@ -692,7 +725,7 @@
 					
 					heartbeatTimer = setTimeout(function() {
 						transport.close();
-						self.fire("close", ["error"]);
+						self.fire("close", "error");
 					}, opts._heartbeat);
 				}, opts.heartbeat - opts._heartbeat);
 			}
@@ -742,7 +775,7 @@
 						reconnectTimer = setTimeout(function() {
 							self.open();
 						}, reconnectDelay);
-						self.fire("waiting", [reconnectDelay, reconnectTry]);
+						self.fire("waiting", reconnectDelay, reconnectTry);
 					}
 				});
 			}
@@ -756,7 +789,7 @@
 			
 			if (callback) {
 				if (typeof callback === "string") {
-					self.fire(callback, [data]).fire("_message", [{type: callback, args: [data]}]);
+					self.fire(callback, data).fire("_message", [callback, data]);
 				} else if ($.isFunction(callback)) {
 					callback.call(self, data);
 				}
@@ -774,8 +807,8 @@
 			try {
 				storage.setItem("t", "t");
 				storage.removeItem("t");
-				// Internet Explorer 9 has no StorageEvent object but supports the storage event
-				return !!window.StorageEvent || Object.prototype.toString.call(storage) === "[object Storage]";
+				// The storage event of Internet Explorer and Firefox 3 works strangely
+				return window.StorageEvent && !$.browser.msie && !($.browser.mozilla && $.browser.version.split(".")[0] === "1");
 			} catch (e) {}
 		}
 		
@@ -829,7 +862,7 @@
 		streamParser: function(chunk) {
 			// Chunks are formatted according to the event stream format 
 			// http://www.w3.org/TR/eventsource/#event-stream-interpretation
-			var reol = /\r\n|\r|\n/g, lines = [], data = this.session("data"), array = [], i = 0, 
+			var reol = /\r\n|[\r\n]/g, lines = [], data = this.session("data"), array = [], i = 0, 
 				match, line;
 			
 			// String.prototype.split is not reliable cross-browser
@@ -869,8 +902,11 @@
 	transports = {
 		// Local socket
 		local: function(socket, options) {
-			var connector, orphan,
+			var trace,
+				orphan,
+				connector,
 				name = "socket-" + options.url,
+				// TODO to be extracted as plugin
 				connectors = {
 					storage: function() {
 						if (!$.support.storageEvent) {
@@ -910,8 +946,13 @@
 								
 								return get("opened");
 							},
-							signal: function(type, data) {
-								storage.setItem(name, $.stringifyJSON({target: "p", type: type, data: data}));
+							broadcast: function(obj) {
+								var string = $.stringifyJSON(obj);
+								
+								storage.setItem(name, string);
+								setTimeout(function() {
+									listener(string);
+								}, 50);
 							}
 						};
 					},
@@ -944,9 +985,9 @@
 								
 								return win.opened;
 							},
-							signal: function(type, data) {
+							broadcast: function(obj) {
 								if (!win.closed && win.fire) {
-									win.fire($.stringifyJSON({target: "p", type: type, data: data}));
+									win.fire($.stringifyJSON(obj));
 								}
 							}
 						};
@@ -957,23 +998,29 @@
 			function listener(string) {
 				var command = $.parseJSON(string), data = command.data;
 				
-				if (command.target === "c") {
+				if (!command.target) {
+					if (command.type === "fire") {
+						socket.fire(data.type, data.data);
+					}
+				} else if (command.target === "c") {
 					switch (command.type) {
 					case "open":
 						socket.fire("open");
 						break;
 					case "close":
-						orphan = true;
-						if (data.reason === "aborted") {
-							socket.close();
-						} else {
-							// Gives the heir some time to reconnect 
-							if (data.heir === options.id) {
-								socket.fire("close", [data.reason]);
+						if (!orphan) {
+							orphan = true;
+							if (data.reason === "aborted") {
+								socket.close();
 							} else {
-								setTimeout(function() {
-									socket.fire("close", [data.reason]);
-								}, 100);
+								// Gives the heir some time to reconnect 
+								if (data.heir === options.id) {
+									socket.fire("close", data.reason);
+								} else {
+									setTimeout(function() {
+										socket.fire("close", data.reason);
+									}, 100);
+								}
 							}
 						}
 						break;
@@ -981,18 +1028,26 @@
 						// When using the local transport, message events could be sent before the open event
 						if (socket.state() === "connecting") {
 							socket.one("open", function() {
-								socket.fire(data.type, data.args);
+								socket.fire.apply(socket, data);
 							});
 						} else {
-							socket.fire(data.type, data.args);
+							socket.fire.apply(socket, data);
 						}
 						break;
 					}
 				}
 			}
 			
-			// Finds the parent socket's traces from the cookie
-			if (!new RegExp("(?:^|; )(" + encodeURIComponent(name) + ")=([^;]*)").test(document.cookie)) {
+			function findTrace() {
+				var matcher = new RegExp("(?:^|; )(" + encodeURIComponent(name) + ")=([^;]*)").exec(document.cookie);
+				if (matcher) {
+					return $.parseJSON(decodeURIComponent(matcher[2]));
+				}
+			}
+			
+			// Finds and validates the parent socket's trace from the cookie
+			trace = findTrace();
+			if (!trace || $.now() - trace.ts > 1000) {
 				return;
 			}
 			
@@ -1002,9 +1057,13 @@
 				return;
 			}
 			
+			// For broadcast method
+			socket.session("broadcastable", connector);
+			
 			return {
 				open: function() {
-					var parentOpened,
+					var traceTimer,
+						parentOpened,
 						timeout = options.timeout, 
 						heartbeat = options.heartbeat, 
 						outbound = options.outbound;
@@ -1015,8 +1074,19 @@
 						return arg;
 					};
 					
+					// Checks the shared one is alive
+					traceTimer = setInterval(function() {
+						var oldTrace = trace;
+						trace = findTrace();
+						if (!trace || oldTrace.ts === trace.ts) {
+							// Simulates a close signal
+							listener($.stringifyJSON({target: "c", type: "close", data: {reason: "error", heir: oldTrace.heir}}));
+						}
+					}, 1000);
+					
 					// Restores options
 					socket.one("close", function() {
+						clearInterval(traceTimer);
 						options.timeout = timeout;
 						options.heartbeat = heartbeat;
 						options.outbound = outbound;
@@ -1024,19 +1094,19 @@
 					
 					parentOpened = connector.init();
 					if (parentOpened) {
-						// Firing the open event without delay robs the user of the opportunity to bind connecting event handlers
+						// Gives the user the opportunity to bind connecting event handlers
 						setTimeout(function() {
 							socket.fire("open");
 						}, 50);
 					}
 				},
 				send: function(event) {
-					connector.signal("send", event);
+					connector.broadcast({target: "p", type: "send", data: event});
 				},
 				close: function() {
 					// Do not signal the parent if this method is executed by the unload event handler
 					if (!unloading) {
-						connector.signal("close");
+						connector.broadcast({target: "p", type: "close"});
 					}
 				}
 			};
@@ -1066,10 +1136,10 @@
 						socket.session("event", event)._fire(event.data);
 					};
 					ws.onerror = function(event) {
-						socket.session("event", event).fire("close", [aborted ? "aborted" : "error"]);
+						socket.session("event", event).fire("close", aborted ? "aborted" : "error");
 					};
 					ws.onclose = function(event) {
-						socket.session("event", event).fire("close", [aborted ? "aborted" : event.wasClean ? "done" : "error"]);
+						socket.session("event", event).fire("close", aborted ? "aborted" : event.wasClean ? "done" : "error");
 					};
 				},
 				send: function(data) {
@@ -1161,7 +1231,10 @@
 			
 			return $.extend(transports.http(socket, options), {
 				open: function() {
-					es = new EventSource(socket.session("url"), {withCredentials: options.credentials});
+					var url = socket.session("url");
+					
+					// Uses proper constructor for Chrome 10-15
+					es = !options.crossDomain ? new EventSource(url) : new EventSource(url, {withCredentials: options.credentials});
 					es.onopen = function(event) {
 						socket.session("event", event).fire("open");
 					};
@@ -1172,7 +1245,7 @@
 						es.close();
 						
 						// There is no way to find whether this connection closed normally or not 
-						socket.session("event", event).fire("close", ["done"]);
+						socket.session("event", event).fire("close", "done");
 					};
 				},
 				close: function() {
@@ -1182,14 +1255,14 @@
 		},
 		// Streaming facade
 		stream: function(socket) {
-			socket.session("candidates").unshift("streamxdr", "streamiframe", "streamxhr");
+			socket.session("candidates").unshift("streamxhr", "streamxdr", "streamiframe");
 		},
 		// Streaming - XMLHttpRequest
 		streamxhr: function(socket, options) {
 			var XMLHttpRequest = window.XMLHttpRequest, 
 				xhr, aborted;
 			
-			if (!XMLHttpRequest || window.XDomainRequest || window.ActiveXObject || (options.crossDomain && !$.support.cors)) {
+			if (!XMLHttpRequest || ($.browser.msie && +$.browser.version < 10) || (options.crossDomain && !$.support.cors)) {
 				return;
 			}
 			
@@ -1204,7 +1277,7 @@
 								length = xhr.responseText.length;
 							
 							if (!index) {
-								socket.fire("open")._fire(trimPadding(xhr.responseText), true);
+								socket.fire("open")._fire(xhr.responseText, true);
 							} else if (length > index) {
 								socket._fire(xhr.responseText.substring(index, length), true);
 							}
@@ -1224,7 +1297,7 @@
 								stop();
 							}
 							
-							socket.fire("close", [aborted ? "aborted" : xhr.status === 200 ? "done" : "error"]);
+							socket.fire("close", aborted ? "aborted" : xhr.status === 200 ? "done" : "error");
 						}
 					};
 					
@@ -1282,11 +1355,11 @@
 						
 						// Detects connection failure
 						if (!response) {
-							socket.fire("close", ["error"]);
+							socket.fire("close", "error");
 							return false;
 						}
 						
-						socket.fire("open")._fire(trimPadding(readDirty()), true);
+						socket.fire("open")._fire(readDirty(), true);
 						response.innerText = "";
 						
 						stop = iterate(function() {
@@ -1298,7 +1371,7 @@
 							}
 							
 							if (cdoc.readyState === "complete") {
-								socket.fire("close", ["done"]);
+								socket.fire("close", "done");
 								return false;
 							}
 						});
@@ -1333,7 +1406,7 @@
 							length = xdr.responseText.length;
 						
 						if (!index) {
-							socket.fire("open")._fire(trimPadding(xdr.responseText), true);
+							socket.fire("open")._fire(xdr.responseText, true);
 						} else {
 							socket._fire(xdr.responseText.substring(index, length), true);
 						}
@@ -1341,10 +1414,10 @@
 						socket.session("index", length);
 					};
 					xdr.onerror = function() {
-						socket.fire("close", ["error"]);
+						socket.fire("close", "error");
 					};
 					xdr.onload = function() {
-						socket.fire("close", ["done"]);
+						socket.fire("close", "done");
 					};
 					
 					xdr.open("GET", url);
@@ -1368,23 +1441,7 @@
 			}
 			
 			function poll() {
-				var url = socket.buildURL({count: ++count}),
-					done = function(data) {
-						if (data || count === 1) {
-							if (count === 1) {
-								socket.fire("open");
-							}
-							if (data) {
-								socket._fire(data);
-							}
-							poll();
-						} else {
-							socket.fire("close", ["done"]);
-						}
-					},
-					fail = function(jqXHR, reason) {
-						socket.fire("close", [reason === "abort" ? "aborted" : "error"]);
-					};
+				var url = socket.buildURL({count: ++count});
 				
 				socket.session("url", url);
 				xhr = $.ajax(url, {
@@ -1395,7 +1452,22 @@
 					timeout: false,
 					xhrFields: $.support.cors ? {withCredentials: options.credentials} : null
 				})
-				.then(done, fail);
+				.done(function(data) {
+					if (data || count === 1) {
+						if (count === 1) {
+							socket.fire("open");
+						}
+						if (data) {
+							socket._fire(data);
+						}
+						poll();
+					} else {
+						socket.fire("close", "done");
+					}
+				})
+				.fail(function(jqXHR, reason) {
+					socket.fire("close", reason === "abort" ? "aborted" : "error");
+				});
 			}
 			
 			return $.extend(transports.http(socket, options), {
@@ -1414,29 +1486,27 @@
 			}
 			
 			function poll() {
-				var url = options.xdrURL.call(socket, socket.buildURL({count: ++count})),
-					done = function() {
-						var data = xdr.responseText;
-						
-						if (data || count === 1) {
-							if (count === 1) {
-								socket.fire("open");
-							}
-							if (data) {
-								socket._fire(data);
-							}
-							poll();
-						} else {
-							socket.fire("close", ["done"]);
-						}
-					},
-					fail = function() {
-						socket.fire("close", ["error"]);
-					};
+				var url = options.xdrURL.call(socket, socket.buildURL({count: ++count}));
 				
 				xdr = new XDomainRequest();
-				xdr.onload = done;
-				xdr.onerror = fail;
+				xdr.onload = function() {
+					var data = xdr.responseText;
+					
+					if (data || count === 1) {
+						if (count === 1) {
+							socket.fire("open");
+						}
+						if (data) {
+							socket._fire(data);
+						}
+						poll();
+					} else {
+						socket.fire("close", "done");
+					}
+				};
+				xdr.onerror = function() {
+					socket.fire("close", "error");
+				};
 				
 				socket.session("url", url);
 				xdr.open("GET", url);
@@ -1469,21 +1539,7 @@
 			});
 			
 			function poll() {
-				var url = socket.buildURL({callback: callback, count: ++count}),
-					done = function() {
-						if (called) {
-							called = false;
-							poll();
-						} else if (count === 1) {
-							socket.fire("open");
-							poll();
-						} else {
-							socket.fire("close", ["done"]);
-						}
-					},
-					fail = function(jqXHR, reason) {
-						socket.fire("close", [reason === "abort" ? "aborted" : "error"]);
-					};
+				var url = socket.buildURL({callback: callback, count: ++count});
 				
 				socket.session("url", url);
 				xhr = $.ajax(url, {
@@ -1492,7 +1548,20 @@
 					cache: true, 
 					timeout: false
 				})
-				.then(done, fail);
+				.done(function() {
+					if (called) {
+						called = false;
+						poll();
+					} else if (count === 1) {
+						socket.fire("open");
+						poll();
+					} else {
+						socket.fire("close", "done");
+					}
+				})
+				.fail(function(jqXHR, reason) {
+					socket.fire("close", reason === "abort" ? "aborted" : "error");
+				});
 			}
 			
 			return $.extend(transports.http(socket, options), {
