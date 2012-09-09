@@ -449,11 +449,7 @@
 				// fires events from the server
 				_fire: function(data, isChunk) {
 					if (isChunk) {
-						// Strips off the padding of the chunk
-						// the first chunk of some streaming transports and every chunk for Android browser 2 and 3 has padding
-						// technically, regular expression, /\S/.test("\xA0") ? (/^[\s\xA0]+/g) : /^\s+/g, is right according to jQuery.trim
-						// but, I believe no one use non-breaking spaces when printing padding
-						data = opts.streamParser.call(self, data.replace(/^\s+/g, ""));
+						data = opts.streamParser.call(self, data);
 						while (data.length) {
 							self._fire(data.shift());
 						}
@@ -864,6 +860,10 @@
 			// http://www.w3.org/TR/eventsource/#event-stream-interpretation
 			var reol = /\r\n|[\r\n]/g, lines = [], data = this.session("data"), array = [], i = 0, 
 				match, line;
+			
+			// Strips off the left padding of the chunk
+			// the first chunk of some streaming transports and every chunk for Android browser 2 and 3 has padding
+			chunk = chunk.replace(/^\s+/g, "");
 			
 			// String.prototype.split is not reliable cross-browser
 			while (match = reol.exec(chunk)) {
