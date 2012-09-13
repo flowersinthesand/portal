@@ -23,9 +23,4 @@ public interface Connection {
 	// Properties
 	Map<String, Object> data();
 
-	// Callback interface
-	interface Callback<T> {
-		void execute(T data);
-	}
-
 }

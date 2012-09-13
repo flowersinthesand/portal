@@ -102,7 +102,14 @@
 					},
 					on: function(type, fn) {
 						connection.event.on(type, function() {
-							fn.apply(connection, Array.prototype.slice.call(arguments, 1));
+							var args = Array.prototype.slice.call(arguments, 1);
+							try {
+								fn.apply(connection, args);
+							} catch (exception) {
+								if (args[1]) {
+									args[1](exception, true);
+								}
+							}
 						});
 						return this;
 					}
@@ -131,10 +138,10 @@
 							args = [event.data];
 						
 						if (event.reply) {
-							args.push(function(result) {
+							args.push(function(result, exception) {
 								if (!latch) {
 									latch = true;
-									connection.send("reply", {id: event.id, data: result});
+									connection.send("reply", {id: event.id, data: result, exception: exception});
 								}
 							});
 						}

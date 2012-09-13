@@ -913,7 +913,7 @@ asyncTest("callback for replying should send a reply event", 2, function() {
 	});
 });
 
-asyncTest("socket should require the server to reply if a reply callback is provided", 2, function() {
+asyncTest("done callback should work", 2, function() {
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("message", function(data, callback) {
@@ -921,16 +921,16 @@ asyncTest("socket should require the server to reply if a reply callback is prov
 			});
 		}
 	})
-	.send("Caliban", function(reply) {
-		strictEqual(reply, "Caliban");
+	.send("Caliban", function(data) {
+		strictEqual(data, "Caliban");
 		start();
 	})
-	.on("reply", function(data) {
-		deepEqual(data, {id: 1, data: "Caliban"});
+	.on("reply", function(info) {
+		deepEqual(info, {id: 1, data: "Caliban"});
 	});
 });
 
-asyncTest("callback should be able to event name", 2, function() {
+asyncTest("done callback should be able to event name", 2, function() {
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("message", function(data, callback) {
@@ -938,13 +938,53 @@ asyncTest("callback should be able to event name", 2, function() {
 			});
 		}
 	})
-	.send("message", "Vassline", "test")
-	.on("test", function(reply) {
-		strictEqual(reply, "Vassline");
+	.send("message", "Vassline", "done")
+	.on("done", function(data) {
+		strictEqual(data, "Vassline");
 		start();
 	})
-	.on("reply", function(data) {
-		deepEqual(data, {id: 1, data: "Vassline"});
+	.on("reply", function(info) {
+		deepEqual(info, {id: 1, data: "Vassline"});
+	});
+});
+
+asyncTest("fail callback should work", 2, function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("message", function(data, callback) {
+				throw data;
+			});
+		}
+	})
+	.send("message", "Gangnam Style", function() {
+		ok(false);
+	}, function(exception) {
+		strictEqual(exception, "Gangnam Style");
+		start();
+	})
+	.on("reply", function(info) {
+		deepEqual(info, {id: 1, data: "Gangnam Style", exception: true});
+	});
+});
+
+asyncTest("fail callback should be able to event name", 2, function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("message", function(data, callback) {
+				throw data;
+			});
+		}
+	})
+	.send("message", "Gangnam Style", "done", "fail")
+	.on("done", function() {
+		ok(false);
+	})
+	.on("fail", function(exception) {
+		strictEqual(exception, "Gangnam Style");
+		start();
+	})
+	.on("reply", function(info) {
+		deepEqual(info, {id: 1, data: "Gangnam Style", exception: true});
 	});
 });
 

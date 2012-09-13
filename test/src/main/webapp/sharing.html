@@ -23,6 +23,7 @@
 				$("<div />").text("Opened").appendTo("body");
 				this.send("Current timestamp: " + $.now())
 				.send("timestamp", null, "timestamp")
+				.send("exception", null, null, "exception")
 				.broadcast("greeting", "Hello from " + this.option("id"));
 			})
 			.message(function(data) {
@@ -30,6 +31,9 @@
 			})
 			.on("timestamp", function(ts) {
 				$("<div />").text("Current timestamp of the server: " + ts).appendTo("body");
+			})
+			.on("exception", function(message) {
+				$("<div />").text("Exception message from the server: " + message).appendTo("body");
 			})
 			.on("greeting", function(message) {
 				$("<div />").text("Greeting: " + message).appendTo("body");

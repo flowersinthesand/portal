@@ -375,7 +375,7 @@
 					return this;
 				},
 				// Transmits event using the connection
-				send: function(type, data, callback) {
+				send: function(type, data, doneCallback, failCallback) {
 					var event;
 					
 					// Defers sending an event until the state become opened
@@ -384,7 +384,7 @@
 					} else {
 						// Standardize .send(data) and .send(data, callback) into .send(event, data, callback)
 						if (data === undefined || $.isFunction(data)) {
-							callback = data;
+							doneCallback = data;
 							data = type;
 							type = "message";
 						}
@@ -395,16 +395,17 @@
 							socket: opts.id,
 							type: type,
 							data: data,
-							reply: !!callback
+							reply: !!(doneCallback || failCallback)
 						};
 						
-						if (callback) {
+						if (event.reply) {
 							// Shared socket needs to know the callback event name 
 							// because it fires the callback event directly instead of using reply event 
 							if (session.transport === "local") {
-								event.callback = callback;
+								event.doneCallback = doneCallback;
+								event.failCallback = failCallback;
 							} else {
-								replyCallbacks[eventId] = callback;
+								replyCallbacks[eventId] = {done: doneCallback, fail: failCallback};
 							}
 						}
 						
@@ -642,7 +643,7 @@
 					} else if (command.target === "p") {
 						switch (command.type) {
 						case "send":
-							self.send(data.type, data.data, data.callback);
+							self.send(data.type, data.data, data.doneCallback, data.failCallback);
 							break;
 						case "close":
 							self.close();
@@ -781,16 +782,23 @@
 			state = "waiting";
 		})
 		.on("reply", function(reply) {
-			var id = reply.id, data = reply.data, callback = replyCallbacks[id];
+			var fn,
+				id = reply.id, 
+				data = reply.data, 
+				exception = reply.exception,
+				callback = replyCallbacks[id];
 			
 			if (callback) {
-				if (typeof callback === "string") {
-					self.fire(callback, data).fire("_message", [callback, data]);
-				} else if ($.isFunction(callback)) {
-					callback.call(self, data);
+				fn = exception ? callback.fail : callback.done;
+				if (fn) {
+					if ($.isFunction(fn)) {
+						fn.call(self, data);
+					} else {
+						self.fire(fn, data).fire("_message", [fn, data]);
+					} 
+					
+					delete replyCallbacks[id];
 				}
-				
-				delete replyCallbacks[id];
 			}
 		});
 		

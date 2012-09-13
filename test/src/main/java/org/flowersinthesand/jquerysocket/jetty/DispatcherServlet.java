@@ -2,7 +2,6 @@ package org.flowersinthesand.jquerysocket.jetty;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +25,9 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
+import org.flowersinthesand.jquerysocket.Callback;
 import org.flowersinthesand.jquerysocket.Connection;
+import org.flowersinthesand.jquerysocket.SocketException;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -37,7 +38,7 @@ public abstract class DispatcherServlet extends WebSocketServlet {
 	// A map of connection identifiers and objects
 	private Map<String, Connection> connections = new ConcurrentHashMap<String, Connection>();
 	// A map of callback identifiers and objects
-	private Map<String, Connection.Callback<?>> callbacks = new ConcurrentHashMap<String, Connection.Callback<?>>();
+	private Map<String, Callback<?>> callbacks = new ConcurrentHashMap<String, Callback<?>>();
 	// Unit of works
 	private BlockingQueue<Object[]> queue = new LinkedBlockingQueue<Object[]>();
 	// Thread to send data
@@ -513,13 +514,20 @@ public abstract class DispatcherServlet extends WebSocketServlet {
 			String callbackKey = id + "." + replyData.get("id");
 			
 			if (callbacks.containsKey(callbackKey)) {
-				((Connection.Callback<Object>) callbacks.get(callbackKey)).execute(replyData.get("data"));
+				((Callback<Object>) callbacks.get(callbackKey)).execute(replyData.get("data"));
 				callbacks.remove(callbackKey);
 			}
 		}
 		
 		// This value may be used as a reply data
-		Object reply = handle(id, type, data);
+		boolean exception = false;
+		Object reply = null;
+		try {
+			reply = handle(id, type, data);
+		} catch (SocketException e) {
+			exception = true;
+			reply = e.data();
+		}
 
 		if (type.equals("close")) {
 			// Removes the completed connection
@@ -529,6 +537,7 @@ public abstract class DispatcherServlet extends WebSocketServlet {
 			Map<String, Object> replyData = new LinkedHashMap<String, Object>();
 			replyData.put("id", event.get("id"));
 			replyData.put("data", reply);
+			replyData.put("exception", exception);
 
 			c.send("reply", replyData);
 		}

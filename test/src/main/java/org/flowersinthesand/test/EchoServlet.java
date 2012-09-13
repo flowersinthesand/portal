@@ -8,6 +8,7 @@ import javax.servlet.annotation.WebInitParam;
 import javax.servlet.annotation.WebServlet;
 
 import org.flowersinthesand.jquerysocket.Connection;
+import org.flowersinthesand.jquerysocket.SocketException;
 import org.flowersinthesand.jquerysocket.jetty.DispatcherServlet;
 
 @WebServlet(
@@ -42,6 +43,8 @@ public class EchoServlet extends DispatcherServlet {
 			connection.send(data);
 		} else if (type.equals("timestamp")) {
 			return System.currentTimeMillis();
+		} else if (type.equals("exception")) {
+			throw new SocketException("Exception");
 		}
 
 		return null;
