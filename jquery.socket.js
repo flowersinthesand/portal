@@ -797,19 +797,19 @@
 		return self.open();
 	}
 	
-	$.support.storageEvent = (function() {
-		var storage = window.localStorage;
-		if (storage) {
-			try {
-				storage.setItem("t", "t");
-				storage.removeItem("t");
-				// The storage event of Internet Explorer and Firefox 3 works strangely
-				return window.StorageEvent && !$.browser.msie && !($.browser.mozilla && $.browser.version.split(".")[0] === "1");
-			} catch (e) {}
-		}
+	function finalize() {
+		var url, socket;
 		
-		return false;
-	})();
+		for (url in sockets) {
+			socket = sockets[url];
+			if (socket.state() !== "closed") {
+				socket.close();
+			}
+			
+			// To run the test suite
+			delete sockets[url];
+		}
+	}
 	
 	// Default options
 	defaults = {
@@ -1573,22 +1573,25 @@
 		}
 	};
 	
-	// Closes all socket when the document is unloaded 
+	$.support.storageEvent = (function() {
+		var storage = window.localStorage;
+		if (storage) {
+			try {
+				storage.setItem("t", "t");
+				storage.removeItem("t");
+				// The storage event of Internet Explorer and Firefox 3 works strangely
+				return window.StorageEvent && !$.browser.msie && !($.browser.mozilla && $.browser.version.split(".")[0] === "1");
+			} catch (e) {}
+		}
+		
+		return false;
+	})();
+	
 	$(window).on("unload.socket", function(event) {
 		// Check the unload event is fired by the browser
 		unloading = !!event.originalEvent;
-		
-		var url, socket;
-		
-		for (url in sockets) {
-			socket = sockets[url];
-			if (socket.state() !== "closed") {
-				socket.close();
-			}
-			
-			// To run the test suite
-			delete sockets[url];
-		}
+		// Closes all sockets when the document is unloaded 
+		finalize();
 	});
 	
 	$.socket = function(url, options) {
@@ -1617,5 +1620,6 @@
 	
 	$.socket.defaults = defaults;
 	$.socket.transports = transports;
+	$.socket.finalize = finalize;
 	
 })(jQuery);

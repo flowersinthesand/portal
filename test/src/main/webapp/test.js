@@ -14,7 +14,7 @@ function setup() {
 }
 
 function teardown() {
-	$(window).trigger("unload.socket");
+	$.socket.finalize();
 	
 	var i, j;
 	
