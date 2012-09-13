@@ -916,12 +916,12 @@ asyncTest("callback for replying should send a reply event", 2, function() {
 asyncTest("socket should require the server to reply if a reply callback is provided", 2, function() {
 	$.socket("url", {
 		server: function(request) {
-			request.accept().on("message", function() {
-				return "Caliban";
+			request.accept().on("message", function(data, callback) {
+				callback(data);
 			});
 		}
 	})
-	.send("data", function(reply) {
+	.send("Caliban", function(reply) {
 		strictEqual(reply, "Caliban");
 		start();
 	})
@@ -933,12 +933,12 @@ asyncTest("socket should require the server to reply if a reply callback is prov
 asyncTest("callback should be able to event name", 2, function() {
 	$.socket("url", {
 		server: function(request) {
-			request.accept().on("message", function() {
-				return "Vassline";
+			request.accept().on("message", function(data, callback) {
+				callback(data);
 			});
 		}
 	})
-	.send("message", "data", "test")
+	.send("message", "Vassline", "test")
 	.on("test", function(reply) {
 		strictEqual(reply, "Vassline");
 		start();

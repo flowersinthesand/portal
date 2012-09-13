@@ -102,14 +102,10 @@
 					},
 					on: function(type, fn) {
 						connection.event.on(type, function() {
-							var result = fn.apply(connection, Array.prototype.slice.call(arguments, 1));
-							if (result !== undefined) {
-								connection.reply = result;
-							}
+							fn.apply(connection, Array.prototype.slice.call(arguments, 1));
 						});
 						return this;
-					},
-					reply: null
+					}
 				};
 				
 				if (options.server) {
@@ -130,13 +126,20 @@
 			send: function(data) {
 				setTimeout(function() {
 					if (accepted) {
-						var event = isBinary(data) ? {type: "message", data: data} : $.parseJSON(data);
-						connection.event.triggerHandler(event.type, [event.data]);
+						var latch,
+							event = isBinary(data) ? {type: "message", data: data} : $.parseJSON(data),
+							args = [event.data];
 						
 						if (event.reply) {
-							connection.send("reply", {id: event.id, data: connection.reply});
-							connection.reply = null;
+							args.push(function(result) {
+								if (!latch) {
+									latch = true;
+									connection.send("reply", {id: event.id, data: result});
+								}
+							});
 						}
+						
+						connection.event.triggerHandler(event.type, args);
 					}
 				}, 5);
 			},
