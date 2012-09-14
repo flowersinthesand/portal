@@ -145,7 +145,7 @@ test("the context of all event handlers should be the corresponding socket objec
 });
 
 $.each(["connecting", "open", "message", "close", "waiting"], function(i, name) {
-	test(name + " method should add " + name + " event handler" + (name !== "message" ? " like a Deferred" : ""), function() {
+	test(name + " method should add " + name + " event handler" + (name !== "message" ? " like the Common JS Promises/A" : ""), function() {
 		var result = "",
 			out = function(string) {
 				return function() {
@@ -180,7 +180,7 @@ asyncTest("open method should establish a connection", 1, function() {
 	.close();
 });
 
-asyncTest("send method should defer sending message when the socket is not connected", function() {
+asyncTest("dispatch method should defer sending message when the socket is not connected", function() {
 	var result = "";
 	
 	$.socket("url", {
@@ -194,11 +194,23 @@ asyncTest("send method should defer sending message when the socket is not conne
 			});
 		}
 	})
-	.send("A")
-	.send("B")
+	.dispatch("message", "A")
+	.dispatch("message", "B")
 	.open(function() {
-		$.socket().send("C");
+		this.dispatch("message", "C");
 	});
+});
+
+asyncTest("send method should send message event", function() {
+	$.socket("url", {
+		server: function(request) {
+			request.accept().on("message", function(data) {
+				strictEqual(data, "data");
+				start();
+			});
+		}
+	})
+	.send("data");
 });
 
 asyncTest("close method should close a connection", function() {
@@ -246,20 +258,20 @@ test("transport function should be executed after the socket.open()", function()
 	strictEqual(result, "ABAB");
 });
 
-test("transport's send method should be executed with data after the socket.send()", 1, function() {
+test("transport's send method should be executed with data after the socket.dispatch()", 1, function() {
 	$.socket.transports.subway = function(socket) {
 		return {
 			open: function() {
 				socket.fire("open");
 			},
 			send: function(data) {
-				strictEqual($.parseJSON(data).data, "data");
+				strictEqual($.parseJSON(data).type, "message");
 			},
 			close: $.noop
 		};
 	};
 	
-	$.socket("url", {transports: ["subway"]}).send("data");
+	$.socket("url", {transports: ["subway"]}).dispatch("message");
 });
 
 test("transport's close method should be executed after the socket.close()", 1, function() {
@@ -679,7 +691,7 @@ asyncTest("custom event handler should be executed with data when a custom messa
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
-				this.send("dm", {sender: "flowersits", message: "How are you?"});
+				this.dispatch("dm", {sender: "flowersits", message: "How are you?"});
 			});
 		}
 	})
@@ -689,7 +701,7 @@ asyncTest("custom event handler should be executed with data when a custom messa
 	});
 });
 
-asyncTest("send method should be able to send custom event message", function() {
+asyncTest("dispatch method should be able to send custom event message", function() {
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("dm", function(data) {
@@ -698,7 +710,7 @@ asyncTest("send method should be able to send custom event message", function() 
 			});
 		}
 	})
-	.send("dm", {sender: "flowersits", message: "I'm fine thank you, and you?"});
+	.dispatch("dm", {sender: "flowersits", message: "I'm fine thank you, and you?"});
 });
 
 module("Reconnection", {
@@ -803,7 +815,7 @@ asyncTest("in case of manual reconnection connecting event should be fired", fun
 		}
 	})
 	.one("close", function() {
-		$.socket().open().connecting(function() {
+		this.open().connecting(function() {
 			ok(true);
 			start();
 		});
@@ -882,7 +894,7 @@ asyncTest("callback for replying should be provided if the server requires reply
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
-				this.send("An Ode to My Friend", $.noop);
+				this.dispatch("message", "An Ode to My Friend", $.noop);
 			});
 		}
 	})
@@ -896,7 +908,7 @@ asyncTest("callback for replying should send a reply event", 2, function() {
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
-				this.send("Heaven Shall Burn", function(reply) {
+				this.dispatch("message", "Heaven Shall Burn", function(reply) {
 					strictEqual(reply, "Heaven Shall Burn");
 					start();
 				})
@@ -921,7 +933,7 @@ asyncTest("done callback should work", 2, function() {
 			});
 		}
 	})
-	.send("Caliban", function(data) {
+	.dispatch("message", "Caliban", function(data) {
 		strictEqual(data, "Caliban");
 		start();
 	})
@@ -938,7 +950,7 @@ asyncTest("done callback should be able to event name", 2, function() {
 			});
 		}
 	})
-	.send("message", "Vassline", "done")
+	.dispatch("message", "Vassline", "done")
 	.on("done", function(data) {
 		strictEqual(data, "Vassline");
 		start();
@@ -956,7 +968,7 @@ asyncTest("fail callback should work", 2, function() {
 			});
 		}
 	})
-	.send("message", "Gangnam Style", function() {
+	.dispatch("message", "Gangnam Style", function() {
 		ok(false);
 	}, function(exception) {
 		strictEqual(exception, "Gangnam Style");
@@ -975,7 +987,7 @@ asyncTest("fail callback should be able to event name", 2, function() {
 			});
 		}
 	})
-	.send("message", "Gangnam Style", "done", "fail")
+	.dispatch("message", "Gangnam Style", "done", "fail")
 	.on("done", function() {
 		ok(false);
 	})
@@ -1119,7 +1131,7 @@ asyncTest("inbound handler should be able to return an array of event object", f
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
-				this.send("composite", [
+				this.dispatch("composite", [
 					{type: "music", data: ["Hollow Jan", "49 Morphines", "Vassline"]},
 					{type: "start"}
 				]);
@@ -1166,17 +1178,17 @@ asyncTest("event object should contain a event type and optional id, reply, sock
 		outbound = function(event) {
 			deepEqual(event, {id: 1, socket: id, reply: false, type: "message", data: {key: "value"}});
 		};
-		this.send({key: "value"});
+		this.dispatch("message", {key: "value"});
 		
 		outbound = function(event) {
 			deepEqual(event, {id: 2, socket: id, reply: false, type: "chat", data: "data"});
 		};
-		this.send("chat", "data");
+		this.dispatch("chat", "data");
 		
 		outbound = function(event) {
 			deepEqual(event, {id: 3, socket: id, reply: true, type: "news", data: "data"});
 		};
-		this.send("news", "data", $.noop);
+		this.dispatch("news", "data", $.noop);
 		
 		inbound = function(event) {
 			deepEqual(event, {type: "message", data: {key: "value"}});

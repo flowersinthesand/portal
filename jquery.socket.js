@@ -374,21 +374,14 @@
 					
 					return this;
 				},
-				// Transmits event using the connection
-				send: function(type, data, doneCallback, failCallback) {
+				// Sends an event to the server via the connection
+				dispatch: function(type, data, doneCallback, failCallback) {
 					var event;
 					
 					// Defers sending an event until the state become opened
 					if (state !== "opened") {
 						buffer.push(arguments);
 					} else {
-						// Standardize .send(data) and .send(data, callback) into .send(event, data, callback)
-						if (data === undefined || $.isFunction(data)) {
-							doneCallback = data;
-							data = type;
-							type = "message";
-						}
-						
 						// Outbound event
 						event = {
 							id: ++eventId,
@@ -414,6 +407,10 @@
 					}
 					
 					return this;
+				},
+				// Convenient method for dispatching a message event
+				send: function(data) {
+					return self.dispatch("message", data);
 				},
 				// Disconnects the connection
 				close: function() {
@@ -464,7 +461,7 @@
 								args.push(function(result) {
 									if (!latch) {
 										latch = true;
-										self.send("reply", {id: event.id, data: result});
+										self.dispatch("reply", {id: event.id, data: result});
 									}
 								});
 							}
@@ -543,7 +540,6 @@
 			}
 			
 			// Makes the socket sharable
-			// TODO to be extracted as plugin
 			function share() {
 				var traceTimer,
 					server, 
@@ -568,7 +564,7 @@
 											listener(event.newValue);
 										}
 									});									
-									self.one("close", function(reason) {
+									self.one("close", function() {
 										$(window).off("storage.socket");
 										// Defers again to clean the storage
 										self.one("close", function() {
@@ -643,7 +639,7 @@
 					} else if (command.target === "p") {
 						switch (command.type) {
 						case "send":
-							self.send(data.type, data.data, data.doneCallback, data.failCallback);
+							self.dispatch(data.type, data.data, data.doneCallback, data.failCallback);
 							break;
 						case "close":
 							self.close();
@@ -715,7 +711,7 @@
 			// Sets heartbeat timer
 			function setHeartbeatTimer() {
 				heartbeatTimer = setTimeout(function() {
-					self.send("heartbeat", null).one("heartbeat", function() {
+					self.dispatch("heartbeat").one("heartbeat", function() {
 						clearHeartbeatTimer();
 						setHeartbeatTimer();
 					});
@@ -745,7 +741,7 @@
 			
 			// Flushes buffer
 			while (buffer.length) {
-				self.send.apply(self, buffer.shift());
+				self.dispatch.apply(self, buffer.shift());
 			}
 		})
 		.close(function() {
@@ -914,7 +910,6 @@
 				orphan,
 				connector,
 				name = "socket-" + options.url,
-				// TODO to be extracted as plugin
 				connectors = {
 					storage: function() {
 						if (!$.support.storageEvent) {

@@ -46,7 +46,7 @@
 									heartbeatTimer = setTimeout(function() {
 										socket.fire("close", "error");
 									}, heartbeat);
-									connection.send("heartbeat", null);
+									connection.dispatch("heartbeat");
 								}
 							})
 							.on("reply", function(reply) {
@@ -68,15 +68,9 @@
 				
 				connection = {
 					event: $({}),
-					send: function(event, data, callback) {
+					dispatch: function(event, data, callback) {
 						setTimeout(function() {
 							if (accepted) {
-								if (data === undefined || $.isFunction(data)) {
-									callback = data;
-									data = event;
-									event = "message";
-								}
-								
 								eventId++;
 								if (callback) {
 									callbacks[eventId] = callback;
@@ -90,6 +84,9 @@
 							}
 						}, 5);
 						return this;
+					}, 
+					send: function(data) {
+						return connection.dispatch("message", data);
 					},
 					close: function() {
 						setTimeout(function() {
@@ -141,7 +138,7 @@
 							args.push(function(result, exception) {
 								if (!latch) {
 									latch = true;
-									connection.send("reply", {id: event.id, data: result, exception: exception});
+									connection.dispatch("reply", {id: event.id, data: result, exception: exception});
 								}
 							});
 						}
