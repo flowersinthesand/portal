@@ -817,12 +817,12 @@
 	
 	// Default options
 	defaults = {
+		// Socket options
 		transports: ["ws", "sse", "stream", "longpoll"],
 		timeout: false,
 		heartbeat: false,
 		_heartbeat: 5000,
 		lastEventId: "",
-		credentials: false,
 		sharing: true,
 		prepare: function(connect) {
 			connect();
@@ -845,6 +845,8 @@
 		},
 		inbound: $.parseJSON,
 		outbound: $.stringifyJSON,
+		// Transport options
+		credentials: false,
 		xdrURL: function(url) {
 			// Maintaining session by rewriting URL
 			// http://stackoverflow.com/questions/6453779/maintaining-session-by-rewriting-url
