@@ -1426,39 +1426,6 @@ function testTransport(transport, fn) {
 			start();
 		});
 	});
-	
-	if (/^stream/.test(transport)) {
-		asyncTest("non-whitespace characters printed in the first chunk should be regarded as data", function() {
-			$.socket(url + "?firstMessage=true").message(function(data) {
-				strictEqual(data, "hello");
-				start();
-			});
-		});
-	}
-	if (/^longpoll/.test(transport)) {
-		asyncTest("session('url') should be modified whenever trying to connect to the server", 6, function() {
-			var oldCount, oldLastEventId;
-			
-			$.socket(url).send(0).message(function(i) {
-				var url = this.session("url"), 
-					count = param(url, "count"), 
-					lastEventId = param(url, "lastEventId");
-				
-				if (oldCount !=null && oldLastEventId != null) {
-					ok(oldCount < count);
-					ok(oldLastEventId < lastEventId);
-				}
-				oldCount = count;
-				oldLastEventId = lastEventId;
-				
-				if (i > 2) {
-					start();
-				} else {
-					this.send(++i);
-				}
-			});
-		});
-	}
 }
 
 if (!isLocal) {
@@ -1553,7 +1520,15 @@ if (!isLocal) {
 			teardown: teardown
 		});
 		
-		testTransport(transport, fn);
+		testTransport(transport, function(url) {
+			fn(url);
+			asyncTest("non-whitespace characters printed in the first chunk should be regarded as data", function() {
+				$.socket(url + "?firstMessage=true").message(function(data) {
+					strictEqual(data, "hello");
+					start();
+				});
+			});
+		});
 	});
 	
 	module("Transport Server-Sent Events", {
@@ -1645,6 +1620,36 @@ if (!isLocal) {
 			teardown: teardown
 		});
 		
-		testTransport(transport, fn);
+		testTransport(transport, function(url) {
+			fn(url);
+			asyncTest("session('url') should be modified whenever trying to connect to the server", 6, function() {
+				var oldCount, oldLastEventId;
+				
+				$.socket(url).send(0).message(function(i) {
+					var url = this.session("url"), 
+						count = param(url, "count"), 
+						lastEventId = param(url, "lastEventId");
+					
+					if (oldCount !=null && oldLastEventId != null) {
+						ok(oldCount < count);
+						ok(oldLastEventId < lastEventId);
+					}
+					oldCount = count;
+					oldLastEventId = lastEventId;
+					
+					if (i > 2) {
+						start();
+					} else {
+						this.send(++i);
+					}
+				});
+			});
+			asyncTest("open event should be fired regardless of the server's status if longpollTest is false", function() {
+				$.socket(url + "wrong", {longpollTest: false}).open(function() {
+					ok(true);
+					start();
+				});
+			});
+		});
 	});
 }

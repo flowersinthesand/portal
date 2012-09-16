@@ -847,6 +847,7 @@
 		outbound: $.stringifyJSON,
 		// Transport options
 		credentials: false,
+		longpollTest: true,
 		xdrURL: function(url) {
 			// Maintaining session by rewriting URL
 			// http://stackoverflow.com/questions/6453779/maintaining-session-by-rewriting-url
@@ -1476,7 +1477,17 @@
 			}
 			
 			return $.extend(transports.http(socket, options), {
-				open: poll,
+				open: function() {
+					if (!options.longpollTest) {
+						// Skips the test that checks the server's status
+						setTimeout(function() {
+							socket.fire("open");
+							poll();
+						}, 50);
+					} else {
+						poll();
+					}
+				},
 				close: function() {
 					xhr.abort();
 				}
@@ -1519,7 +1530,16 @@
 			}
 			
 			return $.extend(transports.http(socket, options), {
-				open: poll,
+				open: function() {
+					if (!options.longpollTest) {
+						setTimeout(function() {
+							socket.fire("open");
+							poll();
+						}, 50);
+					} else {
+						poll();
+					}
+				},
 				close: function() {
 					xdr.abort();
 				}
@@ -1528,20 +1548,6 @@
 		// Long polling - JSONP
 		longpolljsonp: function(socket, options) {
 			var count = 0, callback = jsonpCallbacks.pop() || ("socket_" + (++guid)), xhr, called;
-			
-			// Attaches callback
-			window[callback] = function(data) {
-				called = true;
-				if (count === 1) {
-					socket.fire("open");
-				}
-				socket._fire(data);
-			};
-			socket.one("close", function() {
-				// Assings an empty function for browsers which are not able to cancel a request made from script tag
-				window[callback] = $.noop;
-				jsonpCallbacks.push(callback);
-			});
 			
 			function poll() {
 				var url = socket.buildURL({callback: callback, count: ++count});
@@ -1570,7 +1576,30 @@
 			}
 			
 			return $.extend(transports.http(socket, options), {
-				open: poll,
+				open: function() {
+					// Attaches callback
+					window[callback] = function(data) {
+						called = true;
+						if (count === 1) {
+							socket.fire("open");
+						}
+						socket._fire(data);
+					};
+					socket.one("close", function() {
+						// Assings an empty function for browsers which are not able to cancel a request made from script tag
+						window[callback] = $.noop;
+						jsonpCallbacks.push(callback);
+					});
+					
+					if (!options.longpollTest) {
+						setTimeout(function() {
+							socket.fire("open");
+							poll();
+						}, 50);
+					} else {
+						poll();
+					}
+				},
 				close: function() {
 					xhr.abort();
 				}
