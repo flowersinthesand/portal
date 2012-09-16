@@ -1158,7 +1158,7 @@
 			};
 		},
 		// HTTP Support
-		http: function(socket, options) {
+		httpbase: function(socket, options) {
 			var send,
 				sending,
 				queue = [];
@@ -1235,7 +1235,7 @@
 				}
 			}
 			
-			return $.extend(transports.http(socket, options), {
+			return $.extend(transports.httpbase(socket, options), {
 				open: function() {
 					var url = socket.session("url");
 					
@@ -1272,7 +1272,7 @@
 				return;
 			}
 			
-			return $.extend(transports.http(socket, options), {
+			return $.extend(transports.httpbase(socket, options), {
 				open: function() {
 					var stop;
 					
@@ -1327,7 +1327,7 @@
 				return;
 			}
 			
-			return $.extend(transports.http(socket, options), {
+			return $.extend(transports.httpbase(socket, options), {
 				open: function() {
 					var iframe, cdoc;
 					
@@ -1400,7 +1400,7 @@
 				return;
 			}
 			
-			return $.extend(transports.http(socket, options), {
+			return $.extend(transports.httpbase(socket, options), {
 				open: function() {
 					var url = options.xdrURL.call(socket, socket.session("url"));
 					
@@ -1476,7 +1476,7 @@
 				});
 			}
 			
-			return $.extend(transports.http(socket, options), {
+			return $.extend(transports.httpbase(socket, options), {
 				open: function() {
 					if (!options.longpollTest) {
 						// Skips the test that checks the server's status
@@ -1529,7 +1529,7 @@
 				xdr.send();
 			}
 			
-			return $.extend(transports.http(socket, options), {
+			return $.extend(transports.httpbase(socket, options), {
 				open: function() {
 					if (!options.longpollTest) {
 						setTimeout(function() {
@@ -1575,7 +1575,7 @@
 				});
 			}
 			
-			return $.extend(transports.http(socket, options), {
+			return $.extend(transports.httpbase(socket, options), {
 				open: function() {
 					// Attaches callback
 					window[callback] = function(data) {
