@@ -1446,38 +1446,38 @@
 				return;
 			}
 			
-			function poll() {
-				var url = socket.buildURL({count: ++count});
-				
-				socket.session("url", url);
-				xhr = $.ajax(url, {
-					type: "GET", 
-					dataType: "text", 
-					async: true, 
-					cache: true, 
-					timeout: false,
-					xhrFields: $.support.cors ? {withCredentials: options.credentials} : null
-				})
-				.done(function(data) {
-					if (data || count === 1) {
-						if (count === 1) {
-							socket.fire("open");
-						}
-						if (data) {
-							socket._fire(data);
-						}
-						poll();
-					} else {
-						socket.fire("close", "done");
-					}
-				})
-				.fail(function(jqXHR, reason) {
-					socket.fire("close", reason === "abort" ? "aborted" : "error");
-				});
-			}
-			
 			return $.extend(transports.httpbase(socket, options), {
 				open: function() {
+					function poll() {
+						var url = socket.buildURL({count: ++count});
+						
+						socket.session("url", url);
+						xhr = $.ajax(url, {
+							type: "GET", 
+							dataType: "text", 
+							async: true, 
+							cache: true, 
+							timeout: false,
+							xhrFields: $.support.cors ? {withCredentials: options.credentials} : null
+						})
+						.done(function(data) {
+							if (data || count === 1) {
+								if (count === 1) {
+									socket.fire("open");
+								}
+								if (data) {
+									socket._fire(data);
+								}
+								poll();
+							} else {
+								socket.fire("close", "done");
+							}
+						})
+						.fail(function(jqXHR, reason) {
+							socket.fire("close", reason === "abort" ? "aborted" : "error");
+						});
+					}
+					
 					if (!options.longpollTest) {
 						// Skips the test that checks the server's status
 						setTimeout(function() {
@@ -1501,36 +1501,36 @@
 				return;
 			}
 			
-			function poll() {
-				var url = options.xdrURL.call(socket, socket.buildURL({count: ++count}));
-				
-				xdr = new XDomainRequest();
-				xdr.onload = function() {
-					var data = xdr.responseText;
-					
-					if (data || count === 1) {
-						if (count === 1) {
-							socket.fire("open");
-						}
-						if (data) {
-							socket._fire(data);
-						}
-						poll();
-					} else {
-						socket.fire("close", "done");
-					}
-				};
-				xdr.onerror = function() {
-					socket.fire("close", "error");
-				};
-				
-				socket.session("url", url);
-				xdr.open("GET", url);
-				xdr.send();
-			}
-			
 			return $.extend(transports.httpbase(socket, options), {
 				open: function() {
+					function poll() {
+						var url = options.xdrURL.call(socket, socket.buildURL({count: ++count}));
+						
+						xdr = new XDomainRequest();
+						xdr.onload = function() {
+							var data = xdr.responseText;
+							
+							if (data || count === 1) {
+								if (count === 1) {
+									socket.fire("open");
+								}
+								if (data) {
+									socket._fire(data);
+								}
+								poll();
+							} else {
+								socket.fire("close", "done");
+							}
+						};
+						xdr.onerror = function() {
+							socket.fire("close", "error");
+						};
+						
+						socket.session("url", url);
+						xdr.open("GET", url);
+						xdr.send();
+					}
+					
 					if (!options.longpollTest) {
 						setTimeout(function() {
 							socket.fire("open");
@@ -1549,34 +1549,34 @@
 		longpolljsonp: function(socket, options) {
 			var count = 0, callback = jsonpCallbacks.pop() || ("socket_" + (++guid)), xhr, called;
 			
-			function poll() {
-				var url = socket.buildURL({callback: callback, count: ++count});
-				
-				socket.session("url", url);
-				xhr = $.ajax(url, {
-					dataType: "script", 
-					crossDomain: true, 
-					cache: true, 
-					timeout: false
-				})
-				.done(function() {
-					if (called) {
-						called = false;
-						poll();
-					} else if (count === 1) {
-						socket.fire("open");
-						poll();
-					} else {
-						socket.fire("close", "done");
-					}
-				})
-				.fail(function(jqXHR, reason) {
-					socket.fire("close", reason === "abort" ? "aborted" : "error");
-				});
-			}
-			
 			return $.extend(transports.httpbase(socket, options), {
 				open: function() {
+					function poll() {
+						var url = socket.buildURL({callback: callback, count: ++count});
+						
+						socket.session("url", url);
+						xhr = $.ajax(url, {
+							dataType: "script", 
+							crossDomain: true, 
+							cache: true, 
+							timeout: false
+						})
+						.done(function() {
+							if (called) {
+								called = false;
+								poll();
+							} else if (count === 1) {
+								socket.fire("open");
+								poll();
+							} else {
+								socket.fire("close", "done");
+							}
+						})
+						.fail(function(jqXHR, reason) {
+							socket.fire("close", reason === "abort" ? "aborted" : "error");
+						});
+					}
+					
 					// Attaches callback
 					window[callback] = function(data) {
 						called = true;
