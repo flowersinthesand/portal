@@ -1607,19 +1607,8 @@
 		}
 	};
 	
-	$.support.storageEvent = (function() {
-		var storage = window.localStorage;
-		if (storage) {
-			try {
-				storage.setItem("t", "t");
-				storage.removeItem("t");
-				// The storage event of Internet Explorer and Firefox 3 works strangely
-				return window.StorageEvent && !$.browser.msie && !($.browser.mozilla && $.browser.version.split(".")[0] === "1");
-			} catch (e) {}
-		}
-		
-		return false;
-	})();
+	// The storage event of Internet Explorer and Firefox 3 works strangely
+	$.support.storageEvent = window.localStorage && window.StorageEvent && !$.browser.msie && !($.browser.mozilla && $.browser.version.split(".")[0] === "1");
 	
 	$(window).on("unload.socket", function(event) {
 		// Check the unload event is fired by the browser
