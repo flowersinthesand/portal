@@ -344,7 +344,6 @@
 					// Cancels the scheduled connection
 					if (reconnectTimer) {
 						clearTimeout(reconnectTimer);
-						reconnectTimer = null;
 					}
 					
 					// Resets the session scope and event helpers
@@ -418,7 +417,6 @@
 					opts.reconnect = false;
 					if (reconnectTimer) {
 						clearTimeout(reconnectTimer);
-						reconnectTimer = null;
 					}
 					
 					// Fires the close event immediately for transport which doesn't give feedback on disconnection
