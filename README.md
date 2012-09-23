@@ -9,6 +9,7 @@ The **jQuery Socket** project is developed and maintained by [Donghwan Kim](http
 * [Socket API](https://github.com/flowersinthesand/jquery-socket/wiki/API)
 * [Socket Life Cycle and Events](https://github.com/flowersinthesand/jquery-socket/wiki/Socket-Life-Cycle-and-Events)
 * [Supported Transports and Browsers](https://github.com/flowersinthesand/jquery-socket/wiki/Supported-Transports-and-Browsers)
+* [Browser Quirks](https://github.com/flowersinthesand/jquery-socket/wiki/Browser-Quirks)
 * [Required Server Side Processing](https://github.com/flowersinthesand/jquery-socket/wiki/Server-Side-Processing)
 * [Advanced Server Side Processing](https://github.com/flowersinthesand/jquery-socket/wiki/Advanced-Server-Side-Processing)
 
