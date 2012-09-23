@@ -1505,7 +1505,17 @@ if (!isLocal) {
 				});
 			});
 		},
-		streamiframe: $.noop
+		streamiframe: function(url) {
+			asyncTest("initIframe should be called with iframe element before the open event", 2, function() {
+				$.socket.defaults.initIframe = function(iframe) {
+					ok(iframe);
+					ok(iframe.contentDocument || iframe.contentWindow.document);
+				};
+				$.socket(url).open(function() {
+					start();
+				});
+			});
+		}
 	}, function(transport, fn) {
 		var transportName = ({streamxdr: "XDomainRequest", streamiframe: "ActiveXObject('htmlfile')", streamxhr: "XMLHttpRequest"})[transport];
 		

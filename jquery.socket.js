@@ -1341,14 +1341,11 @@
 					
 					cdoc = iframe.contentDocument || iframe.contentWindow.document;
 					stop = iterate(function() {
-						if (!cdoc.firstChild) {
-							return;
-						}
-						
-						var response = cdoc.body.lastChild;
+						// Response container
+						var container;
 						
 						function readDirty() {
-							var clone = response.cloneNode(true), 
+							var clone = container.cloneNode(true), 
 								text;
 							
 							// Adds a character not CR and LF to circumvent an Internet Explorer bug
@@ -1359,20 +1356,31 @@
 							return text.substring(0, text.length - 1);
 						}
 						
+						// Waits the server's container ignorantly
+						if (!cdoc.firstChild) {
+							return;
+						}
+						
+						if (options.initIframe) {
+							options.initIframe.call(socket, iframe);
+						}
+						
+						container = cdoc.body.lastChild;
+						
 						// Detects connection failure
-						if (!response) {
+						if (!container) {
 							socket.fire("close", "error");
 							return false;
 						}
 						
 						socket.fire("open")._fire(readDirty(), true);
-						response.innerText = "";
+						container.innerText = "";
 						
 						stop = iterate(function() {
 							var text = readDirty();
 							
 							if (text) {
-								response.innerText = "";
+								container.innerText = "";
 								socket._fire(text, true);
 							}
 							
