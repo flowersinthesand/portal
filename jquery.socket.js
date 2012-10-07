@@ -327,8 +327,8 @@
 								
 								// Fires the connecting event and connects
 								if (transport) {
-									transport.open();
 									self.fire("connecting");
+									transport.open();
 								} else {
 									self.fire("close", "notransport");
 								}
