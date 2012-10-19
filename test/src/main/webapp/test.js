@@ -180,7 +180,7 @@ asyncTest("open method should establish a connection", 1, function() {
 	.close();
 });
 
-asyncTest("dispatch method should defer sending message when the socket is not connected", function() {
+asyncTest("send method should defer sending message when the socket is not connected", function() {
 	var result = "";
 	
 	$.socket("url", {
@@ -194,23 +194,11 @@ asyncTest("dispatch method should defer sending message when the socket is not c
 			});
 		}
 	})
-	.dispatch("message", "A")
-	.dispatch("message", "B")
+	.send("message", "A")
+	.send("message", "B")
 	.open(function() {
-		this.dispatch("message", "C");
+		this.send("message", "C");
 	});
-});
-
-asyncTest("send method should send message event", function() {
-	$.socket("url", {
-		server: function(request) {
-			request.accept().on("message", function(data) {
-				strictEqual(data, "data");
-				start();
-			});
-		}
-	})
-	.send("data");
 });
 
 asyncTest("close method should close a connection", function() {
@@ -258,7 +246,7 @@ test("transport function should be executed after the socket.open()", function()
 	strictEqual(result, "ABAB");
 });
 
-test("transport's send method should be executed with data after the socket.dispatch()", 1, function() {
+test("transport's send method should be executed with data after the socket.send()", 1, function() {
 	$.socket.transports.subway = function(socket) {
 		return {
 			open: function() {
@@ -271,7 +259,7 @@ test("transport's send method should be executed with data after the socket.disp
 		};
 	};
 	
-	$.socket("url", {transports: ["subway"]}).dispatch("message");
+	$.socket("url", {transports: ["subway"]}).send("message");
 });
 
 test("transport's close method should be executed after the socket.close()", 1, function() {
@@ -370,7 +358,7 @@ asyncTest("connection's send method should fire socket's message event", functio
 			var connection = request.accept();
 			connection.on("open", function() {
 				strictEqual(this, connection);
-				connection.send("data");
+				connection.send("message", "data");
 			});
 		}
 	})
@@ -423,7 +411,7 @@ asyncTest("connection's message event handler should receive a data sent by the 
 			});
 		}
 	})
-	.send("Hello");
+	.send("message", "Hello");
 });
 
 asyncTest("connection's close event should be fired if opened socket's close event fires", function() {
@@ -513,7 +501,7 @@ asyncTest("message event handler should be executed with data when a message has
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
-				this.send("data");
+				this.send("message", "data");
 			});
 		}
 	})
@@ -691,7 +679,7 @@ asyncTest("custom event handler should be executed with data when a custom messa
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
-				this.dispatch("dm", {sender: "flowersits", message: "How are you?"});
+				this.send("dm", {sender: "flowersits", message: "How are you?"});
 			});
 		}
 	})
@@ -701,7 +689,7 @@ asyncTest("custom event handler should be executed with data when a custom messa
 	});
 });
 
-asyncTest("dispatch method should be able to send custom event message", function() {
+asyncTest("send method should be able to send custom event message", function() {
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("dm", function(data) {
@@ -710,7 +698,7 @@ asyncTest("dispatch method should be able to send custom event message", functio
 			});
 		}
 	})
-	.dispatch("dm", {sender: "flowersits", message: "I'm fine thank you, and you?"});
+	.send("dm", {sender: "flowersits", message: "I'm fine thank you, and you?"});
 });
 
 module("Reconnection", {
@@ -894,7 +882,7 @@ asyncTest("callback for replying should be provided if the server requires reply
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
-				this.dispatch("message", "An Ode to My Friend", $.noop);
+				this.send("message", "An Ode to My Friend", $.noop);
 			});
 		}
 	})
@@ -908,7 +896,7 @@ asyncTest("callback for replying should send a reply event", 2, function() {
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
-				this.dispatch("message", "Heaven Shall Burn", function(reply) {
+				this.send("message", "Heaven Shall Burn", function(reply) {
 					strictEqual(reply, "Heaven Shall Burn");
 					start();
 				})
@@ -933,7 +921,7 @@ asyncTest("done callback should work", 2, function() {
 			});
 		}
 	})
-	.dispatch("message", "Caliban", function(data) {
+	.send("message", "Caliban", function(data) {
 		strictEqual(data, "Caliban");
 		start();
 	})
@@ -950,7 +938,7 @@ asyncTest("done callback should be able to event name", 2, function() {
 			});
 		}
 	})
-	.dispatch("message", "Vassline", "done")
+	.send("message", "Vassline", "done")
 	.on("done", function(data) {
 		strictEqual(data, "Vassline");
 		start();
@@ -968,7 +956,7 @@ asyncTest("fail callback should work", 2, function() {
 			});
 		}
 	})
-	.dispatch("message", "Gangnam Style", function() {
+	.send("message", "Gangnam Style", function() {
 		ok(false);
 	}, function(exception) {
 		strictEqual(exception, "Gangnam Style");
@@ -987,7 +975,7 @@ asyncTest("fail callback should be able to event name", 2, function() {
 			});
 		}
 	})
-	.dispatch("message", "Gangnam Style", "done", "fail")
+	.send("message", "Gangnam Style", "done", "fail")
 	.on("done", function() {
 		ok(false);
 	})
@@ -1068,7 +1056,7 @@ asyncTest("lastEventId option should be the id of the last event which is sent b
 			request.accept().on("open", function() {
 				var i;
 				for (i = 0; i < 10; i++) {
-					this.send(i + 1);
+					this.send("message", i + 1);
 				}
 			});
 		}
@@ -1098,7 +1086,7 @@ asyncTest("outbound handler should receive a event object and return a final dat
 			});
 		}
 	})
-	.send("data");
+	.send("message", "data");
 });
 
 asyncTest("inbound handler should receive a raw data from the server and return a event object", function() {
@@ -1110,7 +1098,7 @@ asyncTest("inbound handler should receive a raw data from the server and return 
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
-				this.send("data");
+				this.send("message", "data");
 			});
 		}
 	})
@@ -1131,7 +1119,7 @@ asyncTest("inbound handler should be able to return an array of event object", f
 	$.socket("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
-				this.dispatch("composite", [
+				this.send("composite", [
 					{type: "music", data: ["Hollow Jan", "49 Morphines", "Vassline"]},
 					{type: "start"}
 				]);
@@ -1178,17 +1166,17 @@ asyncTest("event object should contain a event type and optional id, reply, sock
 		outbound = function(event) {
 			deepEqual(event, {id: 1, socket: id, reply: false, type: "message", data: {key: "value"}});
 		};
-		this.dispatch("message", {key: "value"});
+		this.send("message", {key: "value"});
 		
 		outbound = function(event) {
 			deepEqual(event, {id: 2, socket: id, reply: false, type: "chat", data: "data"});
 		};
-		this.dispatch("chat", "data");
+		this.send("chat", "data");
 		
 		outbound = function(event) {
 			deepEqual(event, {id: 3, socket: id, reply: true, type: "news", data: "data"});
 		};
-		this.dispatch("news", "data", $.noop);
+		this.send("news", "data", $.noop);
 		
 		inbound = function(event) {
 			deepEqual(event, {type: "message", data: {key: "value"}});
@@ -1225,7 +1213,7 @@ if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKit
 			server: function(request) {
 				request.accept().on("message", function(data) {
 					ok(isBinary(data));
-					this.send(data);
+					this.send("message", data);
 				});
 			}
 		})
@@ -1237,8 +1225,8 @@ if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKit
 				start();
 			}
 		})
-		.send(new BlobBuilder().getBlob())
-		.send(new window.ArrayBuffer());
+		.send("message", new BlobBuilder().getBlob())
+		.send("message", new window.ArrayBuffer());
 	});
 }
 
@@ -1296,7 +1284,7 @@ test("a final data to be sent to the server should be a JSON string representing
 		};
 	};
 	
-	$.socket("url").send("data");
+	$.socket("url").send("message", "data");
 });
 
 test("a raw data sent by the server should be a JSON string representing a event object", function() {
@@ -1387,7 +1375,7 @@ function testTransport(transport, fn) {
 			strictEqual(data, "data");
 			start();
 		})
-		.send("data");
+		.send("message", "data");
 	});
 	
 	asyncTest("send method should work properly with multi-byte character data", function() {
@@ -1395,7 +1383,7 @@ function testTransport(transport, fn) {
 			strictEqual(data, "안녕");
 			start();
 		})
-		.send("안녕");
+		.send("message", "안녕");
 	});
 	
 	asyncTest("send method should work properly with big data", function() {
@@ -1409,7 +1397,7 @@ function testTransport(transport, fn) {
 			strictEqual(data, text);
 			start();
 		})
-		.send(text);
+		.send("message", text);
 	});
 	
 	asyncTest("close method should work properly", function() {
@@ -1445,7 +1433,7 @@ if (!isLocal) {
 		asyncTest("WebSocket event should be able to be accessed by session('event')", 3, function() {
 			$.socket(url).open(function() {
 				strictEqual(this.session("event").type, "open");
-				this.send("data");
+				this.send("message", "data");
 			})
 			.message(function() {
 				strictEqual(this.session("event").type, "message");
@@ -1553,7 +1541,7 @@ if (!isLocal) {
 		asyncTest("Server-Sent Events event should be able to be accessed by session('event')", 3, function() {
 			$.socket(url + "?close=1000", {reconnect: false}).open(function() {
 				strictEqual(this.session("event").type, "open");
-				this.send("data");
+				this.send("message", "data");
 			})
 			.message(function() {
 				strictEqual(this.session("event").type, "message");
@@ -1635,7 +1623,7 @@ if (!isLocal) {
 			asyncTest("session('url') should be modified whenever trying to connect to the server", 6, function() {
 				var oldCount, oldLastEventId;
 				
-				$.socket(url).send(0).message(function(i) {
+				$.socket(url).send("message", 0).message(function(i) {
 					var url = this.session("url"), 
 						count = param(url, "count"), 
 						lastEventId = param(url, "lastEventId");
@@ -1650,7 +1638,7 @@ if (!isLocal) {
 					if (i > 2) {
 						start();
 					} else {
-						this.send(++i);
+						this.send("message", ++i);
 					}
 				});
 			});

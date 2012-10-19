@@ -21,9 +21,9 @@
 			})
 			.open(function() {
 				$("<div />").text("Opened").appendTo("body");
-				this.send("Current timestamp: " + $.now())
-				.dispatch("timestamp", null, "timestamp")
-				.dispatch("exception", null, null, "exception")
+				this.send("message", "Current timestamp: " + $.now())
+				.send("timestamp", null, "timestamp")
+				.send("exception", null, null, "exception")
 				.broadcast("greeting", "Hello from " + this.option("id"));
 			})
 			.message(function(data) {

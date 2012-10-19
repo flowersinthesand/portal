@@ -383,7 +383,7 @@
 					return this;
 				},
 				// Sends an event to the server via the connection
-				dispatch: function(type, data, doneCallback, failCallback) {
+				send: function(type, data, doneCallback, failCallback) {
 					var event;
 					
 					// Defers sending an event until the state become opened
@@ -415,10 +415,6 @@
 					}
 					
 					return this;
-				},
-				// Convenient method for dispatching a message event
-				send: function(data) {
-					return self.dispatch("message", data);
 				},
 				// Disconnects the connection
 				close: function() {
@@ -468,7 +464,7 @@
 								args.push(function(result) {
 									if (!latch) {
 										latch = true;
-										self.dispatch("reply", {id: event.id, data: result});
+										self.send("reply", {id: event.id, data: result});
 									}
 								});
 							}
@@ -646,7 +642,7 @@
 					} else if (command.target === "p") {
 						switch (command.type) {
 						case "send":
-							self.dispatch(data.type, data.data, data.doneCallback, data.failCallback);
+							self.send(data.type, data.data, data.doneCallback, data.failCallback);
 							break;
 						case "close":
 							self.close();
@@ -718,7 +714,7 @@
 			// Sets heartbeat timer
 			function setHeartbeatTimer() {
 				heartbeatTimer = setTimeout(function() {
-					self.dispatch("heartbeat").one("heartbeat", function() {
+					self.send("heartbeat").one("heartbeat", function() {
 						clearHeartbeatTimer();
 						setHeartbeatTimer();
 					});
@@ -748,7 +744,7 @@
 			
 			// Flushes buffer
 			while (buffer.length) {
-				self.dispatch.apply(self, buffer.shift());
+				self.send.apply(self, buffer.shift());
 			}
 		})
 		.close(function() {
