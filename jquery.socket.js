@@ -1,6 +1,6 @@
 /*
- * jQuery stringifyJSON
- * http://github.com/flowersinthesand/jquery-stringifyJSON
+ * stringifyJSON
+ * http://github.com/flowersinthesand/stringifyJSON
  * 
  * Copyright 2011, Donghwan Kim 
  * Licensed under the Apache License, Version 2.0
@@ -8,6 +8,8 @@
  */
 // This plugin is heavily based on Douglas Crockford's reference implementation
 (function($) {
+	
+	"use strict";
 	
 	var escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g, 
 		meta = {
@@ -53,8 +55,10 @@
 			
 			switch (Object.prototype.toString.call(value)) {
 			case "[object Date]":
-				return isFinite(value.valueOf()) ? '"' + value.getUTCFullYear() + "-" + f(value.getUTCMonth() + 1) + "-" + f(value.getUTCDate()) + "T" + 
-						f(value.getUTCHours()) + ":" + f(value.getUTCMinutes()) + ":" + f(value.getUTCSeconds()) + "Z" + '"' : "null";
+				return isFinite(value.valueOf()) ? 
+					'"' + value.getUTCFullYear() + "-" + f(value.getUTCMonth() + 1) + "-" + f(value.getUTCDate()) + 
+					"T" + f(value.getUTCHours()) + ":" + f(value.getUTCMinutes()) + ":" + f(value.getUTCSeconds()) + "Z" + '"' : 
+					"null";
 			case "[object Array]":
 				len = value.length;
 				partial = [];
@@ -79,13 +83,16 @@
 		}
 	}
 	
-	$.stringifyJSON = function(value) {
+	function stringifyJSON(value) {
 		if (window.JSON && window.JSON.stringify) {
 			return window.JSON.stringify(value);
 		}
 		
 		return str("", {"": value});
-	};
+	}
+	
+	// Expose stringifyJSON as a jQuery plugin
+	$.stringifyJSON = stringifyJSON;
 	
 }(jQuery));
 
@@ -98,6 +105,8 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 (function($, undefined) {
+	
+	"use strict";
 	
 	var // Default options
 		defaults,
@@ -285,7 +294,7 @@
 				one: function(type, fn) {
 					function proxy() {
 						self.off(type, proxy);
-						fn.apply(this, arguments);
+						fn.apply(self, arguments);
 					}
 					
 					fn.guid = fn.guid || guid++;
