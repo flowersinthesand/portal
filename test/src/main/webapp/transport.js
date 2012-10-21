@@ -33,7 +33,7 @@
 							accepted = true;
 							return connection.on("open", function() {
 								socket.fire("open");
-								heartbeat = param(socket.session("url"), "heartbeat");
+								heartbeat = param(socket.data("url"), "heartbeat");
 								if (heartbeat > 0) {
 									heartbeatTimer = setTimeout(function() {
 										socket.fire("close", "error");
