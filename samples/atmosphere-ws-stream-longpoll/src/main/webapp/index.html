@@ -5,7 +5,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, target-densitydpi=medium-dpi" />
 		<title>jQuery Socket Chat</title>
 		<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.js"></script>
-		<script type="text/javascript" src="jquery.socket-1.0b2.js"></script>
+		<script type="text/javascript" src="jquery.socket-1.0b3.js"></script>
 		<script type="text/javascript">		
 		$(function() {
 			var username, 
@@ -28,7 +28,7 @@
 						
 						$.socket("chat")
 						.connecting(function() {
-							notify("The connection has been tried by '" + this.session("transport") + "'");
+							notify("The connection has been tried by '" + this.data("transport") + "'");
 						})
 						.open(function() {
 							notify("The connection has been opened");
@@ -52,7 +52,7 @@
 							notify("The total number of reconnection attempts is " + attempts);
 						});
 					} else {
-						$.socket().send({username: username, message: input.value});
+						$.socket().send("message", {username: username, message: input.value});
 					}
 					
 					input.value = "";
