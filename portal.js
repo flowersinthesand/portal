@@ -1628,7 +1628,7 @@
 		finalize();
 	});
 	
-	$.socket = function(url, options) {
+	window.portal = function(url, options) {
 		var i;
 		
 		// Returns the first socket in the document
@@ -1652,8 +1652,8 @@
 		return (sockets[url] = socket(url, options));
 	};
 	
-	$.socket.defaults = defaults;
-	$.socket.transports = transports;
-	$.socket.finalize = finalize;
+	window.portal.defaults = defaults;
+	window.portal.transports = transports;
+	window.portal.finalize = finalize;
 	
 })(jQuery);

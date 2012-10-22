@@ -1,9 +1,9 @@
-var original = $.extend(true, {}, $.socket);
+var original = $.extend(true, {}, portal);
 
 function setup() {
-	var reconnect = $.socket.defaults.reconnect;
+	var reconnect = portal.defaults.reconnect;
 	
-	$.extend($.socket.defaults, {
+	$.extend(portal.defaults, {
 		transports: ["test"],
 		sharing: false,
 		reconnect: function() {
@@ -14,16 +14,16 @@ function setup() {
 }
 
 function teardown() {
-	$.socket.finalize();
+	portal.finalize();
 	
 	var i, j;
 	
 	for (i in {defaults: 1, transports: 1}) {
-		for (j in $.socket[i]) {
-			delete $.socket[i][j];
+		for (j in portal[i]) {
+			delete portal[i][j];
 		}
 		
-		$.extend(true, $.socket[i], original[i]);
+		$.extend(true, portal[i], original[i]);
 	}
 }
 
@@ -42,25 +42,25 @@ module("portal", {
 });
 
 test("portal(url, option) should create a socket object", function() {
-	ok($.socket("url", {}));
+	ok(portal("url", {}));
 });
 
 test("portal(url) should return a socket object which is mapped to the given url, or if there is no mapped socket, should create one", function() {
-	var socket = $.socket("url");
+	var socket = portal("url");
 	
 	ok(socket);
-	strictEqual(socket, $.socket("url"));
+	strictEqual(socket, portal("url"));
 });
 
 test("portal(url) should be able to be returned by absolute url and relative url", function() {
-	strictEqual($.socket("url"), $.socket(getAbsoluteURL("url")));
+	strictEqual(portal("url"), portal(getAbsoluteURL("url")));
 });
 
 test("portal() should return the first socket object", function() {
-	var first = $.socket("first", {}), second = $.socket("second", {});
+	var first = portal("first", {}), second = portal("second", {});
 	
-	strictEqual(first, $.socket());
-	notStrictEqual(second, $.socket());
+	strictEqual(first, portal());
+	notStrictEqual(second, portal());
 });
 
 module("Socket", {
@@ -69,16 +69,16 @@ module("Socket", {
 });
 
 test("option method should find the value of an option", function() {
-	strictEqual($.socket("url", {version: $.fn.jquery}).option("version"), $.fn.jquery);
+	strictEqual(portal("url", {version: $.fn.jquery}).option("version"), $.fn.jquery);
 });
 
 test("data method should set and get a connection-scoped value", function() {
-	strictEqual($.socket("url").data("string", "value"), $.socket());
-	strictEqual($.socket("url").data("string"), "value");
+	strictEqual(portal("url").data("string", "value"), portal());
+	strictEqual(portal("url").data("string"), "value");
 });
 
 test("connection scope should be reset when open method has been called", function() {
-	ok(!$.socket("url").data("key", "value").open().data("key"));
+	ok(!portal("url").data("key", "value").open().data("key"));
 });
 
 test("on method should add a event handler", 5, function() {
@@ -88,7 +88,7 @@ test("on method should add a event handler", 5, function() {
 		};
 	
 	for (type in {connecting: 1, open: 1, message: 1, close: 1, waiting: 1}) {
-		$.socket(type, {reconnect: false}).on(type, yes).fire(type);
+		portal(type, {reconnect: false}).on(type, yes).fire(type);
 	}
 });
 
@@ -102,7 +102,7 @@ test("off method should remove a event handler", 4, function() {
 		};
 		
 	for (type in {open: 1, message: 1, close: 1, waiting: 1}) {
-		$.socket(type, {reconnect: false}).on(type, no).off(type, no).on(type, yes).fire(type);
+		portal(type, {reconnect: false}).on(type, no).off(type, no).on(type, yes).fire(type);
 	}
 });
 
@@ -113,7 +113,7 @@ test("one method should add an one time event handler", 5, function() {
 		};
 		
 	for (type in {connecting: 1, open: 1, message: 1, close: 1, waiting: 1}) {
-		$.socket(type).one(type, yes).fire(type).fire(type);
+		portal(type).one(type, yes).fire(type).fire(type);
 	}
 });
 
@@ -127,7 +127,7 @@ test("handler attached by one method should be able to be detached by off method
 		};
 		
 	for (type in {open: 1, message: 1, close: 1, waiting: 1}) {
-		$.socket(type).one(type, no).off(type, no).on(type, yes).fire(type);
+		portal(type).one(type, no).off(type, no).on(type, yes).fire(type);
 	}
 });
 
@@ -139,7 +139,7 @@ test("the context of all event handlers should be the corresponding socket objec
 		};
 	
 	for (type in {connecting: 1, open: 1, message: 1, close: 1, waiting: 1, custom1: 1, custom2: 1}) {
-		socket = $.socket(type); 
+		socket = portal(type); 
 		socket.on(type, fn).fire(type);
 	}
 });
@@ -153,7 +153,7 @@ $.each(["connecting", "open", "message", "close", "waiting"], function(i, name) 
 				};
 			};
 		
-		$.socket("url")[name](out("A"))[name](out("B")).fire(name)[name](out("C"));
+		portal("url")[name](out("A"))[name](out("B")).fire(name)[name](out("C"));
 		
 		strictEqual(result, name !== "message" ? "ABC" : "AB");
 	});
@@ -162,7 +162,7 @@ $.each(["connecting", "open", "message", "close", "waiting"], function(i, name) 
 asyncTest("open method should establish a connection", 1, function() {
 	var latch;
 	
-	$.socket("url", {
+	portal("url", {
 		reconnect: false,
 		server: function(request) {
 			request.accept();
@@ -183,7 +183,7 @@ asyncTest("open method should establish a connection", 1, function() {
 asyncTest("send method should defer sending message when the socket is not connected", function() {
 	var result = "";
 	
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("message", function(data) {
 				result += data;
@@ -202,7 +202,7 @@ asyncTest("send method should defer sending message when the socket is not conne
 });
 
 asyncTest("close method should close a connection", function() {
-	$.socket("url")
+	portal("url")
 	.close(function() {
 		strictEqual("closed", this.state());
 		start();
@@ -218,20 +218,20 @@ module("Transport", {
 test("transport function should receive the socket and the options", function() {
 	var soc;
 	
-	$.socket.transports.subway = function(socket, options) {
+	portal.transports.subway = function(socket, options) {
 		ok(socket);
 		ok(options);
 		soc = socket;
 	};
 	
-	$.socket("url", {transports: ["subway"]});
-	strictEqual(soc, $.socket());
+	portal("url", {transports: ["subway"]});
+	strictEqual(soc, portal());
 });
 
 test("transport function should be executed after the socket.open()", function() {
 	var result = "";
 	
-	$.socket.transports.subway = function() {
+	portal.transports.subway = function() {
 		result += "A";
 		return {
 			open: function() {
@@ -242,12 +242,12 @@ test("transport function should be executed after the socket.open()", function()
 		};
 	};
 	
-	$.socket("url", {transports: ["subway"]}).open();
+	portal("url", {transports: ["subway"]}).open();
 	strictEqual(result, "ABAB");
 });
 
 test("transport's send method should be executed with data after the socket.send()", 1, function() {
-	$.socket.transports.subway = function(socket) {
+	portal.transports.subway = function(socket) {
 		return {
 			open: function() {
 				socket.fire("open");
@@ -259,11 +259,11 @@ test("transport's send method should be executed with data after the socket.send
 		};
 	};
 	
-	$.socket("url", {transports: ["subway"]}).send("message");
+	portal("url", {transports: ["subway"]}).send("message");
 });
 
 test("transport's close method should be executed after the socket.close()", 1, function() {
-	$.socket.transports.subway = function(socket) {
+	portal.transports.subway = function(socket) {
 		return {
 			open: function() {
 				socket.fire("open");
@@ -275,24 +275,24 @@ test("transport's close method should be executed after the socket.close()", 1, 
 		};
 	};
 	
-	$.socket("url", {transports: ["subway"]}).close();
+	portal("url", {transports: ["subway"]}).close();
 });
 
 test("transport function should be able to pass the responsibility onto the next transport function by returning void or false", function() {
 	var result = "";
 	
-	$.socket.transports.bus = function() {
+	portal.transports.bus = function() {
 		result += "A";
 	};
-	$.socket.transports.subway = function() {
+	portal.transports.subway = function() {
 		result += "B";
 		return {open: $.noop, send: $.noop, close: $.noop};
 	};
-	$.socket.transports.bicycle = function() {
+	portal.transports.bicycle = function() {
 		ok(false);
 	};
 	
-	$.socket("url", {transports: ["bus", "subway", "bicycle"]});
+	portal("url", {transports: ["bus", "subway", "bicycle"]});
 	strictEqual(result, "AB");
 });
 
@@ -302,7 +302,7 @@ module("Transport test", {
 });
 
 asyncTest("server should be executed with request", function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			ok(request);
 			start();
@@ -311,7 +311,7 @@ asyncTest("server should be executed with request", function() {
 });
 
 asyncTest("request should be pended if there is no action on request", function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			ok(request);
 			setTimeout(function() {
@@ -325,7 +325,7 @@ asyncTest("request should be pended if there is no action on request", function(
 });
 
 asyncTest("request's accept method should return connection object and fire open event", function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			ok(request.accept());
 		}
@@ -337,7 +337,7 @@ asyncTest("request's accept method should return connection object and fire open
 });
 
 asyncTest("request's reject method should fire close event whose the reason attribute is error", function() {
-	$.socket("url", {
+	portal("url", {
 		reconnect: false,
 		server: function(request) {
 			ok(!request.reject());
@@ -353,7 +353,7 @@ asyncTest("request's reject method should fire close event whose the reason attr
 });
 
 asyncTest("connection's send method should fire socket's message event", function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			var connection = request.accept();
 			connection.on("open", function() {
@@ -369,7 +369,7 @@ asyncTest("connection's send method should fire socket's message event", functio
 });
 
 asyncTest("connection's close method should fire socket's close event whose the reason attribute is done", function() {
-	$.socket("url", {
+	portal("url", {
 		reconnect: false,
 		server: function(request) {
 			var connection = request.accept();
@@ -388,7 +388,7 @@ asyncTest("connection's close method should fire socket's close event whose the 
 asyncTest("connection's open event should be fired after socket's open event", function() {
 	var result = "";
 	
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				result += "B";
@@ -403,7 +403,7 @@ asyncTest("connection's open event should be fired after socket's open event", f
 });
 
 asyncTest("connection's message event handler should receive a data sent by the socket", function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("message", function(data) {
 				strictEqual(data, "Hello");
@@ -417,7 +417,7 @@ asyncTest("connection's message event handler should receive a data sent by the 
 asyncTest("connection's close event should be fired if opened socket's close event fires", function() {
 	var result = "";
 	
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("close", function() {
 				result += "B";
@@ -440,7 +440,7 @@ module("Event", {
 });
 
 asyncTest("connecting event handler should be executed when a connection has tried", function() {
-	$.socket("url").connecting(function() {
+	portal("url").connecting(function() {
 		ok(true);
 		start();
 	});
@@ -449,7 +449,7 @@ asyncTest("connecting event handler should be executed when a connection has tri
 asyncTest("connecting event should be disabled after open event", function() {
 	var result = "";
 	
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept();
 		}
@@ -465,7 +465,7 @@ asyncTest("connecting event should be disabled after open event", function() {
 });
 
 asyncTest("open event handler should be executed when the connection has been established", function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept();
 		}
@@ -479,7 +479,7 @@ asyncTest("open event handler should be executed when the connection has been es
 asyncTest("open event should be disabled after close event", function() {
 	var result = "";
 	
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept();
 		}
@@ -498,7 +498,7 @@ asyncTest("open event should be disabled after close event", function() {
 });
 
 asyncTest("message event handler should be executed with data when a message has been received", function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.send("message", "data");
@@ -512,7 +512,7 @@ asyncTest("message event handler should be executed with data when a message has
 });
 
 asyncTest("close event handler should be executed with a reason when the connection has been closed", function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.reject();
 		}
@@ -524,19 +524,19 @@ asyncTest("close event handler should be executed with a reason when the connect
 });
 
 asyncTest("close event's reason should be 'canceled' if the preparation is failed", function() {
-	$.socket.defaults.prepare = function(connect, cancel) {
+	portal.defaults.prepare = function(connect, cancel) {
 		cancel();
 	};
 	
-	$.socket("url").close(function(reason) {
+	portal("url").close(function(reason) {
 		strictEqual(reason, "canceled");
 		start();
 	});
 });
 
 asyncTest("close event's reason should be 'notransport' if there is no available transport", function() {
-	$.socket.transports.what = $.noop;	
-	$.socket("url", {transports: ["what"]})
+	portal.transports.what = $.noop;	
+	portal("url", {transports: ["what"]})
 	.close(function(reason) {
 		strictEqual(reason, "notransport");
 		start();
@@ -544,7 +544,7 @@ asyncTest("close event's reason should be 'notransport' if there is no available
 });
 
 asyncTest("close event's reason should be 'aborted' if the socket has been closed by the close method", function() {
-	$.socket("url")
+	portal("url")
 	.close(function(reason) {
 		strictEqual(reason, "aborted");
 		start();
@@ -553,7 +553,7 @@ asyncTest("close event's reason should be 'aborted' if the socket has been close
 });
 
 asyncTest("close event's reason should be 'timeout' if the socket has been timed out", function() {
-	$.socket("url", {reconnect: false, timeout: 10})
+	portal("url", {reconnect: false, timeout: 10})
 	.close(function(reason) {
 		strictEqual(reason, "timeout");
 		start();
@@ -561,7 +561,7 @@ asyncTest("close event's reason should be 'timeout' if the socket has been timed
 });
 
 asyncTest("close event's reason should be 'error' if the socket has been closed due to not specific error", function() {
-	$.socket("url", {
+	portal("url", {
 		reconnect: false,
 		server: function(request) {
 			request.reject();
@@ -574,7 +574,7 @@ asyncTest("close event's reason should be 'error' if the socket has been closed 
 });
 
 asyncTest("close event's reason should be 'done' if the socket has been closed normally", function() {
-	$.socket("url", {
+	portal("url", {
 		reconnect: false,
 		server: function(request) {
 			request.accept().on("open", function() {
@@ -589,7 +589,7 @@ asyncTest("close event's reason should be 'done' if the socket has been closed n
 });
 
 asyncTest("waiting event handler should be executed with delay and attempts when a reconnection has scheduled and the socket has started waiting for connection", function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.close();
@@ -609,12 +609,12 @@ module("State", {
 });
 
 test("state should be 'preparing' before connecting event", function() {
-	$.socket.defaults.prepare = $.noop;	
-	strictEqual($.socket("url").state(), "preparing");
+	portal.defaults.prepare = $.noop;	
+	strictEqual(portal("url").state(), "preparing");
 });
 
 asyncTest("state should be 'connecting' after connecting event", function() {
-	$.socket("url")
+	portal("url")
 	.connecting(function() {
 		strictEqual(this.state(), "connecting");
 		start();
@@ -622,7 +622,7 @@ asyncTest("state should be 'connecting' after connecting event", function() {
 });
 
 asyncTest("state should be 'opened' after open event", function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept();
 		}
@@ -634,7 +634,7 @@ asyncTest("state should be 'opened' after open event", function() {
 });
 
 asyncTest("state should be 'closed' after close event", function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.reject();
 		}
@@ -646,7 +646,7 @@ asyncTest("state should be 'closed' after close event", function() {
 });
 
 asyncTest("state should be 'waiting' after waiting event", function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.close();
@@ -672,11 +672,11 @@ test("on, off and one method should work with custom event", 2, function() {
 			ok(false);
 		};
 	
-	$.socket("url").on("custom", yes).on("custom", no).off("custom", no).one("custom", yes).fire("custom").fire("custom");
+	portal("url").on("custom", yes).on("custom", no).off("custom", no).one("custom", yes).fire("custom").fire("custom");
 });
 
 asyncTest("custom event handler should be executed with data when a custom message has been received", function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.send("dm", {sender: "flowersits", message: "How are you?"});
@@ -690,7 +690,7 @@ asyncTest("custom event handler should be executed with data when a custom messa
 });
 
 asyncTest("send method should be able to send custom event message", function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("dm", function(data) {
 				deepEqual(data, {sender: "flowersits", message: "I'm fine thank you, and you?"});
@@ -711,7 +711,7 @@ module("Reconnection", {
 asyncTest("socket should reconnect by default", 4, function() {
 	var reconnectCount = 4;
 	
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request[reconnectCount-- ? "reject" : "accept"]();
 		}
@@ -727,7 +727,7 @@ asyncTest("socket should reconnect by default", 4, function() {
 asyncTest("reconnect handler should receive last delay and the number of attempts and return next delay", 12, function() {
 	var reconnectCount = 4, nextDelay = 20;
 	
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request[reconnectCount-- ? "reject" : "accept"]();
 		},
@@ -750,7 +750,7 @@ asyncTest("reconnect handler should receive last delay and the number of attempt
 asyncTest("reconnect handler which is false should stop reconnection", 1, function() {
 	var reconnectCount = 4;
 	
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request[reconnectCount-- ? "reject" : "accept"]();
 		},
@@ -772,7 +772,7 @@ asyncTest("reconnect handler which is false should stop reconnection", 1, functi
 asyncTest("reconnect handler which returns false should stop reconnection", 1, function() {
 	var reconnectCount = 4;
 	
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request[reconnectCount-- ? "reject" : "accept"]();
 		},
@@ -794,7 +794,7 @@ asyncTest("reconnect handler which returns false should stop reconnection", 1, f
 });
 
 asyncTest("in case of manual reconnection connecting event should be fired", function() {
-	$.socket("url", {
+	portal("url", {
 		reconnect: false,
 		server: function(request) {
 			request.accept().on("open", function() {
@@ -813,7 +813,7 @@ asyncTest("in case of manual reconnection connecting event should be fired", fun
 asyncTest("the number of reconnection attempts should increment even when there is no available transport", function() {
 	var oldAttempts;
 	
-	$.socket("url", {transports: []}).waiting(function(delay, attempts) {
+	portal("url", {transports: []}).waiting(function(delay, attempts) {
 		if (!oldAttempts) {
 			oldAttempts = attempts;
 		} else {
@@ -826,8 +826,8 @@ asyncTest("the number of reconnection attempts should increment even when there 
 module("Heartbeat", {
 	setup: function() {
 		setup();
-		$.socket.defaults.heartbeat = 500;
-		$.socket.defaults._heartbeat = 250;
+		portal.defaults.heartbeat = 500;
+		portal.defaults._heartbeat = 250;
 	},
 	teardown: teardown
 });
@@ -835,13 +835,13 @@ module("Heartbeat", {
 asyncTest("heartbeat event should be sent to the server repeatedly", function() {
 	var i = 0, ts;
 	
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("heartbeat", function() {
 				var now = $.now();
 				
 				if (ts) {
-					ok(now - ts < $.socket.defaults.heartbeat);
+					ok(now - ts < portal.defaults.heartbeat);
 				}
 				ts = now;
 				
@@ -854,11 +854,11 @@ asyncTest("heartbeat event should be sent to the server repeatedly", function() 
 });
 
 asyncTest("connection should be closed when the server makes no response to a heartbeat", function() {
-	$.socket.defaults.urlBuilder = function(url) {
+	portal.defaults.urlBuilder = function(url) {
 		return url;
 	};
 	
-	$.socket("url", {
+	portal("url", {
 		reconnect: false,
 		server: function(request) {
 			request.accept();
@@ -879,7 +879,7 @@ module("Reply", {
 });
 
 asyncTest("callback for replying should be provided if the server requires reply", function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.send("message", "An Ode to My Friend", $.noop);
@@ -893,7 +893,7 @@ asyncTest("callback for replying should be provided if the server requires reply
 });
 
 asyncTest("callback for replying should send a reply event", 2, function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.send("message", "Heaven Shall Burn", function(reply) {
@@ -914,7 +914,7 @@ asyncTest("callback for replying should send a reply event", 2, function() {
 });
 
 asyncTest("done callback should work", 2, function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("message", function(data, callback) {
 				callback(data);
@@ -931,7 +931,7 @@ asyncTest("done callback should work", 2, function() {
 });
 
 asyncTest("done callback should be able to event name", 2, function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("message", function(data, callback) {
 				callback(data);
@@ -949,7 +949,7 @@ asyncTest("done callback should be able to event name", 2, function() {
 });
 
 asyncTest("fail callback should work", 2, function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("message", function(data, callback) {
 				throw data;
@@ -968,7 +968,7 @@ asyncTest("fail callback should work", 2, function() {
 });
 
 asyncTest("fail callback should be able to event name", 2, function() {
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("message", function(data, callback) {
 				throw data;
@@ -996,7 +996,7 @@ module("Protocol", {
 asyncTest("prepare handler should receive connect and cancel function and options, and be executed before the socket tries to connect", function() {
 	var executed;
 	
-	$.socket.defaults.prepare = function(connect, cancel, options) {
+	portal.defaults.prepare = function(connect, cancel, options) {
 		executed = true;
 		ok($.isFunction(connect));
 		ok($.isFunction(cancel));
@@ -1004,26 +1004,26 @@ asyncTest("prepare handler should receive connect and cancel function and option
 		connect();
 	};
 	
-	$.socket("url").connecting(function() {
+	portal("url").connecting(function() {
 		ok(executed);
 		start();
 	});
 });
 
 test("idGenerator should return a unique id within the server", function() {
-	$.socket.defaults.idGenerator = function() {
+	portal.defaults.idGenerator = function() {
 		return "flowersinthesand";
 	};
 	
-	strictEqual($.socket("url").option("id"), "flowersinthesand");
+	strictEqual(portal("url").option("id"), "flowersinthesand");
 });
 
 test("url used for connection should be exposed by data('url')", function() {
-	ok($.socket("url").data("url"));
+	ok(portal("url").data("url"));
 });
 
 test("urlBuilder should receive the absoulte form of original url and the parameters object and return a url to be used to establish a connection", function() {
-	$.socket.defaults.urlBuilder = function(url, params) {
+	portal.defaults.urlBuilder = function(url, params) {
 		strictEqual(url, getAbsoluteURL("url"));
 		ok(params._ && delete params._);
 		deepEqual(params, {id: this.option("id"), heartbeat: this.option("heartbeat"), transport: "test", lastEventId: this.option("lastEventId")});
@@ -1031,17 +1031,17 @@ test("urlBuilder should receive the absoulte form of original url and the parame
 		return "modified";
 	};
 	
-	strictEqual($.socket("url").data("url"), "modified");
+	strictEqual(portal("url").data("url"), "modified");
 });
 
 test("params option should be merged with default params object", function() {
-	$.socket.defaults.urlBuilder = function(url, params) {
+	portal.defaults.urlBuilder = function(url, params) {
 		strictEqual(params.id, "fixed");
 		strictEqual(params.noop, $.noop);
 		return url;
 	};
 	
-	$.socket("url", {
+	portal("url", {
 		params: {
 			id: "fixed",
 			noop: $.noop
@@ -1050,7 +1050,7 @@ test("params option should be merged with default params object", function() {
 });
 
 asyncTest("lastEventId option should be the id of the last event which is sent by the server", function() {
-	$.socket("url", {
+	portal("url", {
 		lastEventId: 25,
 		server: function(request) {
 			request.accept().on("open", function() {
@@ -1073,12 +1073,12 @@ asyncTest("lastEventId option should be the id of the last event which is sent b
 });
 
 asyncTest("outbound handler should receive a event object and return a final data to be sent to the server", function() {
-	$.socket.defaults.outbound = function(event) {
+	portal.defaults.outbound = function(event) {
 		deepEqual(event, {id: 1, socket: this.option("id"), reply: false, type: "message", data: "data"});
 		return $.stringifyJSON(event);
 	};
 	
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("message", function(data) {
 				strictEqual(data, "data");
@@ -1090,12 +1090,12 @@ asyncTest("outbound handler should receive a event object and return a final dat
 });
 
 asyncTest("inbound handler should receive a raw data from the server and return a event object", function() {
-	$.socket.defaults.inbound = function(data) {
+	portal.defaults.inbound = function(data) {
 		deepEqual($.parseJSON(data), {id: 1, reply: false, type: "message", data: "data"});
 		return $.parseJSON(data);
 	};
 	
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.send("message", "data");
@@ -1109,14 +1109,14 @@ asyncTest("inbound handler should receive a raw data from the server and return 
 });
 
 asyncTest("inbound handler should be able to return an array of event object", function() {
-	$.socket.defaults.inbound = function(data) {
+	portal.defaults.inbound = function(data) {
 		var event = $.parseJSON(data); 
 		ok($.isArray(event.data));
 		
 		return event.data;
 	};
 	
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.send("composite", [
@@ -1137,7 +1137,7 @@ asyncTest("inbound handler should be able to return an array of event object", f
 asyncTest("event object should contain a event type and optional id, reply, socket, and data property", function() {
 	var inbound, outbound;
 	
-	$.socket.defaults.inbound = function(event) {
+	portal.defaults.inbound = function(event) {
 		event = $.parseJSON(event);
 		if (inbound) {
 			inbound(event);
@@ -1146,7 +1146,7 @@ asyncTest("event object should contain a event type and optional id, reply, sock
 		
 		return event;
 	};
-	$.socket.defaults.outbound = function(event) {
+	portal.defaults.outbound = function(event) {
 		if (outbound) {
 			outbound(event);
 			outbound = null;
@@ -1155,7 +1155,7 @@ asyncTest("event object should contain a event type and optional id, reply, sock
 		return $.stringifyJSON(event);
 	};
 	
-	$.socket("url", {
+	portal("url", {
 		server: function(request) {
 			request.accept();
 		}
@@ -1193,7 +1193,7 @@ asyncTest("event object should contain a event type and optional id, reply, sock
 });
 
 test("transport used for connection should be exposed by data('transport')", function() {
-	ok($.socket("url").data("transport"));
+	ok(portal("url").data("transport"));
 });
 
 if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKitBlobBuilder)) {
@@ -1205,11 +1205,11 @@ if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKit
 			return string === "[object Blob]" || string === "[object ArrayBuffer]";
 		}
 		
-		$.socket.defaults.inbound = $.socket.defaults.outbound = function() {
+		portal.defaults.inbound = portal.defaults.outbound = function() {
 			ok(false);
 		};
 		
-		$.socket("url", {
+		portal("url", {
 			server: function(request) {
 				request.accept().on("message", function(data) {
 					ok(isBinary(data));
@@ -1231,26 +1231,26 @@ if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKit
 }
 
 test("xdrURL handler should receive data('url') and return a new url containing session id", function() {
-	$.socket.defaults.xdrURL = function(url) {
+	portal.defaults.xdrURL = function(url) {
 		strictEqual(url, this.data("url"));
 		
 		return "modified";
 	};
-	$.socket.transports.test = function(socket, options) {
+	portal.transports.test = function(socket, options) {
 		socket.data("url", options.xdrURL.call(socket, socket.data("url")));
 	};
 	
-	strictEqual($.socket("url").data("url"), "modified");
+	strictEqual(portal("url").data("url"), "modified");
 });
 
 test("streamParser handler should receive a chunk and return an array of data", function() {
-	$.socket.defaults.streamParser = function(chunk) {
+	portal.defaults.streamParser = function(chunk) {
 		return chunk.split("@@");
 	};
 	
-	$.socket("url");
-	deepEqual($.socket.defaults.streamParser.call($.socket(), "A"), ["A"]);
-	deepEqual($.socket.defaults.streamParser.call($.socket(), "A@@B@@C"), ["A", "B", "C"]);
+	portal("url");
+	deepEqual(portal.defaults.streamParser.call(portal(), "A"), ["A"]);
+	deepEqual(portal.defaults.streamParser.call(portal(), "A@@B@@C"), ["A", "B", "C"]);
 });
 
 module("Protocol default", {
@@ -1259,16 +1259,16 @@ module("Protocol default", {
 });
 
 test("effective url should contain id, transport and heartbeat as query string parameters", function() {
-	var url = $.socket("url").data("url");
+	var url = portal("url").data("url");
 	
-	strictEqual(param(url, "id"), $.socket().option("id"));
-	strictEqual(param(url, "transport"), $.socket().data("transport"));
-	strictEqual(param(url, "heartbeat"), String($.socket().option("heartbeat")));
-	strictEqual(param(url, "lastEventId"), $.socket().option("lastEventId"));
+	strictEqual(param(url, "id"), portal().option("id"));
+	strictEqual(param(url, "transport"), portal().data("transport"));
+	strictEqual(param(url, "heartbeat"), String(portal().option("heartbeat")));
+	strictEqual(param(url, "lastEventId"), portal().option("lastEventId"));
 });
 
 test("a final data to be sent to the server should be a JSON string representing a event object", function() {
-	$.socket.transports.test = function(socket) {
+	portal.transports.test = function(socket) {
 		return {
 			open: function() {
 				socket.fire("open");
@@ -1284,11 +1284,11 @@ test("a final data to be sent to the server should be a JSON string representing
 		};
 	};
 	
-	$.socket("url").send("message", "data");
+	portal("url").send("message", "data");
 });
 
 test("a raw data sent by the server should be a JSON string representing a event object", function() {
-	$.socket.transports.test = function(socket) {
+	portal.transports.test = function(socket) {
 		return {
 			open: function() {
 				socket._fire($.stringifyJSON({type: "open", data: "data"}));
@@ -1298,7 +1298,7 @@ test("a raw data sent by the server should be a JSON string representing a event
 		};
 	};
 	
-	$.socket("url").open(function(data) {
+	portal("url").open(function(data) {
 		strictEqual(data, "data");
 	});
 });
@@ -1320,14 +1320,14 @@ test("xdrURL handler should be able to handle JSESSIONID and PHPSESSID in cookie
 	}, function(name, data) {
 		document.cookie = name + "=" + name;
 		$.each(data, function(url, expected) {
-			strictEqual($.socket.defaults.xdrURL.call($.socket("url"), url), expected);
+			strictEqual(portal.defaults.xdrURL.call(portal("url"), url), expected);
 		});
 		document.cookie = name + "=" + ";expires=Thu, 01 Jan 1970 00:00:00 GMT";
 	});
 });
 
 test("stream response should accord with the event stream format", function() {
-	deepEqual($.socket.defaults.streamParser.call($.socket("url"), "data: A\r\n\r\ndata: A\r\ndata: B\rdata: C\n\r\ndata: \r\n"), ["A", "A\nB\nC", ""]);
+	deepEqual(portal.defaults.streamParser.call(portal("url"), "data: A\r\n\r\ndata: A\r\ndata: B\rdata: C\n\r\ndata: \r\n"), ["A", "A\nB\nC", ""]);
 });
 
 function testTransport(transport, fn) {
@@ -1364,14 +1364,14 @@ function testTransport(transport, fn) {
 	}
 	 
 	asyncTest("open method should work properly", function() {
-		$.socket(url).open(function() {
+		portal(url).open(function() {
 			ok(true);
 			start();
 		});
 	});
 	
 	asyncTest("send method should work properly", function() {
-		$.socket(url).message(function(data) {
+		portal(url).message(function(data) {
 			strictEqual(data, "data");
 			start();
 		})
@@ -1379,7 +1379,7 @@ function testTransport(transport, fn) {
 	});
 	
 	asyncTest("send method should work properly with multi-byte character data", function() {
-		$.socket(url).message(function(data) {
+		portal(url).message(function(data) {
 			strictEqual(data, "안녕");
 			start();
 		})
@@ -1393,7 +1393,7 @@ function testTransport(transport, fn) {
 			text += "A";
 		}
 		
-		$.socket(url).message(function(data) {
+		portal(url).message(function(data) {
 			strictEqual(data, text);
 			start();
 		})
@@ -1401,7 +1401,7 @@ function testTransport(transport, fn) {
 	});
 	
 	asyncTest("close method should work properly", function() {
-		$.socket(url).close(function(reason) {
+		portal(url).close(function(reason) {
 			strictEqual(reason, "aborted");
 			start();
 		})
@@ -1409,7 +1409,7 @@ function testTransport(transport, fn) {
 	});
 	
 	asyncTest("close event whose the reason attribute is done should be fired when the server disconnects a connection cleanly", function() {
-		$.socket(url + "?close=1000", {reconnect: false}).close(function(reason) {
+		portal(url + "?close=1000", {reconnect: false}).close(function(reason) {
 			strictEqual(reason, "done");
 			start();
 		});
@@ -1420,18 +1420,18 @@ if (!isLocal) {
 	module("Transport WebSocket", {
 		setup: function() {
 			setup();
-			$.socket.defaults.transports = ["ws"];
+			portal.defaults.transports = ["ws"];
 		},
 		teardown: teardown
 	});
 	
 	testTransport("ws", function(url) {
 		test("url should be converted to accord with WebSocket specification", function() {
-			ok(/^(?:ws|wss):\/\/.+/.test($.socket(url).data("url")));
+			ok(/^(?:ws|wss):\/\/.+/.test(portal(url).data("url")));
 		});
 		
 		asyncTest("WebSocket event should be able to be accessed by data('event')", 3, function() {
-			$.socket(url).open(function() {
+			portal(url).open(function() {
 				strictEqual(this.data("event").type, "open");
 				this.send("message", "data");
 			})
@@ -1450,7 +1450,7 @@ if (!isLocal) {
 	module("Transport HTTP Streaming", {
 		setup: function() {
 			setup();
-			$.socket.defaults.transports = ["stream"];
+			portal.defaults.transports = ["stream"];
 		},
 		teardown: teardown
 	});
@@ -1458,17 +1458,17 @@ if (!isLocal) {
 	test("stream transport should execute real transports", function() {
 		var result = "";
 		
-		$.socket.transports.streamxhr = function() {
+		portal.transports.streamxhr = function() {
 			result += "A";
 		};
-		$.socket.transports.streamxdr = function() {
+		portal.transports.streamxdr = function() {
 			result += "B";
 		};
-		$.socket.transports.streamiframe = function() {
+		portal.transports.streamiframe = function() {
 			result += "C";
 		};
 		
-		$.socket("echo");
+		portal("echo");
 		
 		strictEqual(result, "ABC");
 	});
@@ -1477,17 +1477,17 @@ if (!isLocal) {
 		streamxhr: $.noop,
 		streamxdr: function(url) {
 			test("xdrURL which is false should stop streamxdr transport", function() {
-				$.socket.defaults.xdrURL = false;
-				$.socket(url).close(function(reason) {
+				portal.defaults.xdrURL = false;
+				portal(url).close(function(reason) {
 					strictEqual(reason, "notransport");
 					start();
 				});
 			});
 			test("xdrURL which returns false should stop streamxdr transport", function() {
-				$.socket.defaults.xdrURL = function() {
+				portal.defaults.xdrURL = function() {
 					return false;
 				};
-				$.socket(url).close(function(reason) {
+				portal(url).close(function(reason) {
 					strictEqual(reason, "notransport");
 					start();
 				});
@@ -1495,11 +1495,11 @@ if (!isLocal) {
 		},
 		streamiframe: function(url) {
 			asyncTest("initIframe should be called with iframe element before the open event", 2, function() {
-				$.socket.defaults.initIframe = function(iframe) {
+				portal.defaults.initIframe = function(iframe) {
 					ok(iframe);
 					ok(iframe.contentDocument || iframe.contentWindow.document);
 				};
-				$.socket(url).open(function() {
+				portal(url).open(function() {
 					start();
 				});
 			});
@@ -1510,8 +1510,8 @@ if (!isLocal) {
 		module("Transport HTTP Streaming - " + transportName, {
 			setup: function() {
 				setup();
-				$.socket.defaults.transports = [transport];
-				$.socket.defaults.xdrURL = transport !== "streamxdr" ? false : function(url) {
+				portal.defaults.transports = [transport];
+				portal.defaults.xdrURL = transport !== "streamxdr" ? false : function(url) {
 					return url;
 				};
 			},
@@ -1521,7 +1521,7 @@ if (!isLocal) {
 		testTransport(transport, function(url) {
 			fn(url);
 			asyncTest("non-whitespace characters printed in the first chunk should be regarded as data", function() {
-				$.socket(url + "?firstMessage=true").message(function(data) {
+				portal(url + "?firstMessage=true").message(function(data) {
 					strictEqual(data, "hello");
 					start();
 				});
@@ -1532,14 +1532,14 @@ if (!isLocal) {
 	module("Transport Server-Sent Events", {
 		setup: function() {
 			setup();
-			$.socket.defaults.transports = ["sse"];
+			portal.defaults.transports = ["sse"];
 		},
 		teardown: teardown
 	});
 	
 	testTransport("sse", function(url) {
 		asyncTest("Server-Sent Events event should be able to be accessed by data('event')", 3, function() {
-			$.socket(url + "?close=1000", {reconnect: false}).open(function() {
+			portal(url + "?close=1000", {reconnect: false}).open(function() {
 				strictEqual(this.data("event").type, "open");
 				this.send("message", "data");
 			})
@@ -1556,7 +1556,7 @@ if (!isLocal) {
 	module("Transport Long Polling", {
 		setup: function() {
 			setup();
-			$.socket.defaults.transports = ["longpoll"];
+			portal.defaults.transports = ["longpoll"];
 		},
 		teardown: teardown
 	});
@@ -1564,17 +1564,17 @@ if (!isLocal) {
 	test("longpoll transport should execute real transports", function() {
 		var result = "";
 		
-		$.socket.transports.longpollajax = function() {
+		portal.transports.longpollajax = function() {
 			result += "A";
 		};
-		$.socket.transports.longpollxdr = function() {
+		portal.transports.longpollxdr = function() {
 			result += "B";
 		};
-		$.socket.transports.longpolljsonp = function() {
+		portal.transports.longpolljsonp = function() {
 			result += "C";
 		};
 		
-		$.socket("echo");
+		portal("echo");
 		
 		strictEqual(result, "ABC");
 	});
@@ -1583,17 +1583,17 @@ if (!isLocal) {
 		longpollajax: $.noop,
 		longpollxdr: function(url) {
 			test("xdrURL which is false should stop longpollxdr transport", function() {
-				$.socket.defaults.xdrURL = false;
-				$.socket(url).close(function(reason) {
+				portal.defaults.xdrURL = false;
+				portal(url).close(function(reason) {
 					strictEqual(reason, "notransport");
 					start();
 				});
 			});
 			test("xdrURL which returns false should stop longpollxdr transport", function() {
-				$.socket.defaults.xdrURL = function() {
+				portal.defaults.xdrURL = function() {
 					return false;
 				};
-				$.socket(url).close(function(reason) {
+				portal(url).close(function(reason) {
 					strictEqual(reason, "notransport");
 					start();
 				});
@@ -1601,7 +1601,7 @@ if (!isLocal) {
 		}, 
 		longpolljsonp: function(url) {
 			test("window should have a function whose name is equals to data('url')'s callback parameter", function() {
-				ok($.isFunction(window[param($.socket(url).data("url"), "callback")]));
+				ok($.isFunction(window[param(portal(url).data("url"), "callback")]));
 			});
 		}
 	}, function(transport, fn) {
@@ -1610,8 +1610,8 @@ if (!isLocal) {
 		module("Transport HTTP Long Polling - " + transportName, {
 			setup: function() {
 				setup();
-				$.socket.defaults.transports = [transport];
-				$.socket.defaults.xdrURL = transport !== "longpollxdr" ? false : function(url) {
+				portal.defaults.transports = [transport];
+				portal.defaults.xdrURL = transport !== "longpollxdr" ? false : function(url) {
 					return url;
 				};
 			},
@@ -1623,7 +1623,7 @@ if (!isLocal) {
 			asyncTest("data('url') should be modified whenever trying to connect to the server", 6, function() {
 				var oldCount, oldLastEventId;
 				
-				$.socket(url).send("message", 0).message(function(i) {
+				portal(url).send("message", 0).message(function(i) {
 					var url = this.data("url"), 
 						count = param(url, "count"), 
 						lastEventId = param(url, "lastEventId");
@@ -1643,7 +1643,7 @@ if (!isLocal) {
 				});
 			});
 			asyncTest("open event should be fired regardless of the server's status if longpollTest is false", function() {
-				$.socket(url + "wrong", {longpollTest: false}).open(function() {
+				portal(url + "wrong", {longpollTest: false}).open(function() {
 					ok(true);
 					start();
 				});
