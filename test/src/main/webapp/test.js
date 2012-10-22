@@ -41,13 +41,6 @@ module("portal", {
 	teardown: teardown
 });
 
-test("portal(url) should return a socket object which is mapped to the given url, or if there is no mapped socket, should create one", function() {
-	var socket = portal("url");
-	
-	ok(socket);
-	strictEqual(socket, portal("url"));
-});
-
 test("portal.open(url, option) should create a socket object", function() {
 	ok(portal.open("url", {}));
 });

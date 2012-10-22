@@ -121,9 +121,7 @@
 		// Callback names for JSONP
 		jsonpCallbacks = [],
 		// Portal facade
-		portal = function(url, options) {
-			return portal.find(url) || portal.open(url, options);
-		};
+		portal = {};
 	
 	// From jQuery.Callbacks
 	function callbacks(deferred) {
