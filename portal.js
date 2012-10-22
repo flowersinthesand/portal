@@ -97,8 +97,8 @@
 }(jQuery));
 
 /*
- * jQuery Socket
- * http://github.com/flowersinthesand/jquery-socket
+ * Portal
+ * http://github.com/flowersinthesand/portal
  * 
  * Copyright 2012, Donghwan Kim 
  * Licensed under the Apache License, Version 2.0

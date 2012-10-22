@@ -7,9 +7,9 @@ import java.util.TimerTask;
 import javax.servlet.annotation.WebInitParam;
 import javax.servlet.annotation.WebServlet;
 
-import org.flowersinthesand.jquerysocket.Connection;
-import org.flowersinthesand.jquerysocket.SocketException;
-import org.flowersinthesand.jquerysocket.jetty.DispatcherServlet;
+import org.flowersinthesand.portal.Connection;
+import org.flowersinthesand.portal.SocketException;
+import org.flowersinthesand.portal.jetty.DispatcherServlet;
 
 @WebServlet(
 	urlPatterns = "/echo", 

@@ -36,27 +36,27 @@ function getAbsoluteURL(url) {
 	return decodeURI($('<a href="' + url + '"/>')[0].href);
 }
 
-module("jQuery.socket", {
+module("portal", {
 	setup: setup,
 	teardown: teardown
 });
 
-test("jQuery.socket(url, option) should create a socket object", function() {
+test("portal(url, option) should create a socket object", function() {
 	ok($.socket("url", {}));
 });
 
-test("jQuery.socket(url) should return a socket object which is mapped to the given url, or if there is no mapped socket, should create one", function() {
+test("portal(url) should return a socket object which is mapped to the given url, or if there is no mapped socket, should create one", function() {
 	var socket = $.socket("url");
 	
 	ok(socket);
 	strictEqual(socket, $.socket("url"));
 });
 
-test("jQuery.socket(url) should be able to be returned by absolute url and relative url", function() {
+test("portal(url) should be able to be returned by absolute url and relative url", function() {
 	strictEqual($.socket("url"), $.socket(getAbsoluteURL("url")));
 });
 
-test("jQuery.socket() should return the first socket object", function() {
+test("portal() should return the first socket object", function() {
 	var first = $.socket("first", {}), second = $.socket("second", {});
 	
 	strictEqual(first, $.socket());
@@ -1331,7 +1331,7 @@ test("stream response should accord with the event stream format", function() {
 });
 
 function testTransport(transport, fn) {
-	var url = "/jquery-socket-test/echo";
+	var url = "/portal-test/echo";
 	
 	if ((transport === "ws" && !window.WebSocket && !window.MozWebSocket) || 
 		(transport === "sse" && !window.EventSource) || 

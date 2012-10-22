@@ -1,6 +1,8 @@
-package org.flowersinthesand.jquerysocket;
+package org.flowersinthesand.portal;
 
 import java.util.Map;
+
+import org.flowersinthesand.portal.Callback;
 
 //Interface to blur the differences between the different transport mechanisms
 public interface Connection {

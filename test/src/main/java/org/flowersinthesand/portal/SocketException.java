@@ -1,4 +1,4 @@
-package org.flowersinthesand.jquerysocket;
+package org.flowersinthesand.portal;
 
 public class SocketException extends RuntimeException {
 
