@@ -41,10 +41,6 @@ module("portal", {
 	teardown: teardown
 });
 
-test("portal(url, option) should create a socket object", function() {
-	ok(portal("url", {}));
-});
-
 test("portal(url) should return a socket object which is mapped to the given url, or if there is no mapped socket, should create one", function() {
 	var socket = portal("url");
 	
@@ -52,15 +48,27 @@ test("portal(url) should return a socket object which is mapped to the given url
 	strictEqual(socket, portal("url"));
 });
 
-test("portal(url) should be able to be returned by absolute url and relative url", function() {
-	strictEqual(portal("url"), portal(getAbsoluteURL("url")));
+test("portal.open(url, option) should create a socket object", function() {
+	ok(portal.open("url", {}));
 });
 
-test("portal() should return the first socket object", function() {
-	var first = portal("first", {}), second = portal("second", {});
+test("portal.find(url) should return a socket object which is mapped to the given url or null", function() {
+	var socket = portal.open("url");
 	
-	strictEqual(first, portal());
-	notStrictEqual(second, portal());
+	ok(socket);
+	strictEqual(socket, portal.find("url"));
+	strictEqual(portal.find("wrong"), null);
+});
+
+test("portal.find(url) should be able to be returned by absolute url and relative url", function() {
+	strictEqual(portal.open("url"), portal.find(getAbsoluteURL("url")));
+});
+
+test("portal.find() should return the first socket object", function() {
+	var first = portal.open("first", {}), second = portal.open("second", {});
+	
+	strictEqual(first, portal.find());
+	notStrictEqual(second, portal.find());
 });
 
 module("Socket", {
@@ -69,16 +77,17 @@ module("Socket", {
 });
 
 test("option method should find the value of an option", function() {
-	strictEqual(portal("url", {version: $.fn.jquery}).option("version"), $.fn.jquery);
+	strictEqual(portal.open("url", {version: $.fn.jquery}).option("version"), $.fn.jquery);
 });
 
 test("data method should set and get a connection-scoped value", function() {
-	strictEqual(portal("url").data("string", "value"), portal());
-	strictEqual(portal("url").data("string"), "value");
+	portal.open("url");
+	strictEqual(portal.find().data("string", "value"), portal.find());
+	strictEqual(portal.find().data("string"), "value");
 });
 
 test("connection scope should be reset when open method has been called", function() {
-	ok(!portal("url").data("key", "value").open().data("key"));
+	ok(!portal.open("url").data("key", "value").open().data("key"));
 });
 
 test("on method should add a event handler", 5, function() {
@@ -88,7 +97,7 @@ test("on method should add a event handler", 5, function() {
 		};
 	
 	for (type in {connecting: 1, open: 1, message: 1, close: 1, waiting: 1}) {
-		portal(type, {reconnect: false}).on(type, yes).fire(type);
+		portal.open(type, {reconnect: false}).on(type, yes).fire(type);
 	}
 });
 
@@ -102,7 +111,7 @@ test("off method should remove a event handler", 4, function() {
 		};
 		
 	for (type in {open: 1, message: 1, close: 1, waiting: 1}) {
-		portal(type, {reconnect: false}).on(type, no).off(type, no).on(type, yes).fire(type);
+		portal.open(type, {reconnect: false}).on(type, no).off(type, no).on(type, yes).fire(type);
 	}
 });
 
@@ -113,7 +122,7 @@ test("one method should add an one time event handler", 5, function() {
 		};
 		
 	for (type in {connecting: 1, open: 1, message: 1, close: 1, waiting: 1}) {
-		portal(type).one(type, yes).fire(type).fire(type);
+		portal.open(type).one(type, yes).fire(type).fire(type);
 	}
 });
 
@@ -127,7 +136,7 @@ test("handler attached by one method should be able to be detached by off method
 		};
 		
 	for (type in {open: 1, message: 1, close: 1, waiting: 1}) {
-		portal(type).one(type, no).off(type, no).on(type, yes).fire(type);
+		portal.open(type).one(type, no).off(type, no).on(type, yes).fire(type);
 	}
 });
 
@@ -139,7 +148,7 @@ test("the context of all event handlers should be the corresponding socket objec
 		};
 	
 	for (type in {connecting: 1, open: 1, message: 1, close: 1, waiting: 1, custom1: 1, custom2: 1}) {
-		socket = portal(type); 
+		socket = portal.open(type); 
 		socket.on(type, fn).fire(type);
 	}
 });
@@ -153,7 +162,7 @@ $.each(["connecting", "open", "message", "close", "waiting"], function(i, name) 
 				};
 			};
 		
-		portal("url")[name](out("A"))[name](out("B")).fire(name)[name](out("C"));
+		portal.open("url")[name](out("A"))[name](out("B")).fire(name)[name](out("C"));
 		
 		strictEqual(result, name !== "message" ? "ABC" : "AB");
 	});
@@ -162,7 +171,7 @@ $.each(["connecting", "open", "message", "close", "waiting"], function(i, name) 
 asyncTest("open method should establish a connection", 1, function() {
 	var latch;
 	
-	portal("url", {
+	portal.open("url", {
 		reconnect: false,
 		server: function(request) {
 			request.accept();
@@ -183,7 +192,7 @@ asyncTest("open method should establish a connection", 1, function() {
 asyncTest("send method should defer sending message when the socket is not connected", function() {
 	var result = "";
 	
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("message", function(data) {
 				result += data;
@@ -202,7 +211,7 @@ asyncTest("send method should defer sending message when the socket is not conne
 });
 
 asyncTest("close method should close a connection", function() {
-	portal("url")
+	portal.open("url")
 	.close(function() {
 		strictEqual("closed", this.state());
 		start();
@@ -224,8 +233,8 @@ test("transport function should receive the socket and the options", function() 
 		soc = socket;
 	};
 	
-	portal("url", {transports: ["subway"]});
-	strictEqual(soc, portal());
+	portal.open("url", {transports: ["subway"]});
+	strictEqual(soc, portal.find());
 });
 
 test("transport function should be executed after the socket.open()", function() {
@@ -242,7 +251,7 @@ test("transport function should be executed after the socket.open()", function()
 		};
 	};
 	
-	portal("url", {transports: ["subway"]}).open();
+	portal.open("url", {transports: ["subway"]}).open();
 	strictEqual(result, "ABAB");
 });
 
@@ -259,7 +268,7 @@ test("transport's send method should be executed with data after the socket.send
 		};
 	};
 	
-	portal("url", {transports: ["subway"]}).send("message");
+	portal.open("url", {transports: ["subway"]}).send("message");
 });
 
 test("transport's close method should be executed after the socket.close()", 1, function() {
@@ -275,7 +284,7 @@ test("transport's close method should be executed after the socket.close()", 1, 
 		};
 	};
 	
-	portal("url", {transports: ["subway"]}).close();
+	portal.open("url", {transports: ["subway"]}).close();
 });
 
 test("transport function should be able to pass the responsibility onto the next transport function by returning void or false", function() {
@@ -292,7 +301,7 @@ test("transport function should be able to pass the responsibility onto the next
 		ok(false);
 	};
 	
-	portal("url", {transports: ["bus", "subway", "bicycle"]});
+	portal.open("url", {transports: ["bus", "subway", "bicycle"]});
 	strictEqual(result, "AB");
 });
 
@@ -302,7 +311,7 @@ module("Transport test", {
 });
 
 asyncTest("server should be executed with request", function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			ok(request);
 			start();
@@ -311,7 +320,7 @@ asyncTest("server should be executed with request", function() {
 });
 
 asyncTest("request should be pended if there is no action on request", function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			ok(request);
 			setTimeout(function() {
@@ -325,7 +334,7 @@ asyncTest("request should be pended if there is no action on request", function(
 });
 
 asyncTest("request's accept method should return connection object and fire open event", function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			ok(request.accept());
 		}
@@ -337,7 +346,7 @@ asyncTest("request's accept method should return connection object and fire open
 });
 
 asyncTest("request's reject method should fire close event whose the reason attribute is error", function() {
-	portal("url", {
+	portal.open("url", {
 		reconnect: false,
 		server: function(request) {
 			ok(!request.reject());
@@ -353,7 +362,7 @@ asyncTest("request's reject method should fire close event whose the reason attr
 });
 
 asyncTest("connection's send method should fire socket's message event", function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			var connection = request.accept();
 			connection.on("open", function() {
@@ -369,7 +378,7 @@ asyncTest("connection's send method should fire socket's message event", functio
 });
 
 asyncTest("connection's close method should fire socket's close event whose the reason attribute is done", function() {
-	portal("url", {
+	portal.open("url", {
 		reconnect: false,
 		server: function(request) {
 			var connection = request.accept();
@@ -388,7 +397,7 @@ asyncTest("connection's close method should fire socket's close event whose the 
 asyncTest("connection's open event should be fired after socket's open event", function() {
 	var result = "";
 	
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				result += "B";
@@ -403,7 +412,7 @@ asyncTest("connection's open event should be fired after socket's open event", f
 });
 
 asyncTest("connection's message event handler should receive a data sent by the socket", function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("message", function(data) {
 				strictEqual(data, "Hello");
@@ -417,7 +426,7 @@ asyncTest("connection's message event handler should receive a data sent by the 
 asyncTest("connection's close event should be fired if opened socket's close event fires", function() {
 	var result = "";
 	
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("close", function() {
 				result += "B";
@@ -440,7 +449,7 @@ module("Event", {
 });
 
 asyncTest("connecting event handler should be executed when a connection has tried", function() {
-	portal("url").connecting(function() {
+	portal.open("url").connecting(function() {
 		ok(true);
 		start();
 	});
@@ -449,7 +458,7 @@ asyncTest("connecting event handler should be executed when a connection has tri
 asyncTest("connecting event should be disabled after open event", function() {
 	var result = "";
 	
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept();
 		}
@@ -465,7 +474,7 @@ asyncTest("connecting event should be disabled after open event", function() {
 });
 
 asyncTest("open event handler should be executed when the connection has been established", function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept();
 		}
@@ -479,7 +488,7 @@ asyncTest("open event handler should be executed when the connection has been es
 asyncTest("open event should be disabled after close event", function() {
 	var result = "";
 	
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept();
 		}
@@ -498,7 +507,7 @@ asyncTest("open event should be disabled after close event", function() {
 });
 
 asyncTest("message event handler should be executed with data when a message has been received", function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.send("message", "data");
@@ -512,7 +521,7 @@ asyncTest("message event handler should be executed with data when a message has
 });
 
 asyncTest("close event handler should be executed with a reason when the connection has been closed", function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.reject();
 		}
@@ -528,7 +537,7 @@ asyncTest("close event's reason should be 'canceled' if the preparation is faile
 		cancel();
 	};
 	
-	portal("url").close(function(reason) {
+	portal.open("url").close(function(reason) {
 		strictEqual(reason, "canceled");
 		start();
 	});
@@ -536,7 +545,7 @@ asyncTest("close event's reason should be 'canceled' if the preparation is faile
 
 asyncTest("close event's reason should be 'notransport' if there is no available transport", function() {
 	portal.transports.what = $.noop;	
-	portal("url", {transports: ["what"]})
+	portal.open("url", {transports: ["what"]})
 	.close(function(reason) {
 		strictEqual(reason, "notransport");
 		start();
@@ -544,7 +553,7 @@ asyncTest("close event's reason should be 'notransport' if there is no available
 });
 
 asyncTest("close event's reason should be 'aborted' if the socket has been closed by the close method", function() {
-	portal("url")
+	portal.open("url")
 	.close(function(reason) {
 		strictEqual(reason, "aborted");
 		start();
@@ -553,7 +562,7 @@ asyncTest("close event's reason should be 'aborted' if the socket has been close
 });
 
 asyncTest("close event's reason should be 'timeout' if the socket has been timed out", function() {
-	portal("url", {reconnect: false, timeout: 10})
+	portal.open("url", {reconnect: false, timeout: 10})
 	.close(function(reason) {
 		strictEqual(reason, "timeout");
 		start();
@@ -561,7 +570,7 @@ asyncTest("close event's reason should be 'timeout' if the socket has been timed
 });
 
 asyncTest("close event's reason should be 'error' if the socket has been closed due to not specific error", function() {
-	portal("url", {
+	portal.open("url", {
 		reconnect: false,
 		server: function(request) {
 			request.reject();
@@ -574,7 +583,7 @@ asyncTest("close event's reason should be 'error' if the socket has been closed 
 });
 
 asyncTest("close event's reason should be 'done' if the socket has been closed normally", function() {
-	portal("url", {
+	portal.open("url", {
 		reconnect: false,
 		server: function(request) {
 			request.accept().on("open", function() {
@@ -589,7 +598,7 @@ asyncTest("close event's reason should be 'done' if the socket has been closed n
 });
 
 asyncTest("waiting event handler should be executed with delay and attempts when a reconnection has scheduled and the socket has started waiting for connection", function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.close();
@@ -610,11 +619,11 @@ module("State", {
 
 test("state should be 'preparing' before connecting event", function() {
 	portal.defaults.prepare = $.noop;	
-	strictEqual(portal("url").state(), "preparing");
+	strictEqual(portal.open("url").state(), "preparing");
 });
 
 asyncTest("state should be 'connecting' after connecting event", function() {
-	portal("url")
+	portal.open("url")
 	.connecting(function() {
 		strictEqual(this.state(), "connecting");
 		start();
@@ -622,7 +631,7 @@ asyncTest("state should be 'connecting' after connecting event", function() {
 });
 
 asyncTest("state should be 'opened' after open event", function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept();
 		}
@@ -634,7 +643,7 @@ asyncTest("state should be 'opened' after open event", function() {
 });
 
 asyncTest("state should be 'closed' after close event", function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.reject();
 		}
@@ -646,7 +655,7 @@ asyncTest("state should be 'closed' after close event", function() {
 });
 
 asyncTest("state should be 'waiting' after waiting event", function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.close();
@@ -672,11 +681,11 @@ test("on, off and one method should work with custom event", 2, function() {
 			ok(false);
 		};
 	
-	portal("url").on("custom", yes).on("custom", no).off("custom", no).one("custom", yes).fire("custom").fire("custom");
+	portal.open("url").on("custom", yes).on("custom", no).off("custom", no).one("custom", yes).fire("custom").fire("custom");
 });
 
 asyncTest("custom event handler should be executed with data when a custom message has been received", function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.send("dm", {sender: "flowersits", message: "How are you?"});
@@ -690,7 +699,7 @@ asyncTest("custom event handler should be executed with data when a custom messa
 });
 
 asyncTest("send method should be able to send custom event message", function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("dm", function(data) {
 				deepEqual(data, {sender: "flowersits", message: "I'm fine thank you, and you?"});
@@ -711,7 +720,7 @@ module("Reconnection", {
 asyncTest("socket should reconnect by default", 4, function() {
 	var reconnectCount = 4;
 	
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request[reconnectCount-- ? "reject" : "accept"]();
 		}
@@ -727,7 +736,7 @@ asyncTest("socket should reconnect by default", 4, function() {
 asyncTest("reconnect handler should receive last delay and the number of attempts and return next delay", 12, function() {
 	var reconnectCount = 4, nextDelay = 20;
 	
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request[reconnectCount-- ? "reject" : "accept"]();
 		},
@@ -750,7 +759,7 @@ asyncTest("reconnect handler should receive last delay and the number of attempt
 asyncTest("reconnect handler which is false should stop reconnection", 1, function() {
 	var reconnectCount = 4;
 	
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request[reconnectCount-- ? "reject" : "accept"]();
 		},
@@ -772,7 +781,7 @@ asyncTest("reconnect handler which is false should stop reconnection", 1, functi
 asyncTest("reconnect handler which returns false should stop reconnection", 1, function() {
 	var reconnectCount = 4;
 	
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request[reconnectCount-- ? "reject" : "accept"]();
 		},
@@ -794,7 +803,7 @@ asyncTest("reconnect handler which returns false should stop reconnection", 1, f
 });
 
 asyncTest("in case of manual reconnection connecting event should be fired", function() {
-	portal("url", {
+	portal.open("url", {
 		reconnect: false,
 		server: function(request) {
 			request.accept().on("open", function() {
@@ -813,7 +822,7 @@ asyncTest("in case of manual reconnection connecting event should be fired", fun
 asyncTest("the number of reconnection attempts should increment even when there is no available transport", function() {
 	var oldAttempts;
 	
-	portal("url", {transports: []}).waiting(function(delay, attempts) {
+	portal.open("url", {transports: []}).waiting(function(delay, attempts) {
 		if (!oldAttempts) {
 			oldAttempts = attempts;
 		} else {
@@ -835,7 +844,7 @@ module("Heartbeat", {
 asyncTest("heartbeat event should be sent to the server repeatedly", function() {
 	var i = 0, ts;
 	
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("heartbeat", function() {
 				var now = $.now();
@@ -858,7 +867,7 @@ asyncTest("connection should be closed when the server makes no response to a he
 		return url;
 	};
 	
-	portal("url", {
+	portal.open("url", {
 		reconnect: false,
 		server: function(request) {
 			request.accept();
@@ -879,7 +888,7 @@ module("Reply", {
 });
 
 asyncTest("callback for replying should be provided if the server requires reply", function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.send("message", "An Ode to My Friend", $.noop);
@@ -893,7 +902,7 @@ asyncTest("callback for replying should be provided if the server requires reply
 });
 
 asyncTest("callback for replying should send a reply event", 2, function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.send("message", "Heaven Shall Burn", function(reply) {
@@ -914,7 +923,7 @@ asyncTest("callback for replying should send a reply event", 2, function() {
 });
 
 asyncTest("done callback should work", 2, function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("message", function(data, callback) {
 				callback(data);
@@ -931,7 +940,7 @@ asyncTest("done callback should work", 2, function() {
 });
 
 asyncTest("done callback should be able to event name", 2, function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("message", function(data, callback) {
 				callback(data);
@@ -949,7 +958,7 @@ asyncTest("done callback should be able to event name", 2, function() {
 });
 
 asyncTest("fail callback should work", 2, function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("message", function(data, callback) {
 				throw data;
@@ -968,7 +977,7 @@ asyncTest("fail callback should work", 2, function() {
 });
 
 asyncTest("fail callback should be able to event name", 2, function() {
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("message", function(data, callback) {
 				throw data;
@@ -1004,7 +1013,7 @@ asyncTest("prepare handler should receive connect and cancel function and option
 		connect();
 	};
 	
-	portal("url").connecting(function() {
+	portal.open("url").connecting(function() {
 		ok(executed);
 		start();
 	});
@@ -1015,11 +1024,11 @@ test("idGenerator should return a unique id within the server", function() {
 		return "flowersinthesand";
 	};
 	
-	strictEqual(portal("url").option("id"), "flowersinthesand");
+	strictEqual(portal.open("url").option("id"), "flowersinthesand");
 });
 
 test("url used for connection should be exposed by data('url')", function() {
-	ok(portal("url").data("url"));
+	ok(portal.open("url").data("url"));
 });
 
 test("urlBuilder should receive the absoulte form of original url and the parameters object and return a url to be used to establish a connection", function() {
@@ -1031,7 +1040,7 @@ test("urlBuilder should receive the absoulte form of original url and the parame
 		return "modified";
 	};
 	
-	strictEqual(portal("url").data("url"), "modified");
+	strictEqual(portal.open("url").data("url"), "modified");
 });
 
 test("params option should be merged with default params object", function() {
@@ -1041,7 +1050,7 @@ test("params option should be merged with default params object", function() {
 		return url;
 	};
 	
-	portal("url", {
+	portal.open("url", {
 		params: {
 			id: "fixed",
 			noop: $.noop
@@ -1050,7 +1059,7 @@ test("params option should be merged with default params object", function() {
 });
 
 asyncTest("lastEventId option should be the id of the last event which is sent by the server", function() {
-	portal("url", {
+	portal.open("url", {
 		lastEventId: 25,
 		server: function(request) {
 			request.accept().on("open", function() {
@@ -1078,7 +1087,7 @@ asyncTest("outbound handler should receive a event object and return a final dat
 		return $.stringifyJSON(event);
 	};
 	
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("message", function(data) {
 				strictEqual(data, "data");
@@ -1095,7 +1104,7 @@ asyncTest("inbound handler should receive a raw data from the server and return 
 		return $.parseJSON(data);
 	};
 	
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.send("message", "data");
@@ -1116,7 +1125,7 @@ asyncTest("inbound handler should be able to return an array of event object", f
 		return event.data;
 	};
 	
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept().on("open", function() {
 				this.send("composite", [
@@ -1155,7 +1164,7 @@ asyncTest("event object should contain a event type and optional id, reply, sock
 		return $.stringifyJSON(event);
 	};
 	
-	portal("url", {
+	portal.open("url", {
 		server: function(request) {
 			request.accept();
 		}
@@ -1193,7 +1202,7 @@ asyncTest("event object should contain a event type and optional id, reply, sock
 });
 
 test("transport used for connection should be exposed by data('transport')", function() {
-	ok(portal("url").data("transport"));
+	ok(portal.open("url").data("transport"));
 });
 
 if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKitBlobBuilder)) {
@@ -1209,7 +1218,7 @@ if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKit
 			ok(false);
 		};
 		
-		portal("url", {
+		portal.open("url", {
 			server: function(request) {
 				request.accept().on("message", function(data) {
 					ok(isBinary(data));
@@ -1240,7 +1249,7 @@ test("xdrURL handler should receive data('url') and return a new url containing 
 		socket.data("url", options.xdrURL.call(socket, socket.data("url")));
 	};
 	
-	strictEqual(portal("url").data("url"), "modified");
+	strictEqual(portal.open("url").data("url"), "modified");
 });
 
 test("streamParser handler should receive a chunk and return an array of data", function() {
@@ -1248,9 +1257,9 @@ test("streamParser handler should receive a chunk and return an array of data", 
 		return chunk.split("@@");
 	};
 	
-	portal("url");
-	deepEqual(portal.defaults.streamParser.call(portal(), "A"), ["A"]);
-	deepEqual(portal.defaults.streamParser.call(portal(), "A@@B@@C"), ["A", "B", "C"]);
+	portal.open("url");
+	deepEqual(portal.defaults.streamParser.call(portal.find(), "A"), ["A"]);
+	deepEqual(portal.defaults.streamParser.call(portal.find(), "A@@B@@C"), ["A", "B", "C"]);
 });
 
 module("Protocol default", {
@@ -1259,12 +1268,12 @@ module("Protocol default", {
 });
 
 test("effective url should contain id, transport and heartbeat as query string parameters", function() {
-	var url = portal("url").data("url");
+	var url = portal.open("url").data("url");
 	
-	strictEqual(param(url, "id"), portal().option("id"));
-	strictEqual(param(url, "transport"), portal().data("transport"));
-	strictEqual(param(url, "heartbeat"), String(portal().option("heartbeat")));
-	strictEqual(param(url, "lastEventId"), portal().option("lastEventId"));
+	strictEqual(param(url, "id"), portal.find().option("id"));
+	strictEqual(param(url, "transport"), portal.find().data("transport"));
+	strictEqual(param(url, "heartbeat"), String(portal.find().option("heartbeat")));
+	strictEqual(param(url, "lastEventId"), portal.find().option("lastEventId"));
 });
 
 test("a final data to be sent to the server should be a JSON string representing a event object", function() {
@@ -1284,7 +1293,7 @@ test("a final data to be sent to the server should be a JSON string representing
 		};
 	};
 	
-	portal("url").send("message", "data");
+	portal.open("url").send("message", "data");
 });
 
 test("a raw data sent by the server should be a JSON string representing a event object", function() {
@@ -1298,7 +1307,7 @@ test("a raw data sent by the server should be a JSON string representing a event
 		};
 	};
 	
-	portal("url").open(function(data) {
+	portal.open("url").open(function(data) {
 		strictEqual(data, "data");
 	});
 });
@@ -1320,14 +1329,14 @@ test("xdrURL handler should be able to handle JSESSIONID and PHPSESSID in cookie
 	}, function(name, data) {
 		document.cookie = name + "=" + name;
 		$.each(data, function(url, expected) {
-			strictEqual(portal.defaults.xdrURL.call(portal("url"), url), expected);
+			strictEqual(portal.defaults.xdrURL.call(portal.open("url"), url), expected);
 		});
 		document.cookie = name + "=" + ";expires=Thu, 01 Jan 1970 00:00:00 GMT";
 	});
 });
 
 test("stream response should accord with the event stream format", function() {
-	deepEqual(portal.defaults.streamParser.call(portal("url"), "data: A\r\n\r\ndata: A\r\ndata: B\rdata: C\n\r\ndata: \r\n"), ["A", "A\nB\nC", ""]);
+	deepEqual(portal.defaults.streamParser.call(portal.open("url"), "data: A\r\n\r\ndata: A\r\ndata: B\rdata: C\n\r\ndata: \r\n"), ["A", "A\nB\nC", ""]);
 });
 
 function testTransport(transport, fn) {
@@ -1364,14 +1373,14 @@ function testTransport(transport, fn) {
 	}
 	 
 	asyncTest("open method should work properly", function() {
-		portal(url).open(function() {
+		portal.open(url).open(function() {
 			ok(true);
 			start();
 		});
 	});
 	
 	asyncTest("send method should work properly", function() {
-		portal(url).message(function(data) {
+		portal.open(url).message(function(data) {
 			strictEqual(data, "data");
 			start();
 		})
@@ -1379,7 +1388,7 @@ function testTransport(transport, fn) {
 	});
 	
 	asyncTest("send method should work properly with multi-byte character data", function() {
-		portal(url).message(function(data) {
+		portal.open(url).message(function(data) {
 			strictEqual(data, "안녕");
 			start();
 		})
@@ -1393,7 +1402,7 @@ function testTransport(transport, fn) {
 			text += "A";
 		}
 		
-		portal(url).message(function(data) {
+		portal.open(url).message(function(data) {
 			strictEqual(data, text);
 			start();
 		})
@@ -1401,7 +1410,7 @@ function testTransport(transport, fn) {
 	});
 	
 	asyncTest("close method should work properly", function() {
-		portal(url).close(function(reason) {
+		portal.open(url).close(function(reason) {
 			strictEqual(reason, "aborted");
 			start();
 		})
@@ -1409,7 +1418,7 @@ function testTransport(transport, fn) {
 	});
 	
 	asyncTest("close event whose the reason attribute is done should be fired when the server disconnects a connection cleanly", function() {
-		portal(url + "?close=1000", {reconnect: false}).close(function(reason) {
+		portal.open(url + "?close=1000", {reconnect: false}).close(function(reason) {
 			strictEqual(reason, "done");
 			start();
 		});
@@ -1427,11 +1436,11 @@ if (!isLocal) {
 	
 	testTransport("ws", function(url) {
 		test("url should be converted to accord with WebSocket specification", function() {
-			ok(/^(?:ws|wss):\/\/.+/.test(portal(url).data("url")));
+			ok(/^(?:ws|wss):\/\/.+/.test(portal.open(url).data("url")));
 		});
 		
 		asyncTest("WebSocket event should be able to be accessed by data('event')", 3, function() {
-			portal(url).open(function() {
+			portal.open(url).open(function() {
 				strictEqual(this.data("event").type, "open");
 				this.send("message", "data");
 			})
@@ -1468,7 +1477,7 @@ if (!isLocal) {
 			result += "C";
 		};
 		
-		portal("echo");
+		portal.open("echo");
 		
 		strictEqual(result, "ABC");
 	});
@@ -1478,7 +1487,7 @@ if (!isLocal) {
 		streamxdr: function(url) {
 			test("xdrURL which is false should stop streamxdr transport", function() {
 				portal.defaults.xdrURL = false;
-				portal(url).close(function(reason) {
+				portal.open(url).close(function(reason) {
 					strictEqual(reason, "notransport");
 					start();
 				});
@@ -1487,7 +1496,7 @@ if (!isLocal) {
 				portal.defaults.xdrURL = function() {
 					return false;
 				};
-				portal(url).close(function(reason) {
+				portal.open(url).close(function(reason) {
 					strictEqual(reason, "notransport");
 					start();
 				});
@@ -1499,7 +1508,7 @@ if (!isLocal) {
 					ok(iframe);
 					ok(iframe.contentDocument || iframe.contentWindow.document);
 				};
-				portal(url).open(function() {
+				portal.open(url).open(function() {
 					start();
 				});
 			});
@@ -1521,7 +1530,7 @@ if (!isLocal) {
 		testTransport(transport, function(url) {
 			fn(url);
 			asyncTest("non-whitespace characters printed in the first chunk should be regarded as data", function() {
-				portal(url + "?firstMessage=true").message(function(data) {
+				portal.open(url + "?firstMessage=true").message(function(data) {
 					strictEqual(data, "hello");
 					start();
 				});
@@ -1539,7 +1548,7 @@ if (!isLocal) {
 	
 	testTransport("sse", function(url) {
 		asyncTest("Server-Sent Events event should be able to be accessed by data('event')", 3, function() {
-			portal(url + "?close=1000", {reconnect: false}).open(function() {
+			portal.open(url + "?close=1000", {reconnect: false}).open(function() {
 				strictEqual(this.data("event").type, "open");
 				this.send("message", "data");
 			})
@@ -1574,7 +1583,7 @@ if (!isLocal) {
 			result += "C";
 		};
 		
-		portal("echo");
+		portal.open("echo");
 		
 		strictEqual(result, "ABC");
 	});
@@ -1584,7 +1593,7 @@ if (!isLocal) {
 		longpollxdr: function(url) {
 			test("xdrURL which is false should stop longpollxdr transport", function() {
 				portal.defaults.xdrURL = false;
-				portal(url).close(function(reason) {
+				portal.open(url).close(function(reason) {
 					strictEqual(reason, "notransport");
 					start();
 				});
@@ -1593,7 +1602,7 @@ if (!isLocal) {
 				portal.defaults.xdrURL = function() {
 					return false;
 				};
-				portal(url).close(function(reason) {
+				portal.open(url).close(function(reason) {
 					strictEqual(reason, "notransport");
 					start();
 				});
@@ -1601,7 +1610,7 @@ if (!isLocal) {
 		}, 
 		longpolljsonp: function(url) {
 			test("window should have a function whose name is equals to data('url')'s callback parameter", function() {
-				ok($.isFunction(window[param(portal(url).data("url"), "callback")]));
+				ok($.isFunction(window[param(portal.open(url).data("url"), "callback")]));
 			});
 		}
 	}, function(transport, fn) {
@@ -1623,7 +1632,7 @@ if (!isLocal) {
 			asyncTest("data('url') should be modified whenever trying to connect to the server", 6, function() {
 				var oldCount, oldLastEventId;
 				
-				portal(url).send("message", 0).message(function(i) {
+				portal.open(url).send("message", 0).message(function(i) {
 					var url = this.data("url"), 
 						count = param(url, "count"), 
 						lastEventId = param(url, "lastEventId");
@@ -1643,7 +1652,7 @@ if (!isLocal) {
 				});
 			});
 			asyncTest("open event should be fired regardless of the server's status if longpollTest is false", function() {
-				portal(url + "wrong", {longpollTest: false}).open(function() {
+				portal.open(url + "wrong", {longpollTest: false}).open(function() {
 					ok(true);
 					start();
 				});

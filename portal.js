@@ -112,14 +112,18 @@
 		defaults,
 		// Transports
 		transports,
+		// Is the unload event being processed?
+		unloading,
 		// Socket instances
 		sockets = {},
 		// A global identifier
 		guid = $.now(),
 		// Callback names for JSONP
 		jsonpCallbacks = [],
-		// Is the unload event being processed?
-		unloading;
+		// Portal facade
+		portal = function(url, options) {
+			return portal.find(url) || portal.open(url, options);
+		};
 	
 	// From jQuery.Callbacks
 	function callbacks(deferred) {
@@ -1628,32 +1632,35 @@
 		finalize();
 	});
 	
-	window.portal = function(url, options) {
-		var i;
-		
-		// Returns the first socket in the document
-		if (!url) {
-			for (i in sockets) {
-				if (sockets[i]) {
-					return sockets[i];
+	// Completes the portal facade
+	$.extend(portal, {
+		find: function(url) {
+			var i;
+			
+			// Returns the first socket in the document
+			if (!url) {
+				for (i in sockets) {
+					if (sockets[i]) {
+						return sockets[i];
+					}
 				}
+				return null;
 			}
-			return null;
-		}
-		
-		// The url is a identifier of this socket within the document
-		url = getAbsoluteURL(url);
-		
-		// Socket to which the given url is mapped
-		if (sockets[url]) {
-			return sockets[url];
-		}
-		
-		return (sockets[url] = socket(url, options));
-	};
+			
+			// The url is a identifier of this socket within the document
+			return sockets[getAbsoluteURL(url)] || null;
+		},
+		open: function(url, options) {
+			// Makes url absolute to normalize URL
+			url = getAbsoluteURL(url);
+			return (sockets[url] = socket(url, options));
+		},
+		defaults: defaults,
+		transports: transports,
+		finalize: finalize
+	});
 	
-	window.portal.defaults = defaults;
-	window.portal.transports = transports;
-	window.portal.finalize = finalize;
+	// Exposes portal to the global object
+	window.portal = portal;
 	
 })(jQuery);
