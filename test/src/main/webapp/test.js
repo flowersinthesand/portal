@@ -36,6 +36,88 @@ function getAbsoluteURL(url) {
 	return decodeURI($('<a href="' + url + '"/>')[0].href);
 }
 
+/*
+ * stringifyJSON
+ * http://github.com/flowersinthesand/stringifyJSON
+ * 
+ * Copyright 2011, Donghwan Kim 
+ * Licensed under the Apache License, Version 2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
+function stringifyJSON(value) {
+	var escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g, 
+		meta = {
+			'\b' : '\\b',
+			'\t' : '\\t',
+			'\n' : '\\n',
+			'\f' : '\\f',
+			'\r' : '\\r',
+			'"' : '\\"',
+			'\\' : '\\\\'
+		};
+	
+	function quote(string) {
+		return '"' + string.replace(escapable, function(a) {
+			var c = meta[a];
+			return typeof c === "string" ? c : "\\u" + ("0000" + a.charCodeAt(0).toString(16)).slice(-4);
+		}) + '"';
+	}
+	
+	function f(n) {
+		return n < 10 ? "0" + n : n;
+	}
+	
+	return window.JSON && window.JSON.stringify ? window.JSON.stringify(value) : (function str(key, holder) {
+		var i, v, len, partial, value = holder[key], type = typeof value;
+				
+		if (value && typeof value === "object" && typeof value.toJSON === "function") {
+			value = value.toJSON(key);
+			type = typeof value;
+		}
+		
+		switch (type) {
+		case "string":
+			return quote(value);
+		case "number":
+			return isFinite(value) ? String(value) : "null";
+		case "boolean":
+			return String(value);
+		case "object":
+			if (!value) {
+				return "null";
+			}
+			
+			switch (Object.prototype.toString.call(value)) {
+			case "[object Date]":
+				return isFinite(value.valueOf()) ? 
+					'"' + value.getUTCFullYear() + "-" + f(value.getUTCMonth() + 1) + "-" + f(value.getUTCDate()) + 
+					"T" + f(value.getUTCHours()) + ":" + f(value.getUTCMinutes()) + ":" + f(value.getUTCSeconds()) + "Z" + '"' : 
+					"null";
+			case "[object Array]":
+				len = value.length;
+				partial = [];
+				for (i = 0; i < len; i++) {
+					partial.push(str(i, value) || "null");
+				}
+				
+				return "[" + partial.join(",") + "]";
+			default:
+				partial = [];
+				for (i in value) {
+					if (Object.prototype.hasOwnProperty.call(value, i)) {
+						v = str(i, value);
+						if (v) {
+							partial.push(quote(i) + ":" + v);
+						}
+					}
+				}
+				
+				return "{" + partial.join(",") + "}";
+			}
+		}
+	})("", {"": value});
+}
+
 module("portal", {
 	setup: setup,
 	teardown: teardown
@@ -1077,7 +1159,7 @@ asyncTest("lastEventId option should be the id of the last event which is sent b
 asyncTest("outbound handler should receive a event object and return a final data to be sent to the server", function() {
 	portal.defaults.outbound = function(event) {
 		deepEqual(event, {id: 1, socket: this.option("id"), reply: false, type: "message", data: "data"});
-		return $.stringifyJSON(event);
+		return stringifyJSON(event);
 	};
 	
 	portal.open("url", {
@@ -1154,7 +1236,7 @@ asyncTest("event object should contain a event type and optional id, reply, sock
 			outbound = null;
 		}
 		
-		return $.stringifyJSON(event);
+		return stringifyJSON(event);
 	};
 	
 	portal.open("url", {
@@ -1183,12 +1265,12 @@ asyncTest("event object should contain a event type and optional id, reply, sock
 		inbound = function(event) {
 			deepEqual(event, {type: "message", data: {key: "value"}});
 		};
-		this._fire($.stringifyJSON({type: "message", data: {key: "value"}}));
+		this._fire(stringifyJSON({type: "message", data: {key: "value"}}));
 		
 		inbound = function(event) {
 			deepEqual(event, {type: "chat", data: "data"});
 		};
-		this._fire($.stringifyJSON({type: "chat", data: "data"}));
+		this._fire(stringifyJSON({type: "chat", data: "data"}));
 		
 		start();
 	});
@@ -1293,7 +1375,7 @@ test("a raw data sent by the server should be a JSON string representing a event
 	portal.transports.test = function(socket) {
 		return {
 			open: function() {
-				socket._fire($.stringifyJSON({type: "open", data: "data"}));
+				socket._fire(stringifyJSON({type: "open", data: "data"}));
 			},
 			send: $.noop,
 			close: $.noop
