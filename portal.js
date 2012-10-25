@@ -16,6 +16,8 @@
 		unloading,
 		// Whether the browser can share a connection
 		sharable,
+		// Flags for the user-agent header of the browser
+		browser = {},
 		// Socket instances
 		sockets = {},
 		// A global identifier
@@ -129,7 +131,11 @@
 	}
 	
 	function parseJSON(data) {
-		return !data ? null : window.JSON && window.JSON.parse ? window.JSON.parse(data) : (new Function("return " + data))();
+		return !data ? 
+			null : 
+			window.JSON && window.JSON.parse ? 
+				window.JSON.parse(data) : 
+				new Function("return " + data)();
 	}
 	
 	/*
@@ -163,55 +169,57 @@
 			return n < 10 ? "0" + n : n;
 		}
 		
-		return window.JSON && window.JSON.stringify ? window.JSON.stringify(value) : (function str(key, holder) {
-			var i, v, len, partial, value = holder[key], type = typeof value;
-					
-			if (value && typeof value === "object" && typeof value.toJSON === "function") {
-				value = value.toJSON(key);
-				type = typeof value;
-			}
-			
-			switch (type) {
-			case "string":
-				return quote(value);
-			case "number":
-				return isFinite(value) ? String(value) : "null";
-			case "boolean":
-				return String(value);
-			case "object":
-				if (!value) {
-					return "null";
+		return window.JSON && window.JSON.stringify ? 
+			window.JSON.stringify(value) : 
+			(function str(key, holder) {
+				var i, v, len, partial, value = holder[key], type = typeof value;
+						
+				if (value && typeof value === "object" && typeof value.toJSON === "function") {
+					value = value.toJSON(key);
+					type = typeof value;
 				}
 				
-				switch (toString.call(value)) {
-				case "[object Date]":
-					return isFinite(value.valueOf()) ? 
-						'"' + value.getUTCFullYear() + "-" + f(value.getUTCMonth() + 1) + "-" + f(value.getUTCDate()) + 
-						"T" + f(value.getUTCHours()) + ":" + f(value.getUTCMinutes()) + ":" + f(value.getUTCSeconds()) + "Z" + '"' : 
-						"null";
-				case "[object Array]":
-					len = value.length;
-					partial = [];
-					for (i = 0; i < len; i++) {
-						partial.push(str(i, value) || "null");
+				switch (type) {
+				case "string":
+					return quote(value);
+				case "number":
+					return isFinite(value) ? String(value) : "null";
+				case "boolean":
+					return String(value);
+				case "object":
+					if (!value) {
+						return "null";
 					}
 					
-					return "[" + partial.join(",") + "]";
-				default:
-					partial = [];
-					for (i in value) {
-						if (Object.prototype.hasOwnProperty.call(value, i)) {
-							v = str(i, value);
-							if (v) {
-								partial.push(quote(i) + ":" + v);
+					switch (toString.call(value)) {
+					case "[object Date]":
+						return isFinite(value.valueOf()) ? 
+							'"' + value.getUTCFullYear() + "-" + f(value.getUTCMonth() + 1) + "-" + f(value.getUTCDate()) + 
+							"T" + f(value.getUTCHours()) + ":" + f(value.getUTCMinutes()) + ":" + f(value.getUTCSeconds()) + "Z" + '"' : 
+							"null";
+					case "[object Array]":
+						len = value.length;
+						partial = [];
+						for (i = 0; i < len; i++) {
+							partial.push(str(i, value) || "null");
+						}
+						
+						return "[" + partial.join(",") + "]";
+					default:
+						partial = [];
+						for (i in value) {
+							if (Object.prototype.hasOwnProperty.call(value, i)) {
+								v = str(i, value);
+								if (v) {
+									partial.push(quote(i) + ":" + v);
+								}
 							}
 						}
+						
+						return "{" + partial.join(",") + "}";
 					}
-					
-					return "{" + partial.join(",") + "}";
 				}
-			}
-		})("", {"": value});
+			})("", {"": value});
 	}
 	
 	// Socket function
@@ -809,8 +817,22 @@
 		return self.open();
 	}
 	
-	// The storage event of Internet Explorer and Firefox 3 works strangely
-	sharable = window.localStorage && window.StorageEvent && !$.browser.msie && !($.browser.mozilla && $.browser.version.split(".")[0] === "1");
+	(function() {
+		// From jQuery.browser
+		var ua = navigator.userAgent.toLowerCase(), 
+			match = /(chrome)[ \/]([\w.]+)/.exec(ua) ||
+				/(webkit)[ \/]([\w.]+)/.exec(ua) ||
+				/(opera)(?:.*version|)[ \/]([\w.]+)/.exec(ua) ||
+				/(msie) ([\w.]+)/.exec(ua) ||
+				ua.indexOf("compatible") < 0 && /(mozilla)(?:.*? rv:([\w.]+)|)/.exec(ua) ||
+				[];
+		
+		browser[match[1] || ""] = true;
+		browser.version = match[2] || "0";
+		
+		// The storage event of Internet Explorer and Firefox 3 works strangely
+		sharable = window.localStorage && window.StorageEvent && !browser.msie && !(browser.mozilla && browser.version.split(".")[0] === "1");
+	})();
 	
 	// Portal facade
 	portal = {
@@ -877,7 +899,39 @@
 				});
 			},
 			urlBuilder: function(url, params) {
-				return url + (/\?/.test(url) ? "&" : "?") + $.param(params);
+				// From jQuery.param
+				var prefix,
+					s = [],
+					add = function(key, value) {
+						value = toString.call(value) === "[object Function]" ? value() : (value == null ? "" : value);
+						s.push(encodeURIComponent(key) + "=" + encodeURIComponent(value));
+					};
+				
+				function buildParams(prefix, obj) {
+					var name;
+
+					if (toString.call(obj) === "[object Array]") {
+						$.each(obj, function(i, v) {
+							if (/\[\]$/.test(prefix)) {
+								add(prefix, v);
+							} else {
+								buildParams(prefix + "[" + (typeof v === "object" ? i : "") + "]", v);
+							}
+						});
+					} else if (toString.call(obj) === "[object Object]") {
+						for (name in obj) {
+							buildParams(prefix + "[" + name + "]", obj[name]);
+						}
+					} else {
+						add(prefix, obj);
+					}
+				}
+				
+				for (prefix in params) {
+					buildParams(prefix, params[prefix]);
+				}
+					
+				return url + (/\?/.test(url) ? "&" : "?") + s.join("&").replace(/%20/g, "+");
 			},
 			inbound: parseJSON,
 			outbound: stringifyJSON,
@@ -977,7 +1031,7 @@
 										
 										$(window).off("storage.socket");
 										if (children) {
-											index = $.inArray(options.id, children);
+											index = inArray(children, options.id);
 											if (index > -1) {
 												children.splice(index, 1);
 												set("children", children);
@@ -1011,7 +1065,7 @@
 									
 									socket.one("close", function() {
 										function remove(array, e) {
-											var index = $.inArray(e, array);
+											var index = inArray(array, e);
 											if (index > -1) {
 												array.splice(index, 1);
 											}
@@ -1034,6 +1088,18 @@
 							};
 						}
 					};
+				
+				function inArray(array, val) {
+					var i;
+
+					for (i = 0; i < array.length; i++) {
+						if (array[i] === val) {
+							return i;
+						}
+					}
+
+					return -1;
+				}
 				
 				// Receives open, close and message command from the parent 
 				function listener(string) {
@@ -1303,7 +1369,7 @@
 				var XMLHttpRequest = window.XMLHttpRequest, 
 					xhr, aborted;
 				
-				if (!XMLHttpRequest || ($.browser.msie && +$.browser.version < 10) || (options.crossDomain && !$.support.cors)) {
+				if (!XMLHttpRequest || (browser.msie && +browser.version < 10) || (options.crossDomain && !$.support.cors)) {
 					return;
 				}
 				
@@ -1328,7 +1394,7 @@
 							
 							if (xhr.readyState === 3 && xhr.status === 200) {
 								// Despite the change in response, Opera doesn't fire the readystatechange event
-								if ($.browser.opera && !stop) {
+								if (browser.opera && !stop) {
 									stop = iterate(onprogress);
 								} else {
 									onprogress();
