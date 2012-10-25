@@ -19,9 +19,16 @@
 		// Socket instances
 		sockets = {},
 		// A global identifier
-		guid = $.now(),
+		guid = now(),
 		// Callback names for JSONP
-		jsonpCallbacks = [];
+		jsonpCallbacks = [],
+		// Core prototypes
+		toString = Object.prototype.toString,
+		slice = Array.prototype.slice;
+	
+	function now() {
+		return new Date().getTime();
+	}
 	
 	// From jQuery.Callbacks
 	function callbacks(deferred) {
@@ -93,7 +100,7 @@
 	}
 	
 	function isBinary(data) {
-		var string = Object.prototype.toString.call(data);
+		var string = toString.call(data);
 		return string === "[object Blob]" || string === "[object ArrayBuffer]";
 	}
 	
@@ -119,6 +126,10 @@
 	
 	function getAbsoluteURL(url) {
 		return decodeURI($('<a href="' + url + '"/>')[0].href);
+	}
+	
+	function parseJSON(data) {
+		return !data ? null : window.JSON && window.JSON.parse ? window.JSON.parse(data) : (new Function("return " + data))();
 	}
 	
 	/*
@@ -172,7 +183,7 @@
 					return "null";
 				}
 				
-				switch (Object.prototype.toString.call(value)) {
+				switch (toString.call(value)) {
 				case "[object Date]":
 					return isFinite(value.valueOf()) ? 
 						'"' + value.getUTCFullYear() + "-" + f(value.getUTCMonth() + 1) + "-" + f(value.getUTCDate()) + 
@@ -291,7 +302,7 @@
 					var event = events[type];
 					
 					if (event) {
-						event.fire(self, $.makeArray(arguments).slice(1));
+						event.fire(self, slice.call(arguments, 1));
 					}
 					
 					return this;
@@ -305,7 +316,7 @@
 							
 							if (!latch) {
 								latch = true;
-								candidates = connection.candidates = $.makeArray(opts.transports);
+								candidates = connection.candidates = slice.call(opts.transports);
 								while (!transport && candidates.length) {
 									type = candidates.shift();
 									connection.transport = type;
@@ -433,14 +444,24 @@
 				// For internal use only
 				// fires events from the server
 				_fire: function(data, isChunk) {
+					var array;
+					
 					if (isChunk) {
 						data = opts.streamParser.call(self, data);
 						while (data.length) {
 							self._fire(data.shift());
 						}
 					} else {
-						$.each(isBinary(data) ? [{type: "message", data: data}] : $.makeArray(opts.inbound.call(self, data)), 
-						function(i, event) {
+						if (isBinary(data)) {
+							array = [{type: "message", data: data}];
+						} else {
+							array = opts.inbound.call(self, data);
+							if (toString.call(array) !== "[object Array]") {
+								array = array ? [array] : [];
+							}
+						}
+						
+						$.each(array, function(i, event) {
 							var latch, args = [event.type, event.data];
 							
 							opts.lastEventId = event.id;
@@ -477,7 +498,7 @@
 		if (options) {
 			// Array should not be deep extended
 			if (options.transports) {
-				opts.transports = $.makeArray(options.transports);
+				opts.transports = slice.call(options.transports);
 			}
 		}
 		// Saves original URL
@@ -502,7 +523,7 @@
 				};
 			
 			self[type] = !old ? on : function(fn) {
-				return ($.isFunction(fn) ? on : old).apply(this, arguments);
+				return (toString.call(fn) === "[object Function]" ? on : old).apply(this, arguments);
 			};
 		});
 		
@@ -569,7 +590,7 @@
 									}, 50);
 								},
 								get: function(key) {
-									return $.parseJSON(storage.getItem(name + "-" + key));
+									return parseJSON(storage.getItem(name + "-" + key));
 								},
 								set: function(key, value) {
 									storage.setItem(name + "-" + key, stringifyJSON(value));
@@ -617,7 +638,7 @@
 				
 				// Receives send and close command from the children
 				function listener(string) {
-					var command = $.parseJSON(string), data = command.data;
+					var command = parseJSON(string), data = command.data;
 					
 					if (!command.target) {
 						if (command.type === "fire") {
@@ -644,7 +665,7 @@
 						// Opera's parseFloat and JSON.stringify causes a strange bug with a number larger than 10 digit
 						// JSON.stringify(parseFloat(10000000000) + 1).length === 11;
 						// JSON.stringify(parseFloat(10000000000 + 1)).length === 10;
-						encodeURIComponent(stringifyJSON({ts: $.now() + 1, heir: (server.get("children") || [])[0]}));
+						encodeURIComponent(stringifyJSON({ts: now() + 1, heir: (server.get("children") || [])[0]}));
 				}
 				
 				// Chooses a server
@@ -774,7 +795,7 @@
 			if (callback) {
 				fn = exception ? callback.fail : callback.done;
 				if (fn) {
-					if ($.isFunction(fn)) {
+					if (toString.call(fn) === "[object Function]") {
 						fn.call(self, data);
 					} else {
 						self.fire(fn, data).fire("_message", [fn, data]);
@@ -858,7 +879,7 @@
 			urlBuilder: function(url, params) {
 				return url + (/\?/.test(url) ? "&" : "?") + $.param(params);
 			},
-			inbound: $.parseJSON,
+			inbound: parseJSON,
 			outbound: stringifyJSON,
 			// Transport options
 			credentials: false,
@@ -935,7 +956,7 @@
 							
 							var storage = window.localStorage,
 								get = function(key) {
-									return $.parseJSON(storage.getItem(name + "-" + key));
+									return parseJSON(storage.getItem(name + "-" + key));
 								},
 								set = function(key, value) {
 									storage.setItem(name + "-" + key, stringifyJSON(value));
@@ -1016,7 +1037,7 @@
 				
 				// Receives open, close and message command from the parent 
 				function listener(string) {
-					var command = $.parseJSON(string), data = command.data;
+					var command = parseJSON(string), data = command.data;
 					
 					if (!command.target) {
 						if (command.type === "fire") {
@@ -1061,13 +1082,13 @@
 				function findTrace() {
 					var matcher = new RegExp("(?:^|; )(" + encodeURIComponent(name) + ")=([^;]*)").exec(document.cookie);
 					if (matcher) {
-						return $.parseJSON(decodeURIComponent(matcher[2]));
+						return parseJSON(decodeURIComponent(matcher[2]));
 					}
 				}
 				
 				// Finds and validates the parent socket's trace from the cookie
 				trace = findTrace();
-				if (!trace || $.now() - trace.ts > 1000) {
+				if (!trace || now() - trace.ts > 1000) {
 					return;
 				}
 				
