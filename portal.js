@@ -32,6 +32,41 @@
 		return new Date().getTime();
 	}
 	
+	function each(obj, callback) {
+		var i,
+			name,
+			length = obj.length;
+	
+		if (length === undefined) {
+			for (name in obj) {
+				if (callback.call(obj[name], name, obj[name]) === false) {
+					break;
+				}
+			}
+		} else {
+			for (i = 0; i < length;) {
+				if (callback.call(obj[i], i, obj[i++]) === false) {
+					break;
+				}
+			}
+		}
+	}
+	
+	function extend() {
+		var i, options, name,
+			target = arguments[0];
+		
+		for (i = 1; i < arguments.length; i++) {
+			if ((options = arguments[i]) != null) {
+				for (name in options) {
+					target[name] = options[name];
+				}
+			}
+		}
+		
+		return target;
+	}
+	
 	// From jQuery.Callbacks
 	function callbacks(deferred) {
 		var list = [],
@@ -469,7 +504,7 @@
 							}
 						}
 						
-						$.each(array, function(i, event) {
+						each(array, function(i, event) {
 							var latch, args = [event.type, event.data];
 							
 							opts.lastEventId = event.id;
@@ -491,7 +526,7 @@
 				// For internal use only
 				// builds an effective URL
 				buildURL: function(params) {
-					return opts.urlBuilder.call(self, url, $.extend({
+					return opts.urlBuilder.call(self, url, extend({
 						id: opts.id, 
 						transport: connection.transport, 
 						heartbeat: opts.heartbeat, 
@@ -502,7 +537,7 @@
 			};
 		
 		// Create the final options
-		opts = $.extend(true, {}, portal.defaults, options);
+		opts = extend({}, portal.defaults, options);
 		if (options) {
 			// Array should not be deep extended
 			if (options.transports) {
@@ -519,7 +554,7 @@
 			// port
 			(parts[3] || (parts[1] === "http:" ? 80 : 443)) != (location.port || (location.protocol === "http:" ? 80 : 443))));
 		
-		$.each(["connecting", "open", "message", "close", "waiting"], function(i, type) {
+		each(["connecting", "open", "message", "close", "waiting"], function(i, type) {
 			// Creates event helper
 			events[type] = callbacks(type !== "message");
 			events[type].order = i;
@@ -911,7 +946,7 @@
 					var name;
 
 					if (toString.call(obj) === "[object Array]") {
-						$.each(obj, function(i, v) {
+						each(obj, function(i, v) {
 							if (/\[\]$/.test(prefix)) {
 								add(prefix, v);
 							} else {
@@ -1336,7 +1371,7 @@
 					}
 				}
 				
-				return $.extend(portal.transports.httpbase(socket, options), {
+				return extend(portal.transports.httpbase(socket, options), {
 					open: function() {
 						var url = socket.data("url");
 						
@@ -1373,7 +1408,7 @@
 					return;
 				}
 				
-				return $.extend(portal.transports.httpbase(socket, options), {
+				return extend(portal.transports.httpbase(socket, options), {
 					open: function() {
 						var stop;
 						
@@ -1428,7 +1463,7 @@
 					return;
 				}
 				
-				return $.extend(portal.transports.httpbase(socket, options), {
+				return extend(portal.transports.httpbase(socket, options), {
 					open: function() {
 						var iframe, cdoc;
 						
@@ -1509,7 +1544,7 @@
 					return;
 				}
 				
-				return $.extend(portal.transports.httpbase(socket, options), {
+				return extend(portal.transports.httpbase(socket, options), {
 					open: function() {
 						var url = options.xdrURL.call(socket, socket.data("url"));
 						
@@ -1555,7 +1590,7 @@
 					return;
 				}
 				
-				return $.extend(portal.transports.httpbase(socket, options), {
+				return extend(portal.transports.httpbase(socket, options), {
 					open: function() {
 						function poll() {
 							var url = socket.buildURL({count: ++count});
@@ -1610,7 +1645,7 @@
 					return;
 				}
 				
-				return $.extend(portal.transports.httpbase(socket, options), {
+				return extend(portal.transports.httpbase(socket, options), {
 					open: function() {
 						function poll() {
 							var url = options.xdrURL.call(socket, socket.buildURL({count: ++count}));
@@ -1658,7 +1693,7 @@
 			longpolljsonp: function(socket, options) {
 				var count = 0, callback = jsonpCallbacks.pop() || ("socket_" + (++guid)), xhr, called;
 				
-				return $.extend(portal.transports.httpbase(socket, options), {
+				return extend(portal.transports.httpbase(socket, options), {
 					open: function() {
 						function poll() {
 							var url = socket.buildURL({callback: callback, count: ++count});
@@ -1696,7 +1731,7 @@
 						};
 						socket.one("close", function() {
 							// Assings an empty function for browsers which are not able to cancel a request made from script tag
-							window[callback] = $.noop;
+							window[callback] = function() {};
 							jsonpCallbacks.push(callback);
 						});
 						
