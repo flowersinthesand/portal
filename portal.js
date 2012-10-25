@@ -16,6 +16,8 @@
 		unloading,
 		// Whether the browser can share a connection
 		sharable,
+		// Cross Origin Resource Sharing
+		corsable,
 		// Flags for the user-agent header of the browser
 		browser = {},
 		// Socket instances
@@ -255,6 +257,15 @@
 					}
 				}
 			})("", {"": value});
+	}
+	
+	function createXMLHttpRequest() {
+		try {
+			return new window.XMLHttpRequest();
+		} catch(e) {}
+		try {
+			return new window.ActiveXObject("Microsoft.XMLHTTP");
+		} catch(e) {}
 	}
 	
 	// Socket function
@@ -867,6 +878,7 @@
 		
 		// The storage event of Internet Explorer and Firefox 3 works strangely
 		sharable = window.localStorage && window.StorageEvent && !browser.msie && !(browser.mozilla && browser.version.split(".")[0] === "1");
+		corsable = "withCredentials" in createXMLHttpRequest();
 	})();
 	
 	// Portal facade
@@ -1309,17 +1321,23 @@
 				
 				// The Content-Type is not application/x-www-form-urlencoded but text/plain on account of XDomainRequest
 				// See the fourth at http://blogs.msdn.com/b/ieinternals/archive/2010/05/13/xdomainrequest-restrictions-limitations-and-workarounds.aspx
-				send = !options.crossDomain || $.support.cors ? 
+				send = !options.crossDomain || corsable ? 
 				function(url, data) {
-					$.ajax(url, {
-						type: "POST", 
-						contentType: "text/plain; charset=UTF-8", 
-						data: "data=" + data, 
-						async: true, 
-						timeout: false, 
-						xhrFields: $.support.cors ? {withCredentials: options.credentials} : null
-					})
-					.always(post);
+					var xhr = createXMLHttpRequest();
+					
+					xhr.onreadystatechange = function() {
+						if (xhr.readyState === 4) {
+							post();
+						}
+					};
+					
+					xhr.open("POST", url);
+					xhr.setRequestHeader("Content-Type", "text/plain; charset=UTF-8");
+					if (corsable) {
+						xhr.withCredentials = options.credentials;
+					}
+					
+					xhr.send("data=" + data);
 				} : window.XDomainRequest && options.xdrURL && options.xdrURL.call(socket, "t") ? 
 				function(url, data) {
 					var xdr = new window.XDomainRequest();
@@ -1363,7 +1381,7 @@
 					return;
 				} else if (options.crossDomain) {
 					try {
-						if (!("withCredentials" in new EventSource("about:blank"))) {
+						if (!corsable || !("withCredentials" in new EventSource("about:blank"))) {
 							return;
 						}
 					} catch(e) {
@@ -1401,10 +1419,9 @@
 			},
 			// Streaming - XMLHttpRequest
 			streamxhr: function(socket, options) {
-				var XMLHttpRequest = window.XMLHttpRequest, 
-					xhr, aborted;
+				var xhr, aborted;
 				
-				if (!XMLHttpRequest || (browser.msie && +browser.version < 10) || (options.crossDomain && !$.support.cors)) {
+				if ((browser.msie && +browser.version < 10) || (options.crossDomain && !corsable)) {
 					return;
 				}
 				
@@ -1412,7 +1429,7 @@
 					open: function() {
 						var stop;
 						
-						xhr = new XMLHttpRequest();
+						xhr = createXMLHttpRequest();
 						xhr.onreadystatechange = function() {
 							function onprogress() {
 								var index = socket.data("index"),
@@ -1444,7 +1461,9 @@
 						};
 						
 						xhr.open("GET", socket.data("url"));
-						xhr.withCredentials = options.credentials;
+						if (corsable) {
+							xhr.withCredentials = options.credentials;
+						}
 						
 						xhr.send(null);
 					},
@@ -1584,9 +1603,9 @@
 			},
 			// Long polling - AJAX
 			longpollajax: function(socket, options) {
-				var count = 0, xhr;
+				var count = 0, xhr, aborted;
 				
-				if (!$.support.ajax || (options.crossDomain && !$.support.cors)) {
+				if (options.crossDomain && !corsable) {
 					return;
 				}
 				
@@ -1596,30 +1615,41 @@
 							var url = socket.buildURL({count: ++count});
 							
 							socket.data("url", url);
-							xhr = $.ajax(url, {
-								type: "GET", 
-								dataType: "text", 
-								async: true, 
-								cache: true, 
-								timeout: false,
-								xhrFields: $.support.cors ? {withCredentials: options.credentials} : null
-							})
-							.done(function(data) {
-								if (data || count === 1) {
-									if (count === 1) {
-										socket.fire("open");
+							
+							xhr = createXMLHttpRequest();
+							xhr.onreadystatechange = function() {
+								var data;
+								
+								if (xhr.readyState === 4) {
+									if (aborted) {
+										socket.fire("close", "aborted");
+									} else {
+										if (xhr.status === 200) {
+											data = xhr.responseText;
+											if (data || count === 1) {
+												if (count === 1) {
+													socket.fire("open");
+												}
+												if (data) {
+													socket._fire(data);
+												}
+												poll();
+											} else {
+												socket.fire("close", "done");
+											}
+										} else {
+											socket.fire("close", "error");
+										}
 									}
-									if (data) {
-										socket._fire(data);
-									}
-									poll();
-								} else {
-									socket.fire("close", "done");
 								}
-							})
-							.fail(function(jqXHR, reason) {
-								socket.fire("close", reason === "abort" ? "aborted" : "error");
-							});
+							};
+							
+							xhr.open("GET", url);
+							if (corsable) {
+								xhr.withCredentials = options.credentials;
+							}
+							
+							xhr.send(null);
 						}
 						
 						if (!options.longpollTest) {
@@ -1633,6 +1663,7 @@
 						}
 					},
 					close: function() {
+						aborted = true;
 						xhr.abort();
 					}
 				});
@@ -1649,6 +1680,8 @@
 					open: function() {
 						function poll() {
 							var url = options.xdrURL.call(socket, socket.buildURL({count: ++count}));
+
+							socket.data("url", url);
 							
 							xdr = new XDomainRequest();
 							xdr.onload = function() {
@@ -1670,7 +1703,6 @@
 								socket.fire("close", "error");
 							};
 							
-							socket.data("url", url);
 							xdr.open("GET", url);
 							xdr.send();
 						}
@@ -1691,34 +1723,46 @@
 			},
 			// Long polling - JSONP
 			longpolljsonp: function(socket, options) {
-				var count = 0, callback = jsonpCallbacks.pop() || ("socket_" + (++guid)), xhr, called;
+				var count = 0, callback = jsonpCallbacks.pop() || ("socket_" + (++guid)), script, called, aborted;
 				
 				return extend(portal.transports.httpbase(socket, options), {
 					open: function() {
 						function poll() {
-							var url = socket.buildURL({callback: callback, count: ++count});
+							var url = socket.buildURL({callback: callback, count: ++count}), 
+								head = document.head || document.getElementsByTagName("head")[0] || document.documentElement;
 							
 							socket.data("url", url);
-							xhr = $.ajax(url, {
-								dataType: "script", 
-								crossDomain: true, 
-								cache: true, 
-								timeout: false
-							})
-							.done(function() {
-								if (called) {
-									called = false;
-									poll();
-								} else if (count === 1) {
-									socket.fire("open");
-									poll();
-								} else {
-									socket.fire("close", "done");
+							
+							script = document.createElement("script");
+							script.async = "async";
+							script.src = url;
+							script.onload = script.onreadystatechange = function() {
+								if (aborted || !script.readyState || /loaded|complete/.test(script.readyState)) {
+									script.onerror = script.onload = script.onreadystatechange = null;
+									if (head && script.parentNode) {
+										head.removeChild(script);
+									}
+									
+									if (aborted) {
+										socket.fire("close", "aborted");
+									} else {
+										if (called) {
+											called = false;
+											poll();
+										} else if (count === 1) {
+											socket.fire("open");
+											poll();
+										} else {
+											socket.fire("close", "done");
+										}
+									}
 								}
-							})
-							.fail(function(jqXHR, reason) {
-								socket.fire("close", reason === "abort" ? "aborted" : "error");
-							});
+							};
+							script.onerror = function() {
+								socket.fire("close", aborted === "abort" ? "aborted" : "error");
+							}; 
+							
+							head.insertBefore(script, head.firstChild);
 						}
 						
 						// Attaches callback
@@ -1745,7 +1789,8 @@
 						}
 					},
 					close: function() {
-						xhr.abort();
+						aborted = true;
+						script.onload();
 					}
 				});
 			}
