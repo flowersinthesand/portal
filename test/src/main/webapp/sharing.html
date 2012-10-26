@@ -9,7 +9,7 @@
 		$(function() {
 			var i = 1;
 			
-			portal("echo?close=10000", {
+			portal.open("echo?close=10000", {
 				prepare: function(connect) {
 					$("<div />").text("preparing").appendTo("body");
 					connect();
@@ -17,7 +17,7 @@
 			})
 			.connecting(function() {
 				$("<div />").text(i++).appendTo("body");
-				$("<div />").text("Connecting with the transport [" + this.session("transport") + "]").appendTo("body");
+				$("<div />").text("Connecting with the transport [" + this.data("transport") + "]").appendTo("body");
 			})
 			.open(function() {
 				$("<div />").text("Opened").appendTo("body");

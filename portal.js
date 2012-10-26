@@ -164,7 +164,9 @@
 	}
 	
 	function getAbsoluteURL(url) {
-		return decodeURI($('<a href="' + url + '"/>')[0].href);
+		var div = document.createElement("div");
+		div.innerHTML = '<a href="' + url + '"/>';
+		return decodeURI(div.firstChild.href);
 	}
 	
 	function parseJSON(data) {
@@ -657,8 +659,18 @@
 							// Internet Explorer raises an invalid argument error
 							// when calling the window.open method with the name containing non-word characters
 							var neim = name.replace(/\W/g, ""),
-								win = ($('iframe[name="' + neim + '"]')[0] || $('<iframe name="' + neim + '" />').hide().appendTo("body")[0])
-									.contentWindow;
+								div = document.getElementById(neim),
+								win;
+							
+							if (!div) {
+								div = document.createElement("div");
+								div.id = neim;
+								div.style.display = "none";
+								div.innerHTML = '<iframe name="' + neim + '" />';
+								document.body.appendChild(div);
+							}
+							
+							win = div.firstChild.contentWindow;
 							
 							return {
 								init: function() {
@@ -1346,19 +1358,32 @@
 					xdr.open("POST", options.xdrURL.call(socket, url));
 					xdr.send("data=" + data);
 				} : 
+				// Assumes the browser is old IE
 				function(url, data) {
-					var $form = $("<form method='POST' enctype='text/plain' accept-charset='UTF-8' />"),
-						$iframe = $("<iframe name='socket-" + (++guid) + "'/>");
+					var iframe,
+						textarea, 
+						form = document.createElement("form");
+
+					form.action = url;
+					form.target = "socket-" + (++guid);
+					form.method = "POST";
+					// IE 6 needs encoding property
+					form.enctype = form.encoding = "text/plain";
+					form.acceptCharset = "UTF-8";
+					form.style.display = "none";
+					form.innerHTML = '<textarea name="data"></textarea><iframe name="' + form.target + '"></iframe>';
 					
-					$form.attr({action: url, target: $iframe.attr("name")}).hide().appendTo("body")
-					.append($("<textarea name='data' />").val(data))
-					.append($iframe)
-					.submit();
+					textarea = form.firstChild;
+					textarea.value = data;
 					
-					$iframe.load(function() {
-						$form.remove();
+					iframe = form.lastChild;
+					iframe.attachEvent("onload", function() {
+						document.body.removeChild(form);
 						post();
 					});
+					
+					document.body.appendChild(form);
+					form.submit();
 				};
 				
 				return {
@@ -1736,13 +1761,15 @@
 							script = document.createElement("script");
 							script.async = "async";
 							script.src = url;
+							script.finalize = function() {
+								script.finalize = script.onerror = script.onload = script.onreadystatechange = null;
+								if (head && script.parentNode) {
+									head.removeChild(script);
+								}
+							};
 							script.onload = script.onreadystatechange = function() {
 								if (aborted || !script.readyState || /loaded|complete/.test(script.readyState)) {
-									script.onerror = script.onload = script.onreadystatechange = null;
-									if (head && script.parentNode) {
-										head.removeChild(script);
-									}
-									
+									script.finalize();
 									if (aborted) {
 										socket.fire("close", "aborted");
 									} else {
@@ -1759,6 +1786,7 @@
 								}
 							};
 							script.onerror = function() {
+								script.finalize();
 								socket.fire("close", aborted === "abort" ? "aborted" : "error");
 							}; 
 							
@@ -1790,7 +1818,9 @@
 					},
 					close: function() {
 						aborted = true;
-						script.onload();
+						if (script.onload) {
+							script.onload();
+						}
 					}
 				});
 			}
