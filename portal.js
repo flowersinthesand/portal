@@ -6,7 +6,7 @@
  * Licensed under the Apache License, Version 2.0
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-(function($, undefined) {
+(function() {
 	
 	"use strict";
 	
@@ -67,6 +67,22 @@
 		}
 		
 		return target;
+	}
+	
+	function addEvent(elem, type, fn) {
+		if (elem.addEventListener) {
+			elem.addEventListener(type, fn, false);
+		} else if (elem.attachEvent) {
+			elem.attachEvent("on" + type, fn);
+		}
+	}
+	
+	function removeEvent(elem, type, fn) {
+		if (elem.removeEventListener) {
+			elem.removeEventListener(type, fn, false);
+		} else if (elem.detachEvent) {
+			elem.detachEvent("on" + type, fn);
+		}
 	}
 	
 	// From jQuery.Callbacks
@@ -620,16 +636,17 @@
 							
 							return {
 								init: function() {
-									// Handles the storage event 
-									$(window).on("storage.socket", function(event) {
-										event = event.originalEvent;
+									function handleStorageEvent(event) {
 										// When a deletion, newValue initialized to null
 										if (event.key === name && event.newValue) {
 											listener(event.newValue);
 										}
-									});									
+									}
+									
+									// Handles the storage event 
+									addEvent(window, "storage", handleStorageEvent);									
 									self.one("close", function() {
-										$(window).off("storage.socket");
+										removeEvent(window, "storage", handleStorageEvent);
 										// Defers again to clean the storage
 										self.one("close", function() {
 											storage.removeItem(name);
@@ -1077,18 +1094,19 @@
 							
 							return {
 								init: function() {
-									set("children", get("children").concat([options.id]));
-									$(window).on("storage.socket", function(event) {
-										event = event.originalEvent;
+									function handleStorageEvent(event) {
 										if (event.key === name && event.newValue) {
 											listener(event.newValue);
 										}
-									});
+									}
+									
+									set("children", get("children").concat([options.id]));
+									addEvent(window, "storage", handleStorageEvent);
 									
 									socket.one("close", function() {
 										var index, children = get("children");
 										
-										$(window).off("storage.socket");
+										removeEvent(window, "storage", handleStorageEvent);
 										if (children) {
 											index = inArray(children, options.id);
 											if (index > -1) {
@@ -1358,7 +1376,6 @@
 					xdr.open("POST", options.xdrURL.call(socket, url));
 					xdr.send("data=" + data);
 				} : 
-				// Assumes the browser is old IE
 				function(url, data) {
 					var iframe,
 						textarea, 
@@ -1377,7 +1394,7 @@
 					textarea.value = data;
 					
 					iframe = form.lastChild;
-					iframe.attachEvent("onload", function() {
+					addEvent(iframe, "load", function() {
 						document.body.removeChild(form);
 						post();
 					});
@@ -1827,9 +1844,9 @@
 		}
 	};
 	
-	$(window).on("unload.socket", function(event) {
+	addEvent(window, "unload", function() {
 		// Check the unload event is fired by the browser
-		unloading = !!event.originalEvent;
+		unloading = true;
 		// Closes all sockets when the document is unloaded 
 		portal.finalize();
 	});
@@ -1837,4 +1854,4 @@
 	// Exposes portal to the global object
 	window.portal = portal;
 	
-})(jQuery);
+})();
