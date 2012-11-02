@@ -14,8 +14,6 @@
 		guid,
 		// Is the unload event being processed?
 		unloading,
-		// Whether the browser doesn't support the storage event
-		noStorageEvent,
 		// Portal
 		portal = {},
 		// Socket instances
@@ -111,7 +109,7 @@
 			
 			function buildParams(prefix, obj) {
 				var name;
-
+				
 				if (portal.support.isArray(obj)) {
 					portal.support.each(obj, function(i, v) {
 						if (/\[\]$/.test(prefix)) {
@@ -228,7 +226,10 @@
 		}
 	};
 	portal.support.corsable = !!portal.support.xhr().withCredentials;
+	portal.support.storage = !!(window.localStorage && window.StorageEvent);
+	guid = portal.support.now();
 	
+	// Browser sniffing
 	(function() {
 		var ua = navigator.userAgent.toLowerCase(), 
 			match = /(chrome)[ \/]([\w.]+)/.exec(ua) ||
@@ -241,21 +242,19 @@
 		portal.support.browser = {};
 		portal.support.browser[match[1] || ""] = true;
 		portal.support.browser.version = match[2] || "0";
+		
+		// The storage event of Internet Explorer and Firefox 3 works strangely
+		if (portal.support.browser.msie || (portal.support.browser.mozilla && portal.support.browser.version.split(".")[0] === "1")) {
+			portal.support.storage = false;
+		}
 	})();
-	
-	guid = portal.support.now();
-	noStorageEvent = !(window.localStorage && window.StorageEvent);
-	// The storage event of Internet Explorer and Firefox 3 works strangely
-	if (portal.support.browser.msie || (portal.support.browser.mozilla && portal.support.browser.version.split(".")[0] === "1")) {
-		noStorageEvent = true;
-	}
 	
 	// Finds the socket object which is mapped to the given url
 	portal.find = function(url) {
 		var i;
 		
 		// Returns the first socket in the document
-		if (!url) {
+		if (!arguments.length) {
 			for (i in sockets) {
 				if (sockets[i]) {
 					return sockets[i];
@@ -271,7 +270,99 @@
 	portal.open = function(url, options) {
 		// Makes url absolute to normalize URL
 		url = portal.support.getAbsoluteURL(url);
-		return (sockets[url] = socket(url, options));
+		sockets[url] = socket(url, options);
+		
+		return portal.find(url);
+	};
+	// Default options
+	portal.defaults = {
+		// Socket options
+		transports: ["ws", "sse", "stream", "longpoll"],
+		timeout: false,
+		heartbeat: false,
+		_heartbeat: 5000,
+		lastEventId: "",
+		sharing: true,
+		prepare: function(connect) {
+			connect();
+		},
+		reconnect: function(lastDelay) {
+			return 2 * (lastDelay || 250);
+		},
+		idGenerator: function() {
+			// Generates a random UUID 
+			// Logic borrowed from http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/2117523#2117523
+			return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+				var r = Math.random() * 16 | 0,
+					v = c === "x" ? r : (r & 0x3 | 0x8);
+				
+				return v.toString(16);
+			});
+		},
+		urlBuilder: function(url, params) {
+			return url + (/\?/.test(url) ? "&" : "?") + portal.support.param(params);
+		},
+		inbound: portal.support.parseJSON,
+		outbound: portal.support.stringifyJSON,
+		
+		// Transport options
+		credentials: false,
+		longpollTest: true,
+		xdrURL: function(url) {
+			// Maintaining session by rewriting URL
+			// http://stackoverflow.com/questions/6453779/maintaining-session-by-rewriting-url
+			var match = /(?:^|; )(JSESSIONID|PHPSESSID)=([^;]*)/.exec(document.cookie);
+			
+			switch (match && match[1]) {
+			case "JSESSIONID":
+				return url.replace(/;jsessionid=[^\?]*|(\?)|$/, ";jsessionid=" + match[2] + "$1");
+			case "PHPSESSID":
+				return url.replace(/\?PHPSESSID=[^&]*&?|\?|$/, "?PHPSESSID=" + match[2] + "&").replace(/&$/, "");
+			default:
+				return false;
+			}
+		},
+		streamParser: function(chunk) {
+			// Chunks are formatted according to the event stream format 
+			// http://www.w3.org/TR/eventsource/#event-stream-interpretation
+			var reol = /\r\n|[\r\n]/g, lines = [], data = this.data("data"), array = [], i = 0, 
+				match, line;
+			
+			// Strips off the left padding of the chunk
+			// the first chunk of some streaming transports and every chunk for Android browser 2 and 3 has padding
+			chunk = chunk.replace(/^\s+/g, "");
+			
+			// String.prototype.split is not reliable cross-browser
+			while (match = reol.exec(chunk)) {
+				lines.push(chunk.substring(i, match.index));
+				i = match.index + match[0].length;
+			}
+			lines.push(chunk.length === i ? "" : chunk.substring(i));
+			
+			if (!data) {
+				data = [];
+				this.data("data", data);
+			}
+			
+			// Processes the data field only
+			for (i = 0; i < lines.length; i++) {
+				line = lines[i];
+				if (!line) {
+					// Finish
+					array.push(data.join("\n"));
+					data = [];
+					this.data("data", data);
+				} else if (/^data:\s/.test(line)) {
+					// A single data field
+					data.push(line.substring("data: ".length));
+				} else {
+					// A fragment of a data field
+					data[data.length - 1] += line;
+				}
+			}
+			
+			return array;
+		}
 	};
 	
 	// Callback function
@@ -495,7 +586,7 @@
 						connection.transport = "local";
 						transport = portal.transports.local(self, opts);
 					}
-
+					
 					// Executes the prepare handler if a physical connection is needed
 					if (transport) {
 						connect();
@@ -682,7 +773,7 @@
 						// Powered by the storage event and the localStorage
 						// http://www.w3.org/TR/webstorage/#event-storage
 						storage: function() {
-							if (noStorageEvent) {
+							if (!portal.support.storage) {
 								return;
 							}
 							
@@ -698,7 +789,7 @@
 									}
 									
 									// Handles the storage event 
-									portal.support.on(window, "storage", onstorage);									
+									portal.support.on(window, "storage", onstorage);
 									self.one("close", function() {
 										portal.support.off(window, "storage", onstorage);
 										// Defers again to clean the storage
@@ -946,97 +1037,6 @@
 		return self.open();
 	}
 	
-	// Default options
-	portal.defaults = {
-		// Socket options
-		transports: ["ws", "sse", "stream", "longpoll"],
-		timeout: false,
-		heartbeat: false,
-		_heartbeat: 5000,
-		lastEventId: "",
-		sharing: true,
-		prepare: function(connect) {
-			connect();
-		},
-		reconnect: function(lastDelay) {
-			return 2 * (lastDelay || 250);
-		},
-		idGenerator: function() {
-			// Generates a random UUID 
-			// Logic borrowed from http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/2117523#2117523
-			return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
-				var r = Math.random() * 16 | 0,
-					v = c === "x" ? r : (r & 0x3 | 0x8);
-				
-				return v.toString(16);
-			});
-		},
-		urlBuilder: function(url, params) {
-			return url + (/\?/.test(url) ? "&" : "?") + portal.support.param(params);
-		},
-		inbound: portal.support.parseJSON,
-		outbound: portal.support.stringifyJSON,
-		
-		// Transport options
-		credentials: false,
-		longpollTest: true,
-		xdrURL: function(url) {
-			// Maintaining session by rewriting URL
-			// http://stackoverflow.com/questions/6453779/maintaining-session-by-rewriting-url
-			var match = /(?:^|; )(JSESSIONID|PHPSESSID)=([^;]*)/.exec(document.cookie);
-			
-			switch (match && match[1]) {
-			case "JSESSIONID":
-				return url.replace(/;jsessionid=[^\?]*|(\?)|$/, ";jsessionid=" + match[2] + "$1");
-			case "PHPSESSID":
-				return url.replace(/\?PHPSESSID=[^&]*&?|\?|$/, "?PHPSESSID=" + match[2] + "&").replace(/&$/, "");
-			default:
-				return false;
-			}
-		},
-		streamParser: function(chunk) {
-			// Chunks are formatted according to the event stream format 
-			// http://www.w3.org/TR/eventsource/#event-stream-interpretation
-			var reol = /\r\n|[\r\n]/g, lines = [], data = this.data("data"), array = [], i = 0, 
-				match, line;
-			
-			// Strips off the left padding of the chunk
-			// the first chunk of some streaming transports and every chunk for Android browser 2 and 3 has padding
-			chunk = chunk.replace(/^\s+/g, "");
-			
-			// String.prototype.split is not reliable cross-browser
-			while (match = reol.exec(chunk)) {
-				lines.push(chunk.substring(i, match.index));
-				i = match.index + match[0].length;
-			}
-			lines.push(chunk.length === i ? "" : chunk.substring(i));
-			
-			if (!data) {
-				data = [];
-				this.data("data", data);
-			}
-			
-			// Processes the data field only
-			for (i = 0; i < lines.length; i++) {
-				line = lines[i];
-				if (!line) {
-					// Finish
-					array.push(data.join("\n"));
-					data = [];
-					this.data("data", data);
-				} else if (/^data:\s/.test(line)) {
-					// A single data field
-					data.push(line.substring("data: ".length));
-				} else {
-					// A fragment of a data field
-					data[data.length - 1] += line;
-				}
-			}
-			
-			return array;
-		}
-	};
-	
 	// Transports
 	portal.transports = {
 		// Local socket
@@ -1047,7 +1047,7 @@
 				name = "socket-" + options.url,
 				connectors = {
 					storage: function() {
-						if (noStorageEvent) {
+						if (!portal.support.storage) {
 							return;
 						}
 						
@@ -1129,13 +1129,13 @@
 			function removeFromArray(array, val) {
 				var i, 
 					length = array.length;
-
+				
 				for (i = 0; i < length; i++) {
 					if (array[i] === val) {
 						array.splice(i, 1);
 					}
 				}
-
+				
 				return length !== array.length;
 			}
 			
@@ -1343,7 +1343,7 @@
 				var iframe,
 					textarea, 
 					form = document.createElement("form");
-
+				
 				form.action = url;
 				form.target = "socket-" + (++guid);
 				form.method = "POST";
@@ -1686,7 +1686,7 @@
 				open: function() {
 					function poll() {
 						var url = options.xdrURL.call(socket, socket.buildURL({count: ++count}));
-
+						
 						socket.data("url", url);
 						
 						xdr = new XDomainRequest();
