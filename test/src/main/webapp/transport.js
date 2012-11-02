@@ -114,9 +114,8 @@
 							fns = events[type];
 						
 						if (fns) {
+							args = args || [];
 							for (i = 0; i < fns.length; i++) {
-								// TODO
-//								$("<div />").appendTo("body").text(fns[i].toString());
 								fns[i].apply(null, args);
 							}
 						}
