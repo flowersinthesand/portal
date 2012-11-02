@@ -22,6 +22,7 @@
 		jsonpCallbacks = [],
 		// Core prototypes
 		toString = Object.prototype.toString,
+		hasOwn = Object.prototype.hasOwnProperty,
 		slice = Array.prototype.slice;
 	
 	// Convenience utilities
@@ -211,7 +212,7 @@
 						default:
 							partial = [];
 							for (i in value) {
-								if (Object.prototype.hasOwnProperty.call(value, i)) {
+								if (hasOwn.call(value, i)) {
 									v = str(i, value);
 									if (v) {
 										partial.push(quote(i) + ":" + v);
