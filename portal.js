@@ -137,10 +137,11 @@
 		xhr: function() {
 			try {
 				return new window.XMLHttpRequest();
-			} catch(e) {}
-			try {
-				return new window.ActiveXObject("Microsoft.XMLHTTP");
-			} catch(e) {}
+			} catch(e) {
+				try {
+					return new window.ActiveXObject("Microsoft.XMLHTTP");
+				} catch(e) {}
+			}
 		},
 		parseJSON: function(data) {
 			return !data ? 
@@ -149,7 +150,7 @@
 					window.JSON.parse(data) : 
 					new Function("return " + data)();
 		},
-		// http://github.com/flowersinthesand/portal.support.stringifyJSON(
+		// http://github.com/flowersinthesand/stringifyJSON
 		stringifyJSON: function(value) {
 			var escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g, 
 				meta = {
@@ -891,7 +892,7 @@
 				
 				function leaveTrace() {
 					document.cookie = encodeURIComponent(name) + "=" +
-						// Opera's parseFloat and JSON.stringify causes a strange bug with a number larger than 10 digit
+						// Opera 12.00's parseFloat and JSON.stringify causes a strange bug with a number larger than 10 digit
 						// JSON.stringify(parseFloat(10000000000) + 1).length === 11;
 						// JSON.stringify(parseFloat(10000000000 + 1)).length === 10;
 						encodeURIComponent(portal.support.stringifyJSON({ts: portal.support.now() + 1, heir: (server.get("children") || [])[0]}));
