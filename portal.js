@@ -585,8 +585,8 @@
 					
 					// Check if possible to make use of a shared socket
 					if (opts.sharing) {
-						connection.transport = "local";
-						transport = portal.transports.local(self, opts);
+						connection.transport = "session";
+						transport = portal.transports.session(self, opts);
 					}
 					
 					// Executes the prepare handler if a physical connection is needed
@@ -618,7 +618,7 @@
 						if (event.reply) {
 							// Shared socket needs to know the callback event name 
 							// because it fires the callback event directly instead of using reply event 
-							if (connection.transport === "local") {
+							if (connection.transport === "session") {
 								event.doneCallback = doneCallback;
 								event.failCallback = failCallback;
 							} else {
@@ -936,7 +936,7 @@
 			}
 			
 			// Share the socket if possible
-			if (opts.sharing && connection.transport !== "local") {
+			if (opts.sharing && connection.transport !== "session") {
 				share();
 			}
 		})
@@ -1041,8 +1041,8 @@
 	
 	// Transports
 	portal.transports = {
-		// Local socket
-		local: function(socket, options) {
+		// Session socket
+		session: function(socket, options) {
 			var trace,
 				orphan,
 				connector,
@@ -1172,7 +1172,7 @@
 						}
 						break;
 					case "message":
-						// When using the local transport, message events could be sent before the open event
+						// When using the session transport, message events could be sent before the open event
 						if (socket.state() === "connecting") {
 							socket.one("open", function() {
 								socket.fire.apply(socket, data);
