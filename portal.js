@@ -480,9 +480,18 @@
 				},
 				// Adds event handler
 				on: function(type, fn) {
-					var event = events[type];
+					var event;
+					
+					// Handles a map of type and handler
+					if (typeof type === "object") {
+						for (event in type) {
+							self.on(event, type[event]);
+						}
+						return this;
+					}
 					
 					// For custom event
+					event = events[type];
 					if (!event) {
 						if (events.message.locked()) {
 							return this;
@@ -605,30 +614,31 @@
 					// Defers sending an event until the state become opened
 					if (state !== "opened") {
 						buffer.push(arguments);
-					} else {
-						// Outbound event
-						event = {
-							id: ++eventId,
-							socket: opts.id,
-							type: type,
-							data: data,
-							reply: !!(doneCallback || failCallback)
-						};
-						
-						if (event.reply) {
-							// Shared socket needs to know the callback event name 
-							// because it fires the callback event directly instead of using reply event 
-							if (connection.transport === "session") {
-								event.doneCallback = doneCallback;
-								event.failCallback = failCallback;
-							} else {
-								replyCallbacks[eventId] = {done: doneCallback, fail: failCallback};
-							}
-						}
-						
-						// Delegates to the transport
-						transport.send(portal.support.isBinary(data) ? data : opts.outbound.call(self, event));
+						return this;
 					}
+					
+					// Outbound event
+					event = {
+						id: ++eventId,
+						socket: opts.id,
+						type: type,
+						data: data,
+						reply: !!(doneCallback || failCallback)
+					};
+					
+					if (event.reply) {
+						// Shared socket needs to know the callback event name 
+						// because it fires the callback event directly instead of using reply event 
+						if (connection.transport === "session") {
+							event.doneCallback = doneCallback;
+							event.failCallback = failCallback;
+						} else {
+							replyCallbacks[eventId] = {done: doneCallback, fail: failCallback};
+						}
+					}
+					
+					// Delegates to the transport
+					transport.send(portal.support.isBinary(data) ? data : opts.outbound.call(self, event));
 					
 					return this;
 				},
@@ -672,30 +682,31 @@
 						while (data.length) {
 							self._fire(data.shift());
 						}
+						return this;
+					}
+					
+					if (portal.support.isBinary(data)) {
+						array = [{type: "message", data: data}];
 					} else {
-						if (portal.support.isBinary(data)) {
-							array = [{type: "message", data: data}];
-						} else {
-							array = opts.inbound.call(self, data);
-							array = array == null ? [] : !portal.support.isArray(array) ? [array] : array;
+						array = opts.inbound.call(self, data);
+						array = array == null ? [] : !portal.support.isArray(array) ? [array] : array;
+					}
+					
+					portal.support.each(array, function(i, event) {
+						var latch, args = [event.type, event.data];
+						
+						opts.lastEventId = event.id;
+						if (event.reply) {
+							args.push(function(result) {
+								if (!latch) {
+									latch = true;
+									self.send("reply", {id: event.id, data: result});
+								}
+							});
 						}
 						
-						portal.support.each(array, function(i, event) {
-							var latch, args = [event.type, event.data];
-							
-							opts.lastEventId = event.id;
-							if (event.reply) {
-								args.push(function(result) {
-									if (!latch) {
-										latch = true;
-										self.send("reply", {id: event.id, data: result});
-									}
-								});
-							}
-							
-							self.fire.apply(self, args).fire("_message", args);
-						});
-					}
+						self.fire.apply(self, args).fire("_message", args);
+					});
 					
 					return this;
 				},
@@ -747,291 +758,293 @@
 		});
 		
 		// Initializes
-		self.connecting(function() {
-			// From preparing state
-			state = "connecting";
-			
-			var timeoutTimer;
-			
-			// Sets timeout timer
-			function setTimeoutTimer() {
-				timeoutTimer = setTimeout(function() {
-					transport.close();
-					self.fire("close", "timeout");
-				}, opts.timeout);
-			}
-			
-			// Clears timeout timer
-			function clearTimeoutTimer() {
-				clearTimeout(timeoutTimer);
-			}
-			
-			// Makes the socket sharable
-			function share() {
-				var traceTimer,
-					server, 
-					name = "socket-" + url,
-					servers = {
-						// Powered by the storage event and the localStorage
-						// http://www.w3.org/TR/webstorage/#event-storage
-						storage: function() {
-							if (!portal.support.storage) {
-								return;
-							}
-							
-							var storage = window.localStorage;
-							
-							return {
-								init: function() {
-									function onstorage(event) {
-										// When a deletion, newValue initialized to null
-										if (event.key === name && event.newValue) {
-											listener(event.newValue);
-										}
-									}
-									
-									// Handles the storage event 
-									portal.support.on(window, "storage", onstorage);
-									self.one("close", function() {
-										portal.support.off(window, "storage", onstorage);
-										// Defers again to clean the storage
-										self.one("close", function() {
-											storage.removeItem(name);
-											storage.removeItem(name + "-opened");
-											storage.removeItem(name + "-children");
-										});
-									});
-								},
-								broadcast: function(obj) {
-									var string = portal.support.stringifyJSON(obj);
-									storage.setItem(name, string);
-									setTimeout(function() {
-										listener(string);
-									}, 50);
-								},
-								get: function(key) {
-									return portal.support.parseJSON(storage.getItem(name + "-" + key));
-								},
-								set: function(key, value) {
-									storage.setItem(name + "-" + key, portal.support.stringifyJSON(value));
-								}
-							};
-						},
-						// Powered by the window.open method
-						// https://developer.mozilla.org/en/DOM/window.open
-						windowref: function() {
-							// Internet Explorer raises an invalid argument error
-							// when calling the window.open method with the name containing non-word characters
-							var neim = name.replace(/\W/g, ""),
-								container = document.getElementById(neim),
-								win;
-							
-							if (!container) {
-								container = document.createElement("div");
-								container.id = neim;
-								container.style.display = "none";
-								container.innerHTML = '<iframe name="' + neim + '" />';
-								document.body.appendChild(container);
-							}
-							
-							win = container.firstChild.contentWindow;
-							
-							return {
-								init: function() {
-									// Callbacks from different windows
-									win.callbacks = [listener];
-									// In IE 8 and less, only string argument can be safely passed to the function in other window
-									win.fire = function(string) {
-										var i;
-										
-										for (i = 0; i < win.callbacks.length; i++) {
-											win.callbacks[i](string);
-										}
-									};
-								},
-								broadcast: function(obj) {
-									if (!win.closed && win.fire) {
-										win.fire(portal.support.stringifyJSON(obj));
-									}
-								},
-								get: function(key) {
-									return !win.closed ? win[key] : null;
-								},
-								set: function(key, value) {
-									if (!win.closed) {
-										win[key] = value;
-									}
-								}
-							};
-						}
-					};
+		self.on({
+			connecting: function() {
+				// From preparing state
+				state = "connecting";
 				
-				// Receives send and close command from the children
-				function listener(string) {
-					var command = portal.support.parseJSON(string), data = command.data;
-					
-					if (!command.target) {
-						if (command.type === "fire") {
-							self.fire(data.type, data.data);
-						}
-					} else if (command.target === "p") {
-						switch (command.type) {
-						case "send":
-							self.send(data.type, data.data, data.doneCallback, data.failCallback);
-							break;
-						case "close":
-							self.close();
-							break;
-						}
-					}
-				}
+				var timeoutTimer;
 				
-				function propagateMessageEvent(args) {
-					server.broadcast({target: "c", type: "message", data: args});
-				}
-				
-				function leaveTrace() {
-					document.cookie = encodeURIComponent(name) + "=" +
-						// Opera 12.00's parseFloat and JSON.stringify causes a strange bug with a number larger than 10 digit
-						// JSON.stringify(parseFloat(10000000000) + 1).length === 11;
-						// JSON.stringify(parseFloat(10000000000 + 1)).length === 10;
-						encodeURIComponent(portal.support.stringifyJSON({ts: portal.support.now() + 1, heir: (server.get("children") || [])[0]}));
-				}
-				
-				// Chooses a server
-				server = servers.storage() || servers.windowref();
-				server.init();
-				
-				// For broadcast method
-				connection.broadcastable = server;
-				
-				// List of children sockets
-				server.set("children", []);
-				// Flag indicating the parent socket is opened
-				server.set("opened", false);
-				
-				// Leaves traces
-				leaveTrace();
-				traceTimer = setInterval(leaveTrace, 1000);
-				
-				self.on("_message", propagateMessageEvent)
-				.one("open", function() {
-					server.set("opened", true);
-					server.broadcast({target: "c", type: "open"});
-				})
-				.one("close", function(reason) {
-					// Clears trace timer 
-					clearInterval(traceTimer);
-					// Removes the trace
-					document.cookie = encodeURIComponent(name) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-					// The heir is the parent unless unloading
-					server.broadcast({target: "c", type: "close", data: {reason: reason, heir: !unloading ? opts.id : (server.get("children") || [])[0]}});
-					self.off("_message", propagateMessageEvent);
-				});
-			}
-			
-			if (opts.timeout > 0) {
-				setTimeoutTimer();				
-				self.one("open", clearTimeoutTimer).one("close", clearTimeoutTimer);
-			}
-			
-			// Share the socket if possible
-			if (opts.sharing && connection.transport !== "session") {
-				share();
-			}
-		})
-		.open(function() {
-			// From connecting state
-			state = "opened";
-			
-			var heartbeatTimer;
-			
-			// Sets heartbeat timer
-			function setHeartbeatTimer() {
-				heartbeatTimer = setTimeout(function() {
-					self.send("heartbeat").one("heartbeat", function() {
-						clearHeartbeatTimer();
-						setHeartbeatTimer();
-					});
-					
-					heartbeatTimer = setTimeout(function() {
+				// Sets timeout timer
+				function setTimeoutTimer() {
+					timeoutTimer = setTimeout(function() {
 						transport.close();
-						self.fire("close", "error");
-					}, opts._heartbeat);
-				}, opts.heartbeat - opts._heartbeat);
-			}
-			
-			// Clears heartbeat timer
-			function clearHeartbeatTimer() {
-				clearTimeout(heartbeatTimer);
-			}
-						
-			if (opts.heartbeat > opts._heartbeat) {
-				setHeartbeatTimer();
-				self.one("close", clearHeartbeatTimer);
-			}
-			
-			// Locks the connecting event
-			events.connecting.lock();
-			
-			// Initializes variables related with reconnection
-			reconnectTimer = reconnectDelay = reconnectTry = null;
-			
-			// Flushes buffer
-			while (buffer.length) {
-				self.send.apply(self, buffer.shift());
-			}
-		})
-		.close(function() {
-			// From preparing, connecting, or opened state 
-			state = "closed";
-			
-			var type, event, order = events.close.order;
-			
-			// Locks event whose order is lower than close event
-			for (type in events) {
-				event = events[type];
-				if (event.order < order) {
-					event.lock();
+						self.fire("close", "timeout");
+					}, opts.timeout);
 				}
-			}
-			
-			// Schedules reconnection
-			if (opts.reconnect) {
-				self.one("close", function() {
-					reconnectTry = reconnectTry || 1;
-					reconnectDelay = opts.reconnect.call(self, reconnectDelay, reconnectTry);
+				
+				// Clears timeout timer
+				function clearTimeoutTimer() {
+					clearTimeout(timeoutTimer);
+				}
+				
+				// Makes the socket sharable
+				function share() {
+					var traceTimer,
+						server, 
+						name = "socket-" + url,
+						servers = {
+							// Powered by the storage event and the localStorage
+							// http://www.w3.org/TR/webstorage/#event-storage
+							storage: function() {
+								if (!portal.support.storage) {
+									return;
+								}
+								
+								var storage = window.localStorage;
+								
+								return {
+									init: function() {
+										function onstorage(event) {
+											// When a deletion, newValue initialized to null
+											if (event.key === name && event.newValue) {
+												listener(event.newValue);
+											}
+										}
+										
+										// Handles the storage event 
+										portal.support.on(window, "storage", onstorage);
+										self.one("close", function() {
+											portal.support.off(window, "storage", onstorage);
+											// Defers again to clean the storage
+											self.one("close", function() {
+												storage.removeItem(name);
+												storage.removeItem(name + "-opened");
+												storage.removeItem(name + "-children");
+											});
+										});
+									},
+									broadcast: function(obj) {
+										var string = portal.support.stringifyJSON(obj);
+										storage.setItem(name, string);
+										setTimeout(function() {
+											listener(string);
+										}, 50);
+									},
+									get: function(key) {
+										return portal.support.parseJSON(storage.getItem(name + "-" + key));
+									},
+									set: function(key, value) {
+										storage.setItem(name + "-" + key, portal.support.stringifyJSON(value));
+									}
+								};
+							},
+							// Powered by the window.open method
+							// https://developer.mozilla.org/en/DOM/window.open
+							windowref: function() {
+								// Internet Explorer raises an invalid argument error
+								// when calling the window.open method with the name containing non-word characters
+								var neim = name.replace(/\W/g, ""),
+									container = document.getElementById(neim),
+									win;
+								
+								if (!container) {
+									container = document.createElement("div");
+									container.id = neim;
+									container.style.display = "none";
+									container.innerHTML = '<iframe name="' + neim + '" />';
+									document.body.appendChild(container);
+								}
+								
+								win = container.firstChild.contentWindow;
+								
+								return {
+									init: function() {
+										// Callbacks from different windows
+										win.callbacks = [listener];
+										// In IE 8 and less, only string argument can be safely passed to the function in other window
+										win.fire = function(string) {
+											var i;
+											
+											for (i = 0; i < win.callbacks.length; i++) {
+												win.callbacks[i](string);
+											}
+										};
+									},
+									broadcast: function(obj) {
+										if (!win.closed && win.fire) {
+											win.fire(portal.support.stringifyJSON(obj));
+										}
+									},
+									get: function(key) {
+										return !win.closed ? win[key] : null;
+									},
+									set: function(key, value) {
+										if (!win.closed) {
+											win[key] = value;
+										}
+									}
+								};
+							}
+						};
 					
-					if (reconnectDelay !== false) {
-						reconnectTimer = setTimeout(function() {
-							self.open();
-						}, reconnectDelay);
-						self.fire("waiting", reconnectDelay, reconnectTry);
+					// Receives send and close command from the children
+					function listener(string) {
+						var command = portal.support.parseJSON(string), data = command.data;
+						
+						if (!command.target) {
+							if (command.type === "fire") {
+								self.fire(data.type, data.data);
+							}
+						} else if (command.target === "p") {
+							switch (command.type) {
+							case "send":
+								self.send(data.type, data.data, data.doneCallback, data.failCallback);
+								break;
+							case "close":
+								self.close();
+								break;
+							}
+						}
 					}
-				});
-			}
-		})
-		.waiting(function() {
-			// From closed state
-			state = "waiting";
-		})
-		.on("reply", function(reply) {
-			var fn,
-				id = reply.id, 
-				data = reply.data, 
-				exception = reply.exception,
-				callback = replyCallbacks[id];
-			
-			if (callback) {
-				fn = exception ? callback.fail : callback.done;
-				if (fn) {
-					if (portal.support.isFunction(fn)) {
-						fn.call(self, data);
-					} else {
-						self.fire(fn, data).fire("_message", [fn, data]);
-					} 
 					
-					delete replyCallbacks[id];
+					function propagateMessageEvent(args) {
+						server.broadcast({target: "c", type: "message", data: args});
+					}
+					
+					function leaveTrace() {
+						document.cookie = encodeURIComponent(name) + "=" +
+							// Opera 12.00's parseFloat and JSON.stringify causes a strange bug with a number larger than 10 digit
+							// JSON.stringify(parseFloat(10000000000) + 1).length === 11;
+							// JSON.stringify(parseFloat(10000000000 + 1)).length === 10;
+							encodeURIComponent(portal.support.stringifyJSON({ts: portal.support.now() + 1, heir: (server.get("children") || [])[0]}));
+					}
+					
+					// Chooses a server
+					server = servers.storage() || servers.windowref();
+					server.init();
+					
+					// For broadcast method
+					connection.broadcastable = server;
+					
+					// List of children sockets
+					server.set("children", []);
+					// Flag indicating the parent socket is opened
+					server.set("opened", false);
+					
+					// Leaves traces
+					leaveTrace();
+					traceTimer = setInterval(leaveTrace, 1000);
+					
+					self.on("_message", propagateMessageEvent)
+					.one("open", function() {
+						server.set("opened", true);
+						server.broadcast({target: "c", type: "open"});
+					})
+					.one("close", function(reason) {
+						// Clears trace timer 
+						clearInterval(traceTimer);
+						// Removes the trace
+						document.cookie = encodeURIComponent(name) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+						// The heir is the parent unless unloading
+						server.broadcast({target: "c", type: "close", data: {reason: reason, heir: !unloading ? opts.id : (server.get("children") || [])[0]}});
+						self.off("_message", propagateMessageEvent);
+					});
+				}
+				
+				if (opts.timeout > 0) {
+					setTimeoutTimer();				
+					self.one("open", clearTimeoutTimer).one("close", clearTimeoutTimer);
+				}
+				
+				// Share the socket if possible
+				if (opts.sharing && connection.transport !== "session") {
+					share();
+				}
+			},
+			open: function() {
+				// From connecting state
+				state = "opened";
+				
+				var heartbeatTimer;
+				
+				// Sets heartbeat timer
+				function setHeartbeatTimer() {
+					heartbeatTimer = setTimeout(function() {
+						self.send("heartbeat").one("heartbeat", function() {
+							clearHeartbeatTimer();
+							setHeartbeatTimer();
+						});
+						
+						heartbeatTimer = setTimeout(function() {
+							transport.close();
+							self.fire("close", "error");
+						}, opts._heartbeat);
+					}, opts.heartbeat - opts._heartbeat);
+				}
+				
+				// Clears heartbeat timer
+				function clearHeartbeatTimer() {
+					clearTimeout(heartbeatTimer);
+				}
+							
+				if (opts.heartbeat > opts._heartbeat) {
+					setHeartbeatTimer();
+					self.one("close", clearHeartbeatTimer);
+				}
+				
+				// Locks the connecting event
+				events.connecting.lock();
+				
+				// Initializes variables related with reconnection
+				reconnectTimer = reconnectDelay = reconnectTry = null;
+				
+				// Flushes buffer
+				while (buffer.length) {
+					self.send.apply(self, buffer.shift());
+				}
+			},
+			close: function() {
+				// From preparing, connecting, or opened state 
+				state = "closed";
+				
+				var type, event, order = events.close.order;
+				
+				// Locks event whose order is lower than close event
+				for (type in events) {
+					event = events[type];
+					if (event.order < order) {
+						event.lock();
+					}
+				}
+				
+				// Schedules reconnection
+				if (opts.reconnect) {
+					self.one("close", function() {
+						reconnectTry = reconnectTry || 1;
+						reconnectDelay = opts.reconnect.call(self, reconnectDelay, reconnectTry);
+						
+						if (reconnectDelay !== false) {
+							reconnectTimer = setTimeout(function() {
+								self.open();
+							}, reconnectDelay);
+							self.fire("waiting", reconnectDelay, reconnectTry);
+						}
+					});
+				}
+			},
+			waiting: function() {
+				// From closed state
+				state = "waiting";
+			},
+			reply: function(reply) {
+				var fn,
+					id = reply.id, 
+					data = reply.data, 
+					exception = reply.exception,
+					callback = replyCallbacks[id];
+				
+				if (callback) {
+					fn = exception ? callback.fail : callback.done;
+					if (fn) {
+						if (portal.support.isFunction(fn)) {
+							fn.call(self, data);
+						} else {
+							self.fire(fn, data).fire("_message", [fn, data]);
+						} 
+						
+						delete replyCallbacks[id];
+					}
 				}
 			}
 		});

@@ -90,6 +90,15 @@ test("on method should add a event handler", 5, function() {
 	}
 });
 
+test("on method should be able to receive events map", 1, function() {
+	portal.open("url").on({
+		open: function() {
+			ok(true);
+		}
+	})
+	.fire("open");
+});
+
 test("off method should remove a event handler", 4, function() {
 	var type, 
 		yes = function() {
@@ -1387,7 +1396,7 @@ function testTransport(transport, fn) {
 	asyncTest("send method should work properly with big data", function() {
 		var i, text = "A";
 		
-		for (i = 0; i < Math.pow(2, transport === "ws" ? 12 : 15); i++) {
+		for (i = 0; i < Math.pow(2, transport === "ws" || transport === "longpolljsonp"? 12 : 15); i++) {
 			text += "A";
 		}
 		
