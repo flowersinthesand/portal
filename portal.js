@@ -365,6 +365,9 @@
 			
 			return array;
 		}
+		// Undocumented
+		// method: null
+		// initIframe: null
 	};
 	
 	// Callback function
@@ -461,8 +464,14 @@
 			// Socket object
 			self = {
 				// Finds the value of an option
-				option: function(key) {
-					return opts[key];
+				option: function(key, /* undocumented */ value) {
+					if (value === undefined) {
+						return opts[key];
+					}
+					
+					opts[key] = value;
+					
+					return this;
 				},
 				// Gets or sets a connection-scoped value
 				data: function(key, value) {
@@ -1480,7 +1489,7 @@
 						}
 					};
 					
-					xhr.open("GET", socket.data("url"));
+					xhr.open(options.method || "GET", socket.data("url"));
 					if (portal.support.corsable) {
 						xhr.withCredentials = options.credentials;
 					}
@@ -1609,7 +1618,7 @@
 						socket.fire("close", "done");
 					};
 					
-					xdr.open("GET", url);
+					xdr.open(options.method || "GET", url);
 					xdr.send();
 				},
 				close: function() {
@@ -1663,7 +1672,7 @@
 							}
 						};
 						
-						xhr.open("GET", url);
+						xhr.open(options.method || "GET", url);
 						if (portal.support.corsable) {
 							xhr.withCredentials = options.credentials;
 						}
@@ -1724,7 +1733,7 @@
 							socket.fire("close", "error");
 						};
 						
-						xdr.open("GET", url);
+						xdr.open(options.method || "GET", url);
 						xdr.send();
 					}
 					
