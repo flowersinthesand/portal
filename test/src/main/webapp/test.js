@@ -66,7 +66,7 @@ module("Socket", {
 });
 
 test("option method should find the value of an option", function() {
-	strictEqual(portal.open("url", {version: $.fn.jquery}).option("version"), $.fn.jquery);
+	strictEqual(portal.open("url", {version: "1"}).option("version"), "1");
 });
 
 test("data method should set and get a connection-scoped value", function() {
