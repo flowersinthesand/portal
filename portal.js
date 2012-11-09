@@ -137,10 +137,10 @@
 		xhr: function() {
 			try {
 				return new window.XMLHttpRequest();
-			} catch(e) {
+			} catch(e1) {
 				try {
 					return new window.ActiveXObject("Microsoft.XMLHTTP");
-				} catch(e) {}
+				} catch(e2) {}
 			}
 		},
 		parseJSON: function(data) {
