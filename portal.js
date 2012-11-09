@@ -227,7 +227,7 @@
 				})("", {"": value});
 		}
 	};
-	portal.support.corsable = !!portal.support.xhr().withCredentials;
+	portal.support.corsable = "withCredentials" in portal.support.xhr();
 	portal.support.storage = !!(window.localStorage && window.StorageEvent);
 	guid = portal.support.now();
 	
