@@ -3,11 +3,11 @@
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, target-densitydpi=medium-dpi" />
-		<title>jQuery Socket Chat</title>
-		<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.js"></script>
-		<script type="text/javascript" src="jquery.socket-1.0b3.js"></script>
+		<title>Chat</title>
+		<script type="text/javascript" src="http://code.jquery.com/jquery-1.8.2.js"></script>
+		<script type="text/javascript" src="portal-1.0rc1.js"></script>
 		<script type="text/javascript">
-		$.socket.defaults.transports = ["sse", "stream"];
+		portal.defaults.transports = ["sse", "stream"];
 		
 		$(function() {
 			var username, 
@@ -28,33 +28,34 @@
 						$("#editor p").addClass("user").removeClass("guide").text(username);
 						document.cookie = "username=" + encodeURIComponent(username);
 						
-						$.socket("chat")
-						.connecting(function() {
-							notify("The connection has been tried by '" + this.data("transport") + "'");
-						})
-						.open(function() {
-							notify("The connection has been opened");
-							$(input).removeAttr("disabled").focus();
-						})
-						.close(function(reason) {
-							notify("The connection has been closed due to '" + reason + "'");
-							$(input).attr("disabled", "disabled");
-						})
-						.message(function(data) {
-							if (lastUsername !== data.username) {
-								lastUsername = data.username;
-								$('<p class="user"/>').text(data.username).appendTo(content);
+						portal.open("chat").on({
+							connecting: function() {
+								notify("The connection has been tried by '" + this.data("transport") + "'");
+							},
+							open: function() {
+								notify("The connection has been opened");
+								$(input).removeAttr("disabled").focus();
+							},
+							close: function(reason) {
+								notify("The connection has been closed due to '" + reason + "'");
+								$(input).attr("disabled", "disabled");
+							},
+							message: function(data) {
+								if (lastUsername !== data.username) {
+									lastUsername = data.username;
+									$('<p class="user"/>').text(data.username).appendTo(content);
+								}
+								
+								$('<p class="message"/>').text(data.message).appendTo(content);
+								content.scrollTop = content.scrollHeight;
+							},
+							waiting: function(delay, attempts) {
+								notify("The socket will try to reconnect after " + delay + " ms");
+								notify("The total number of reconnection attempts is " + attempts);
 							}
-							
-							$('<p class="message"/>').text(data.message).appendTo(content);
-							content.scrollTop = content.scrollHeight;
-						})
-						.waiting(function(delay, attempts) {
-							notify("The socket will try to reconnect after " + delay + " ms");
-							notify("The total number of reconnection attempts is " + attempts);
 						});
 					} else {
-						$.socket().send("message", {username: username, message: input.value});
+						portal.find().send("message", {username: username, message: input.value});
 					}
 					
 					input.value = "";
@@ -90,7 +91,7 @@
 	<body>
 		<div id="content">
 			<p class="user"><span>Donghwan Kim</span></p>
-			<p class="message">Welcome to jQuery Socket!</p>
+			<p class="message">Welcome to Portal!</p>
 		</div>
 		<div id="editor">
 			<p class="guide">Enter your username</p>
