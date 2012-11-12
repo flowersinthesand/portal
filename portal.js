@@ -225,10 +225,11 @@
 						}
 					}
 				})("", {"": value});
-		}
+		},
+		browser: {},
+		storage: !!(window.localStorage && window.StorageEvent)
 	};
 	portal.support.corsable = "withCredentials" in portal.support.xhr();
-	portal.support.storage = !!(window.localStorage && window.StorageEvent);
 	guid = portal.support.now();
 	
 	// Browser sniffing
@@ -241,7 +242,6 @@
 				ua.indexOf("compatible") < 0 && /(mozilla)(?:.*? rv:([\w.]+)|)/.exec(ua) ||
 				[];
 		
-		portal.support.browser = {};
 		portal.support.browser[match[1] || ""] = true;
 		portal.support.browser.version = match[2] || "0";
 		
