@@ -44,7 +44,7 @@
 		getAbsoluteURL: function(url) {
 			var div = document.createElement("div");
 			div.innerHTML = '<a href="' + url + '"/>';
-			return decodeURI(div.firstChild.href);
+			return encodeURI(decodeURI(div.firstChild.href));
 		},
 		iterate: function(fn) {
 			var timeoutId;
