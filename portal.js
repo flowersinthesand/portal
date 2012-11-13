@@ -43,7 +43,12 @@
 		},
 		getAbsoluteURL: function(url) {
 			var div = document.createElement("div");
+			
+			// Uses an innerHTML property to obtain an absolute URL
 			div.innerHTML = '<a href="' + url + '"/>';
+			
+			// encodeURI and decodeURI are needed to normalize URL between IE and non-IE, 
+			// since IE doesn't encode the href property value and return it - http://jsfiddle.net/Yq9M8/1/
 			return encodeURI(decodeURI(div.firstChild.href));
 		},
 		iterate: function(fn) {
