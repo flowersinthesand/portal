@@ -1344,8 +1344,7 @@ function testTransport(transport, fn) {
 		(transport === "sse" && !window.EventSource) || 
 		(transport === "streamxhr" && (!window.XMLHttpRequest || (portal.support.browser.msie && +portal.support.browser.version < 10))) || 
 		(transport === "streamxdr" && !window.XDomainRequest) ||
-		(transport === "streamiframe" && !window.ActiveXObject) || 
-		(transport === "longpollajax") ||
+		(transport === "streamiframe" && !window.ActiveXObject) ||
 		(transport === "longpollxdr" && !window.XDomainRequest)) {
 		return;
 	}
