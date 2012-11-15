@@ -1342,20 +1342,28 @@ function testTransport(transport, fn) {
 	
 	if ((transport === "ws" && !window.WebSocket && !window.MozWebSocket) || 
 		(transport === "sse" && !window.EventSource) || 
-		(transport === "streamxhr" && (!window.XMLHttpRequest || ($.browser.msie && +$.browser.version < 10))) || 
+		(transport === "streamxhr" && (!window.XMLHttpRequest || (portal.support.browser.msie && +portal.support.browser.version < 10))) || 
 		(transport === "streamxdr" && !window.XDomainRequest) ||
 		(transport === "streamiframe" && !window.ActiveXObject) || 
-		(transport === "longpollajax" && !$.support.ajax) ||
+		(transport === "longpollajax") ||
 		(transport === "longpollxdr" && !window.XDomainRequest)) {
 		return;
 	}
 	
+	if (/streamiframe/.test(transport)) {
+		try {
+			new window.ActiveXObject("htmlfile");
+		} catch(e) {
+			return;
+		}
+	}
+	
 	if (QUnit.urlParams.crossdomain) {
-		if (/streamiframe/.test(transport) || (/streamxhr|longpollajax/.test(transport) && !$.support.cors)) {
+		if (/streamiframe/.test(transport) || (/streamxhr|longpollajax/.test(transport) && !portal.support.corsable)) {
 			return;
 		} else if (/sse/.test(transport)) {
 			try {
-				if (!("withCredentials" in new EventSource("about:blank"))) {
+				if (!("withCredentials" in new window.EventSource("about:blank"))) {
 					return;
 				}
 			} catch (e) {

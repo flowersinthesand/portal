@@ -1514,6 +1514,13 @@
 			
 			if (!ActiveXObject || options.crossDomain) {
 				return;
+			} else {
+				// IE 10 Metro doesn't support ActiveXObject
+				try {
+					new ActiveXObject("htmlfile");
+				} catch(e) {
+					return;
+				}
 			}
 			
 			return portal.support.extend(portal.transports.httpbase(socket, options), {
