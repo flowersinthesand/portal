@@ -1780,7 +1780,7 @@
 						socket.data("url", url);
 						
 						script = document.createElement("script");
-						script.async = "async";
+						script.async = true;
 						script.src = url;
 						script.clean = function() {
 							script.clean = script.onerror = script.onload = script.onreadystatechange = null;
