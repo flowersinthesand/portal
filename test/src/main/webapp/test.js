@@ -1271,7 +1271,7 @@ test("effective url should contain id, transport and heartbeat as query string p
 	strictEqual(param(url, "id"), portal.find().option("id"));
 	strictEqual(param(url, "transport"), portal.find().data("transport"));
 	strictEqual(param(url, "heartbeat"), String(portal.find().option("heartbeat")));
-	strictEqual(param(url, "lastEventId"), portal.find().option("lastEventId"));
+	strictEqual(param(url, "lastEventId"), String(portal.find().option("lastEventId")));
 });
 
 test("a final data to be sent to the server should be a JSON string representing a event object", function() {
