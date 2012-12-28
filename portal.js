@@ -288,7 +288,7 @@
 		timeout: false,
 		heartbeat: false,
 		_heartbeat: 5000,
-		lastEventId: "",
+		lastEventId: 0,
 		sharing: true,
 		prepare: function(connect) {
 			connect();
