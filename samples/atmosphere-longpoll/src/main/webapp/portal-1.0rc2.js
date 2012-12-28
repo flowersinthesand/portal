@@ -43,8 +43,13 @@
 		},
 		getAbsoluteURL: function(url) {
 			var div = document.createElement("div");
+			
+			// Uses an innerHTML property to obtain an absolute URL
 			div.innerHTML = '<a href="' + url + '"/>';
-			return decodeURI(div.firstChild.href);
+			
+			// encodeURI and decodeURI are needed to normalize URL between IE and non-IE, 
+			// since IE doesn't encode the href property value and return it - http://jsfiddle.net/Yq9M8/1/
+			return encodeURI(decodeURI(div.firstChild.href));
 		},
 		iterate: function(fn) {
 			var timeoutId;
@@ -225,10 +230,11 @@
 						}
 					}
 				})("", {"": value});
-		}
+		},
+		browser: {},
+		storage: !!(window.localStorage && window.StorageEvent)
 	};
 	portal.support.corsable = "withCredentials" in portal.support.xhr();
-	portal.support.storage = !!(window.localStorage && window.StorageEvent);
 	guid = portal.support.now();
 	
 	// Browser sniffing
@@ -241,7 +247,6 @@
 				ua.indexOf("compatible") < 0 && /(mozilla)(?:.*? rv:([\w.]+)|)/.exec(ua) ||
 				[];
 		
-		portal.support.browser = {};
 		portal.support.browser[match[1] || ""] = true;
 		portal.support.browser.version = match[2] || "0";
 		
@@ -283,7 +288,7 @@
 		timeout: false,
 		heartbeat: false,
 		_heartbeat: 5000,
-		lastEventId: "",
+		lastEventId: 0,
 		sharing: true,
 		prepare: function(connect) {
 			connect();
@@ -1509,6 +1514,13 @@
 			
 			if (!ActiveXObject || options.crossDomain) {
 				return;
+			} else {
+				// IE 10 Metro doesn't support ActiveXObject
+				try {
+					new ActiveXObject("htmlfile");
+				} catch(e) {
+					return;
+				}
 			}
 			
 			return portal.support.extend(portal.transports.httpbase(socket, options), {
@@ -1768,7 +1780,7 @@
 						socket.data("url", url);
 						
 						script = document.createElement("script");
-						script.async = "async";
+						script.async = true;
 						script.src = url;
 						script.clean = function() {
 							script.clean = script.onerror = script.onload = script.onreadystatechange = null;
