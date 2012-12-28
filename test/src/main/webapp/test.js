@@ -1403,7 +1403,8 @@ function testTransport(transport, fn) {
 	asyncTest("send method should work properly with big data", function() {
 		var i, text = "A";
 		
-		for (i = 0; i < Math.pow(2, transport === "ws" || transport === "longpolljsonp"? 12 : 15); i++) {
+		for (i = 0; i < Math.pow(2, 
+			transport === "ws" || transport === "longpolljsonp" || transport === "streamxdr" || transport === "longpollxdr" ? 12 : 15); i++) {
 			text += "A";
 		}
 		
