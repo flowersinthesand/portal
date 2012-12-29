@@ -14,7 +14,12 @@
 		</dependency>
 		<dependency>
 			<groupId>com.github.flowersinthesand</groupId>
-			<artifactId>portal</artifactId>
+			<artifactId>portal-core</artifactId>
+			<version>0.1-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>com.github.flowersinthesand</groupId>
+			<artifactId>portal-atmosphere</artifactId>
 			<version>0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
