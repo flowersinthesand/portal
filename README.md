@@ -1,9 +1,9 @@
 # Portal
 The **Portal** is a server agnostic JavaScript library that not just provides a socket for browser-based applications that need two-way communication with servers, but also aims to utilize a full duplex connection for modern web application development.
 
-All you need to do to use the **Portal** is to prepare a [event-driven](http://daverecycles.com/post/3104767110/explain-event-driven-web-servers-to-your-grandma) server and to implement some server-side code to run transports which application will use. Whether cross-domain connections and browsers are supported or not is depending on transport. 
+All you need to do to use the **Portal** is to prepare a event-driven server and to implement some server-side code to run transports which application will use. Whether cross-domain connections and browsers are supported or not is depending on transport. 
 
-There is the **Portal for Java** project which is a [reference implementation of the server counterpart](https://github.com/flowersinthesand/portal-java) written in Java. Look at it to implement a portal server in other languages.
+There is the [**Portal for Java**](https://github.com/flowersinthesand/portal-java) project which is a reference implementation of the server counterpart written in Java. Look at it to implement a portal server in other languages.
 
 The **Portal** and **Portal for Java** project is developed and maintained by [Donghwan Kim](http://twitter.com/flowersits). If you are interested, please subscribe to the [discussion group](https://groups.google.com/d/forum/portal_project).
 
