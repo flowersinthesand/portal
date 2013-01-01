@@ -3,9 +3,18 @@ The **Portal** is a server agnostic JavaScript library that not just provides a 
 
 All you need to do to use the **Portal** is to prepare a event-driven server and to implement some server-side code to run transports which application will use. Whether cross-domain connections and browsers are supported or not is depending on transport. 
 
-There is the [**Portal for Java**](https://github.com/flowersinthesand/portal-java) project which is a reference implementation of the server counterpart written in Java. Look at it to implement a portal server in other languages.
+There is the **Portal for Java** project which is a reference implementation of the server counterpart written in Java. Look at it to implement a portal server in other languages.
 
 The **Portal** and **Portal for Java** project is developed and maintained by [Donghwan Kim](http://twitter.com/flowersits). If you are interested, please subscribe to the [discussion group](https://groups.google.com/d/forum/portal_project).
+
+## Installing
+Add portal.js to your application:
+```html
+<script src="portal-1.0.js"></script>
+```
+Then, install a server counterpart or implement new one. The following projects are now available.
+
+* [Portal for Java](https://github.com/flowersinthesand/portal-java) by Donghwan Kim
 
 ## References
 * [API](https://github.com/flowersinthesand/portal/wiki/API)
