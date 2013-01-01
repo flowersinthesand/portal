@@ -8,7 +8,7 @@ There is the **Portal for Java** project which is a reference implementation of 
 The **Portal** and **Portal for Java** project is developed and maintained by [Donghwan Kim](http://twitter.com/flowersits). If you are interested, please subscribe to the [discussion group](https://groups.google.com/d/forum/portal_project).
 
 ## Installing
-Add portal.js to your application:
+Add and load portal.js to your application:
 ```html
 <script src="portal-1.0.js"></script>
 ```
