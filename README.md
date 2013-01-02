@@ -169,11 +169,6 @@ public class PostHandler {
 
     private EntityManager em;
     
-    @Prepare
-    public void prepare() {
-        em = Persistence.createEntityManagerFactory("mse").createEntityManager();
-    }
-    
     @On("find")
     public void find(@Data Integer id, @Reply Fn.Callback1<Post> reply) {
         reply.call(em.find(Post.class, id));
@@ -187,12 +182,11 @@ Room can be used as a shared data store.
 
 #### Browser
 ```js
-portal.open("/data").send("set", {key: "key", value: "value"}, function() {
-    portal.find("/data").send("get", "key", function(value) {
+portal.find("/data").send("set", {key: "key", value: "value"}, function() {
+    this.send("get", "key", function(value) {
         console.log(value);
     });
 });
-
 ```
 
 #### Server
