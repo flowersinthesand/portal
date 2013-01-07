@@ -20,5 +20,4 @@ Then, install a server counterpart or implement new one. The following projects 
 * [Socket Life Cycle and Events](https://github.com/flowersinthesand/portal/wiki/Socket-Life-Cycle-and-Events)
 * [Supported Transports and Browsers](https://github.com/flowersinthesand/portal/wiki/Supported-Transports-and-Browsers)
 * [Browser Quirks](https://github.com/flowersinthesand/portal/wiki/Browser-Quirks)
-* [Required Server Side Processing](https://github.com/flowersinthesand/portal/wiki/Server-Side-Processing)
-* [Advanced Server Side Processing](https://github.com/flowersinthesand/portal/wiki/Advanced-Server-Side-Processing)
+* [Server Side Processing](https://github.com/flowersinthesand/portal/wiki/Server-Side-Processing)
