@@ -8,7 +8,7 @@ The **Portal** and **Portal for Java** project is developed and maintained by [D
 ## Installing
 Add and load portal.js to your application:
 ```html
-<script src="portal-1.0.js"></script>
+<script src="portal.js"></script>
 ```
 Then, install a server counterpart or implement new one. The following projects are now available.
 
