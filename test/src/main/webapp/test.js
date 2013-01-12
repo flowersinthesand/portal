@@ -1338,7 +1338,7 @@ test("stream response should accord with the event stream format", function() {
 });
 
 function testTransport(transport, fn) {
-	var url = "/portal-test/echo";
+	var url = "./echo";
 	
 	if ((transport === "ws" && !window.WebSocket && !window.MozWebSocket) || 
 		(transport === "sse" && !window.EventSource) || 
