@@ -15,12 +15,12 @@
 		<dependency>
 			<groupId>com.github.flowersinthesand</groupId>
 			<artifactId>portal-core</artifactId>
-			<version>0.3-SNAPSHOT</version>
+			<version>0.2</version>
 		</dependency>
 		<dependency>
 			<groupId>com.github.flowersinthesand</groupId>
 			<artifactId>portal-atmosphere</artifactId>
-			<version>0.3-SNAPSHOT</version>
+			<version>0.2</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -86,14 +86,4 @@
 			</plugin>
 		</plugins>
 	</build>
-	<repositories>
-		<repository>
-			<id>sonatype</id>
-			<url>http://oss.sonatype.org/content/repositories/releases</url>
-		</repository>
-		<repository>
-			<id>sonatype-snapshot</id>
-			<url>http://oss.sonatype.org/content/repositories/snapshots</url>
-		</repository>
-	</repositories>
 </project>
