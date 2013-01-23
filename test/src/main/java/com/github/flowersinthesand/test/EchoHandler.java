@@ -3,14 +3,14 @@ package com.github.flowersinthesand.test;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import com.github.flowersinthesand.portal.Bean;
 import com.github.flowersinthesand.portal.Data;
 import com.github.flowersinthesand.portal.Fn;
-import com.github.flowersinthesand.portal.Handler;
 import com.github.flowersinthesand.portal.On;
 import com.github.flowersinthesand.portal.Reply;
 import com.github.flowersinthesand.portal.Socket;
 
-@Handler("/echo")
+@Bean
 public class EchoHandler {
 
 	@On.open
