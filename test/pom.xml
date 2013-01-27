@@ -5,6 +5,11 @@
 	<artifactId>portal-test</artifactId>
 	<version>0</version>
 	<packaging>war</packaging>
+	<properties>
+		<portal.version>0.3</portal.version>
+		<slf4j.version>1.7.2</slf4j.version>
+	</properties>
+	
 	<dependencies>
 		<dependency>
 			<groupId>org.apache.geronimo.specs</groupId>
@@ -15,22 +20,22 @@
 		<dependency>
 			<groupId>com.github.flowersinthesand</groupId>
 			<artifactId>portal-core</artifactId>
-			<version>0.3</version>
+			<version>${portal.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.github.flowersinthesand</groupId>
 			<artifactId>portal-atmosphere</artifactId>
-			<version>0.3</version>
+			<version>${portal.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
-			<version>1.7.2</version>
+			<version>${slf4j.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-log4j12</artifactId>
-			<version>1.7.2</version>
+			<version>${slf4j.version}</version>
 		</dependency>
 	</dependencies>
 	<build>
@@ -81,7 +86,7 @@
 					<downloadJavadocs>true</downloadJavadocs>
 					<downloadSources>true</downloadSources>
 					<wtpversion>2.0</wtpversion>
-					<jeeversion>5.0</jeeversion>
+					<jeeversion>6.0</jeeversion>
 				</configuration>
 			</plugin>
 		</plugins>
