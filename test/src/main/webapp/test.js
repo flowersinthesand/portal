@@ -520,6 +520,7 @@ asyncTest("message event handler should be executed with data when a message has
 
 asyncTest("close event handler should be executed with a reason when the connection has been closed", function() {
 	portal.open("url", {
+		reconnect: false,
 		server: function(request) {
 			request.reject();
 		}
@@ -642,6 +643,7 @@ asyncTest("state should be 'opened' after open event", function() {
 
 asyncTest("state should be 'closed' after close event", function() {
 	portal.open("url", {
+		reconnect: false,
 		server: function(request) {
 			request.reject();
 		}
@@ -1431,7 +1433,7 @@ function testTransport(transport, fn) {
 	});
 }
 
-if (!isLocal) {
+if (!QUnit.isLocal) {
 	module("Transport WebSocket", {
 		setup: function() {
 			setup();
@@ -1491,14 +1493,14 @@ if (!isLocal) {
 	$.each({
 		streamxhr: $.noop,
 		streamxdr: function(url) {
-			test("xdrURL which is false should stop streamxdr transport", function() {
+			asyncTest("xdrURL which is false should stop streamxdr transport", function() {
 				portal.defaults.xdrURL = false;
 				portal.open(url).close(function(reason) {
 					strictEqual(reason, "notransport");
 					start();
 				});
 			});
-			test("xdrURL which returns false should stop streamxdr transport", function() {
+			asyncTest("xdrURL which returns false should stop streamxdr transport", function() {
 				portal.defaults.xdrURL = function() {
 					return false;
 				};
@@ -1597,14 +1599,14 @@ if (!isLocal) {
 	$.each({
 		longpollajax: $.noop,
 		longpollxdr: function(url) {
-			test("xdrURL which is false should stop longpollxdr transport", function() {
+			asyncTest("xdrURL which is false should stop longpollxdr transport", function() {
 				portal.defaults.xdrURL = false;
 				portal.open(url).close(function(reason) {
 					strictEqual(reason, "notransport");
 					start();
 				});
 			});
-			test("xdrURL which returns false should stop longpollxdr transport", function() {
+			asyncTest("xdrURL which returns false should stop longpollxdr transport", function() {
 				portal.defaults.xdrURL = function() {
 					return false;
 				};
