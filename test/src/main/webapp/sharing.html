@@ -10,6 +10,7 @@
 			var i = 1;
 			
 			portal.open("echo?close=10000", {
+				sharing: true,
 				prepare: function(connect) {
 					$("<div />").text("preparing").appendTo("body");
 					connect();

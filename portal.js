@@ -289,7 +289,7 @@
 		heartbeat: false,
 		_heartbeat: 5000,
 		lastEventId: 0,
-		sharing: true,
+		sharing: false,
 		prepare: function(connect) {
 			connect();
 		},
