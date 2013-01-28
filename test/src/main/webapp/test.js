@@ -611,6 +611,35 @@ asyncTest("waiting event handler should be executed with delay and attempts when
 	});
 });
 
+if (window.ononline === null) {
+	asyncTest("waiting sockets should reconnect immediately after the ononline event is dispatched", function() {
+		var delay = 10000, time, event;
+		
+		portal.open("url", {
+			reconnect: function() {
+				return delay;
+			},
+			server: function(request) {
+				if (event) {
+					request.accept();
+				} else {
+					request.reject();
+				}
+			}
+		})
+		.open(function() {
+			ok(portal.support.now() - time < delay);
+			start();
+		})
+		.waiting(function() {
+			time = portal.support.now();
+			event = document.createEvent("Event");
+			event.initEvent("online", true, false);
+			window.dispatchEvent(event);
+		});
+	});
+}
+
 module("State", {
 	setup: setup,
 	teardown: teardown

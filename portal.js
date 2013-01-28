@@ -1862,6 +1862,17 @@
 		unloading = true;
 		// Closes all sockets when the document is unloaded 
 		portal.finalize();
+	});	
+	portal.support.on(window, "online", function() {
+		var url, socket;
+		
+		for (url in sockets) {
+			socket = sockets[url];
+			// There is no reason to wait
+			if (socket.state() === "waiting") {
+				socket.open();
+			}
+		}
 	});
 	
 	// Exposes portal to the global object
