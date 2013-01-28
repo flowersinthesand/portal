@@ -1862,7 +1862,7 @@
 		unloading = true;
 		// Closes all sockets when the document is unloaded 
 		portal.finalize();
-	});	
+	});
 	portal.support.on(window, "online", function() {
 		var url, socket;
 		
@@ -1871,6 +1871,17 @@
 			// There is no reason to wait
 			if (socket.state() === "waiting") {
 				socket.open();
+			}
+		}
+	});
+	portal.support.on(window, "offline", function() {
+		var url, socket;
+		
+		for (url in sockets) {
+			socket = sockets[url];
+			// Closes sockets which cannot detect disconnection manually
+			if (socket.state() === "opened") {
+				socket.fire("close", "error");
 			}
 		}
 	});

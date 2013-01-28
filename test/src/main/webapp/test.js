@@ -639,6 +639,37 @@ if (window.ononline === null) {
 		});
 	});
 }
+if (window.onoffline === null) {
+	asyncTest("opened sockets should close immediately after the onoffline event is dispatched", function() {
+		var delay = 10000, time, timer;
+		
+		portal.open("url", {
+			reconnect: false,
+			server: function(request) {
+				request.accept();
+			}
+		})
+		.connecting(function() {
+			var self = this;
+			
+			time = portal.support.now();
+			timer = setTimeout(function() {
+				self.fire("close", "error");
+			}, delay);
+		})
+		.open(function() {
+			var event = document.createEvent("Event");
+			event.initEvent("offline", true, false);
+			window.dispatchEvent(event);
+		})
+		.close(function(reason) {
+			clearTimeout(timer);
+			ok(portal.support.now() - time < delay);
+			strictEqual(reason, "error");
+			start();
+		});
+	});
+}
 
 module("State", {
 	setup: setup,
