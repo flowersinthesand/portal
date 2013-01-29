@@ -5,6 +5,7 @@ function setup() {
 	
 	$.extend(portal.defaults, {
 		transports: ["test"],
+		heartbeat: 20000,
 		sharing: false,
 		reconnect: function() {
 			var delay = reconnect.apply(this, arguments);
