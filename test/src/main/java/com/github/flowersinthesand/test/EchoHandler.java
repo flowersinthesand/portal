@@ -15,8 +15,9 @@
  */
 package com.github.flowersinthesand.test;
 
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import com.github.flowersinthesand.portal.Bean;
 import com.github.flowersinthesand.portal.Data;
@@ -28,16 +29,18 @@ import com.github.flowersinthesand.portal.Socket;
 @Bean
 public class EchoHandler {
 
+	private ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
+
 	@On.open
 	public void open(final Socket socket) {
 		String close = socket.param("close");
 		if (close != null) {
-			new Timer().schedule(new TimerTask() {
+			service.schedule(new Runnable() {
 				@Override
 				public void run() {
 					socket.close();
 				}
-			}, Long.valueOf(close));
+			}, Long.valueOf(close), TimeUnit.MILLISECONDS);
 		}
 
 		String firstMessage = socket.param("firstMessage");

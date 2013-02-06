@@ -21,13 +21,14 @@ import javax.servlet.annotation.WebListener;
 
 import com.github.flowersinthesand.portal.App;
 import com.github.flowersinthesand.portal.Options;
+import com.github.flowersinthesand.portal.atmosphere.AtmosphereModule;
 
 @WebListener
 public class EchoInitializer implements ServletContextListener {
 
 	@Override
 	public void contextInitialized(ServletContextEvent event) {
-		new App(new Options().url("/echo").packages(this.getClass().getPackage().getName()).beans(event.getServletContext()));
+		new App(new Options().url("/echo").packageOf(this), new AtmosphereModule(event.getServletContext()));
 	}
 
 	@Override

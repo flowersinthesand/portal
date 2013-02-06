@@ -6,7 +6,7 @@
 	<version>0</version>
 	<packaging>war</packaging>
 	<properties>
-		<portal.version>0.3</portal.version>
+		<portal.version>0.5</portal.version>
 		<slf4j.version>1.7.2</slf4j.version>
 	</properties>
 	<dependencies>
