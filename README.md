@@ -10,6 +10,14 @@ Add and load portal.js to your application:
 ```html
 <script src="portal.js"></script>
 ```
+
+Or you can use CloudFlare's CDN. Visit [CloudFlare's CDN](http://cdnjs.com/) for more information.
+
+```html
+<script src="http://cdnjs.cloudflare.com/ajax/libs/portal/${portal.version}/portal.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/portal/${portal.version}/portal.min.js"></script>
+```
+
 Then, install a server counterpart or implement new one. The following projects are now available.
 
 * [Portal for Java](https://github.com/flowersinthesand/portal-java) by Donghwan Kim
