@@ -218,6 +218,21 @@ asyncTest("close method should close a connection", function() {
 	.close();
 });
 
+test("init handler should receive the unhandled socket", function() {
+	var s, ss, sss, state;
+	s = portal.open("url", {
+		init: function(socket) {
+			ss = socket;
+			sss = this;
+			state = socket.state();
+		}
+	});
+	
+	strictEqual(s, ss);
+	strictEqual(s, sss);
+	strictEqual(state, undefined);
+});
+
 module("Transport", {
 	setup: setup,
 	teardown: teardown

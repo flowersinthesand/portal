@@ -290,6 +290,7 @@
 		_heartbeat: 5000,
 		lastEventId: 0,
 		sharing: false,
+		init: null,
 		prepare: function(connect) {
 			connect();
 		},
@@ -1062,6 +1063,10 @@
 				}
 			}
 		});
+		
+		if (opts.init) {
+			opts.init.call(self, self);
+		}
 		
 		return self.open();
 	}
