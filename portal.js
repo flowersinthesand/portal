@@ -671,7 +671,7 @@
 					// Fires the close event immediately for transport which doesn't give feedback on disconnection
 					if (unloading || !transport || !transport.feedback) {
 						self.fire("close", unloading ? "error" : "aborted");
-						if (opts.notifyAbortion) {
+						if (opts.notifyAbortion && connection.transport !== "session") {
 							head = document.head || document.getElementsByTagName("head")[0] || document.documentElement;
 							script = document.createElement("script");
 							script.async = false;
