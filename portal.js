@@ -725,10 +725,12 @@
 						array = array == null ? [] : !portal.support.isArray(array) ? [array] : array;
 					}
 					
+					connection.lastEventIds = [];
 					portal.support.each(array, function(i, event) {
 						var latch, args = [event.type, event.data];
 						
 						opts.lastEventId = event.id;
+						connection.lastEventIds.push(event.id);
 						if (event.reply) {
 							args.push(function(result) {
 								if (!latch) {
@@ -747,10 +749,18 @@
 				// builds an effective URL
 				buildURL: function(when, params) {
 					var p = when === "open" ? 
-								{transport: connection.transport, heartbeat: opts.heartbeat, lastEventId: opts.lastEventId} : 
+							{
+								transport: connection.transport, 
+								heartbeat: opts.heartbeat, 
+								lastEventId: opts.lastEventId
+							} : 
 							when === "poll" ? 
-								{transport: connection.transport, lastEventId: opts.lastEventId} : 
-								{};
+							{
+								transport: connection.transport, 
+								lastEventIds: connection.lastEventIds && connection.lastEventIds.join(","), 
+								/* deprecated */lastEventId: opts.lastEventId
+							} : 
+							{};
 					
 					portal.support.extend(p, {id: opts.id, _: guid++}, opts.params && opts.params[when], params);
 					return opts.urlBuilder.call(self, url, p, when);
@@ -1670,6 +1680,7 @@
 		longpollajax: function(socket, options) {
 			var xhr, 
 				aborted,
+				// deprecated
 				count = 0;
 			
 			if (options.crossDomain && !portal.support.corsable) {
@@ -1735,6 +1746,7 @@
 		// Long polling - XDomainRequest
 		longpollxdr: function(socket, options) {
 			var xdr, 
+				// deprecated
 				count = 0, 
 				XDomainRequest = window.XDomainRequest;
 			
@@ -1791,6 +1803,7 @@
 		longpolljsonp: function(socket, options) {
 			var script, 
 				called, 
+				// deprecated
 				count = 0, 
 				callback = jsonpCallbacks.pop() || ("socket_" + (++guid));
 			
