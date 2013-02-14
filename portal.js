@@ -316,7 +316,7 @@
 		// Transport options
 		credentials: false,
 		longpollTest: true,
-		notifyAbortion: false,
+		notifyAbort: false,
 		xdrURL: function(url) {
 			// Maintaining session by rewriting URL
 			// http://stackoverflow.com/questions/6453779/maintaining-session-by-rewriting-url
@@ -671,7 +671,7 @@
 					// Fires the close event immediately for transport which doesn't give feedback on disconnection
 					if (unloading || !transport || !transport.feedback) {
 						self.fire("close", unloading ? "error" : "aborted");
-						if (opts.notifyAbortion && connection.transport !== "session") {
+						if (opts.notifyAbort && connection.transport !== "session") {
 							head = document.head || document.getElementsByTagName("head")[0] || document.documentElement;
 							script = document.createElement("script");
 							script.async = false;
