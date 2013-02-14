@@ -1107,11 +1107,12 @@ test("url used for connection should be exposed by data('url')", function() {
 	ok(portal.open("url").data("url"));
 });
 
-test("urlBuilder should receive the absoulte form of original url and the parameters object and return a url to be used to establish a connection", function() {
-	portal.defaults.urlBuilder = function(url, params) {
+test("urlBuilder should receive the absoulte form of original url, the parameters object for purpose and the purpose and return a url to be used to establish a connection", function() {
+	portal.defaults.urlBuilder = function(url, params, when) {
 		strictEqual(url, portal.support.getAbsoluteURL("url"));
 		ok(params._ && delete params._);
 		deepEqual(params, {id: this.option("id"), heartbeat: this.option("heartbeat"), transport: "test", lastEventId: this.option("lastEventId")});
+		strictEqual(when, "open");
 		
 		return "modified";
 	};
@@ -1119,17 +1120,20 @@ test("urlBuilder should receive the absoulte form of original url and the parame
 	strictEqual(portal.open("url").data("url"), "modified");
 });
 
-test("params option should be merged with default params object", function() {
-	portal.defaults.urlBuilder = function(url, params) {
+test("params option should be merged with default params object according to the when", function() {
+	portal.defaults.urlBuilder = function(url, params, when) {
 		strictEqual(params.id, "fixed");
 		strictEqual(params.noop, $.noop);
+		strictEqual(when, "open");
 		return url;
 	};
 	
 	portal.open("url", {
 		params: {
-			id: "fixed",
-			noop: $.noop
+			open: {
+				id: "fixed",
+				noop: $.noop
+			}
 		}
 	});
 });
@@ -1343,9 +1347,10 @@ module("Protocol default", {
 	teardown: teardown
 });
 
-test("effective url should contain id, transport and heartbeat as query string parameters", function() {
+test("effective url should contain when, id, transport and heartbeat as query string parameters", function() {
 	var url = portal.open("url").data("url");
 	
+	strictEqual(param(url, "when"), "open");
 	strictEqual(param(url, "id"), portal.find().option("id"));
 	strictEqual(param(url, "transport"), portal.find().data("transport"));
 	strictEqual(param(url, "heartbeat"), String(portal.find().option("heartbeat")));

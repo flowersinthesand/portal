@@ -307,8 +307,8 @@
 				return v.toString(16);
 			});
 		},
-		urlBuilder: function(url, params) {
-			return url + (/\?/.test(url) ? "&" : "?") + portal.support.param(params);
+		urlBuilder: function(url, params, when) {
+			return url + (/\?/.test(url) ? "&" : "?") + "when=" + when + "&" + portal.support.param(params);
 		},
 		inbound: portal.support.parseJSON,
 		outbound: portal.support.stringifyJSON,
@@ -566,7 +566,7 @@
 								while (!transport && candidates.length) {
 									type = candidates.shift();
 									connection.transport = type;
-									connection.url = self.buildURL();
+									connection.url = self.buildURL("open");
 									transport = portal.transports[type](self, opts);
 								}
 								
@@ -675,7 +675,7 @@
 							head = document.head || document.getElementsByTagName("head")[0] || document.documentElement;
 							script = document.createElement("script");
 							script.async = false;
-							script.src = self.buildURL({abortion: true});
+							script.src = self.buildURL("abort");
 							script.onload = script.onreadystatechange = function() {
 								if (!script.readyState || /loaded|complete/.test(script.readyState)) {
 									script.onload = script.onreadystatechange = null;
@@ -745,14 +745,15 @@
 				},
 				// For internal use only
 				// builds an effective URL
-				buildURL: function(params) {
-					return opts.urlBuilder.call(self, url, portal.support.extend({
-						id: opts.id, 
-						transport: connection.transport, 
-						heartbeat: opts.heartbeat, 
-						lastEventId: opts.lastEventId,
-						_: guid++
-					}, opts.params, params));
+				buildURL: function(when, params) {
+					var p = when === "open" ? 
+								{transport: connection.transport, heartbeat: opts.heartbeat, lastEventId: opts.lastEventId} : 
+							when === "poll" ? 
+								{transport: connection.transport, lastEventId: opts.lastEventId} : 
+								{};
+					
+					portal.support.extend(p, {id: opts.id, _: guid++}, opts.params && opts.params[when], params);
+					return opts.urlBuilder.call(self, url, p, when);
 				}
 			};
 		
@@ -1678,7 +1679,7 @@
 			return portal.support.extend(portal.transports.httpbase(socket, options), {
 				open: function() {
 					function poll() {
-						var url = socket.buildURL({count: ++count});
+						var url = socket.buildURL(!count ? "open" : "poll", {count: ++count});
 						
 						socket.data("url", url);
 						
@@ -1744,7 +1745,7 @@
 			return portal.support.extend(portal.transports.httpbase(socket, options), {
 				open: function() {
 					function poll() {
-						var url = options.xdrURL.call(socket, socket.buildURL({count: ++count}));
+						var url = options.xdrURL.call(socket, socket.buildURL(!count ? "open" : "poll", {count: ++count}));
 						
 						socket.data("url", url);
 						
@@ -1796,7 +1797,7 @@
 			return portal.support.extend(portal.transports.httpbase(socket, options), {
 				open: function() {
 					function poll() {
-						var url = socket.buildURL({callback: callback, count: ++count}), 
+						var url = socket.buildURL(!count ? "open" : "poll", {callback: callback, count: ++count}), 
 							head = document.head || document.getElementsByTagName("head")[0] || document.documentElement;
 						
 						socket.data("url", url);
