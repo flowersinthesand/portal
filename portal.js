@@ -747,8 +747,10 @@
 				// builds an effective URL
 				buildURL: function(when, params) {
 					var p = when === "open" ? 
-							{transport: connection.transport, heartbeat: opts.heartbeat, lastEventId: opts.lastEventId} : 
-							{};
+								{transport: connection.transport, heartbeat: opts.heartbeat, lastEventId: opts.lastEventId} : 
+							when === "poll" ? 
+								{transport: connection.transport, lastEventId: opts.lastEventId} : 
+								{};
 					
 					portal.support.extend(p, {id: opts.id, _: guid++}, opts.params && opts.params[when], params);
 					return opts.urlBuilder.call(self, url, p, when);
@@ -1677,7 +1679,7 @@
 			return portal.support.extend(portal.transports.httpbase(socket, options), {
 				open: function() {
 					function poll() {
-						var url = socket.buildURL("open", {count: ++count});
+						var url = socket.buildURL(!count ? "open" : "poll", {count: ++count});
 						
 						socket.data("url", url);
 						
@@ -1743,7 +1745,7 @@
 			return portal.support.extend(portal.transports.httpbase(socket, options), {
 				open: function() {
 					function poll() {
-						var url = options.xdrURL.call(socket, socket.buildURL("open", {count: ++count}));
+						var url = options.xdrURL.call(socket, socket.buildURL(!count ? "open" : "poll", {count: ++count}));
 						
 						socket.data("url", url);
 						
@@ -1795,7 +1797,7 @@
 			return portal.support.extend(portal.transports.httpbase(socket, options), {
 				open: function() {
 					function poll() {
-						var url = socket.buildURL("open", {callback: callback, count: ++count}), 
+						var url = socket.buildURL(!count ? "open" : "poll", {callback: callback, count: ++count}), 
 							head = document.head || document.getElementsByTagName("head")[0] || document.documentElement;
 						
 						socket.data("url", url);
