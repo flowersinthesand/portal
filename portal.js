@@ -1,5 +1,5 @@
 /*
- * Portal v1.0rc4pre
+ * Portal v1.0
  * http://github.com/flowersinthesand/portal
  * 
  * Copyright 2011-2013, Donghwan Kim 
@@ -287,7 +287,6 @@
 		transports: ["ws", "sse", "stream", "longpoll"],
 		timeout: false,
 		heartbeat: false,
-		_heartbeat: 5000,
 		lastEventId: 0,
 		sharing: false,
 		prepare: function(connect) {
@@ -314,7 +313,6 @@
 		
 		// Transport options
 		credentials: false,
-		longpollTest: true,
 		notifyAbort: false,
 		xdrURL: function(url) {
 			// Maintaining session by rewriting URL
@@ -370,8 +368,11 @@
 			}
 			
 			return array;
-		}
+		},
+		
 		// Undocumented
+		_heartbeat: 5000,
+		longpollTest: true
 		// method: null
 		// initIframe: null
 	};
