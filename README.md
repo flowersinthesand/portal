@@ -5,24 +5,34 @@ There is the **Portal for Java** project which is a reference implementation of 
 
 The **Portal** and **Portal for Java** project is developed and maintained by [Donghwan Kim](http://twitter.com/flowersits). If you are interested, please subscribe to the [discussion group](https://groups.google.com/d/forum/portal_project).
 
-## Installing
-Add and load portal.js to your application:
+## How to use
+Load portal.js to your application:
 ```html
-<script src="portal.js"></script>
+<script src="/portal/portal.js"></script>
 ```
 
-Or you can use CloudFlare's CDN. Visit [CloudFlare's CDN](http://cdnjs.com/) for more information.
-
+Then, open a connection to the Portal server.
 ```html
-<script src="http://cdnjs.cloudflare.com/ajax/libs/portal/${portal.version}/portal.js"></script>
-<script src="http://cdnjs.cloudflare.com/ajax/libs/portal/${portal.version}/portal.min.js"></script>
+<script>
+portal.open("/portal").on({
+    // Pseudo event
+    connecting: function() {},
+    waiting: function(delay, attempts) {},
+    // Network event
+    open: function() {},
+    close: function(reason) {},
+    // Message event
+    message: function(data) {},
+    eventname: function(data) {}
+});
+</script>
 ```
 
-Then, install a server counterpart or implement new one. The following projects are now available.
+## Server
+* [Portal for Java](https://github.com/flowersinthesand/portal-java)
 
-* [Portal for Java](https://github.com/flowersinthesand/portal-java) by Donghwan Kim
 
-## References
+## Documentation
 * [API](https://github.com/flowersinthesand/portal/wiki/API)
 * [Features](https://github.com/flowersinthesand/portal/wiki/Features)
 * [Socket Life Cycle and Events](https://github.com/flowersinthesand/portal/wiki/Socket-Life-Cycle-and-Events)
