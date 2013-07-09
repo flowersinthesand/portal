@@ -1333,13 +1333,16 @@ module("Protocol default", {
 });
 
 test("effective url should contain when, id, transport and heartbeat as query string parameters", function() {
-	var url = portal.open("url").data("url");
+	var url = portal.open("url", {params: {open: {str: "", nul: null, undef: undefined}}}).data("url");
 	
 	strictEqual(param(url, "when"), "open");
 	strictEqual(param(url, "id"), portal.find().option("id"));
 	strictEqual(param(url, "transport"), portal.find().data("transport"));
 	strictEqual(param(url, "heartbeat"), String(portal.find().option("heartbeat")));
 	strictEqual(param(url, "lastEventId"), String(portal.find().option("lastEventId")));
+	strictEqual(param(url, "str"), "");
+	strictEqual(param(url, "nul"), "");
+	strictEqual(param(url, "undef"), "");
 });
 
 test("a final data to be sent to the server should be a JSON string representing a event object", function() {

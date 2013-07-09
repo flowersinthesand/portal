@@ -124,7 +124,7 @@
 							buildParams(prefix + "[" + (typeof v === "object" ? i : "") + "]", v);
 						}
 					});
-				} else if (toString.call(obj) === "[object Object]") {
+				} else if (obj != null && toString.call(obj) === "[object Object]") {
 					for (name in obj) {
 						buildParams(prefix + "[" + name + "]", obj[name]);
 					}
