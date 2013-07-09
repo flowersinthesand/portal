@@ -287,6 +287,7 @@
 		transports: ["ws", "sse", "stream", "longpoll"],
 		timeout: false,
 		heartbeat: false,
+		_heartbeat: 5000,
 		lastEventId: 0,
 		sharing: false,
 		prepare: function(connect) {
@@ -368,13 +369,7 @@
 			}
 			
 			return array;
-		},
-		
-		// Undocumented
-		_heartbeat: 5000,
-		longpollTest: true
-		// method: null
-		// initIframe: null
+		}
 	};
 	
 	// Callback function
@@ -1524,7 +1519,7 @@
 						}
 					};
 					
-					xhr.open(options.method || "GET", socket.data("url"));
+					xhr.open("GET", socket.data("url"));
 					if (portal.support.corsable) {
 						xhr.withCredentials = options.credentials;
 					}
@@ -1586,11 +1581,7 @@
 						if (!cdoc.firstChild) {
 							return;
 						}
-						
-						if (options.initIframe) {
-							options.initIframe.call(socket, iframe);
-						}
-						
+												
 						container = cdoc.body.lastChild;
 						
 						// Detects connection failure
@@ -1660,7 +1651,7 @@
 						socket.fire("close", "done");
 					};
 					
-					xdr.open(options.method || "GET", url);
+					xdr.open("GET", url);
 					xdr.send();
 				},
 				close: function() {
@@ -1715,7 +1706,7 @@
 							}
 						};
 						
-						xhr.open(options.method || "GET", url);
+						xhr.open("GET", url);
 						if (portal.support.corsable) {
 							xhr.withCredentials = options.credentials;
 						}
@@ -1723,15 +1714,7 @@
 						xhr.send(null);
 					}
 					
-					if (!options.longpollTest) {
-						// Skips the test that checks the server's status
-						setTimeout(function() {
-							socket.fire("open");
-							poll();
-						}, 50);
-					} else {
-						poll();
-					}
+					poll();
 				},
 				close: function() {
 					aborted = true;
@@ -1777,18 +1760,11 @@
 							socket.fire("close", "error");
 						};
 						
-						xdr.open(options.method || "GET", url);
+						xdr.open("GET", url);
 						xdr.send();
 					}
 					
-					if (!options.longpollTest) {
-						setTimeout(function() {
-							socket.fire("open");
-							poll();
-						}, 50);
-					} else {
-						poll();
-					}
+					poll();
 				},
 				close: function() {
 					xdr.abort();
@@ -1856,14 +1832,7 @@
 						jsonpCallbacks.push(callback);
 					});
 					
-					if (!options.longpollTest) {
-						setTimeout(function() {
-							socket.fire("open");
-							poll();
-						}, 50);
-					} else {
-						poll();
-					}
+					poll();
 				},
 				close: function() {
 					if (script.clean) {

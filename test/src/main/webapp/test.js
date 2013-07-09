@@ -1578,17 +1578,6 @@ if (!QUnit.isLocal) {
 					start();
 				});
 			});
-		},
-		streamiframe: function(url) {
-			asyncTest("initIframe should be called with iframe element before the open event", 2, function() {
-				portal.defaults.initIframe = function(iframe) {
-					ok(iframe);
-					ok(iframe.contentDocument || iframe.contentWindow.document);
-				};
-				portal.open(url).open(function() {
-					start();
-				});
-			});
 		}
 	}, function(transport, fn) {
 		var transportName = ({streamxdr: "XDomainRequest", streamiframe: "ActiveXObject('htmlfile')", streamxhr: "XMLHttpRequest"})[transport];
@@ -1726,12 +1715,6 @@ if (!QUnit.isLocal) {
 					} else {
 						this.send("message", ++i);
 					}
-				});
-			});
-			asyncTest("open event should be fired regardless of the server's status if longpollTest is false", function() {
-				portal.open(url + "wrong", {longpollTest: false}).open(function() {
-					ok(true);
-					start();
 				});
 			});
 		});
