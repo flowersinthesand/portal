@@ -2,49 +2,50 @@
 <html>
 	<head>
 		<meta charset="utf-8" />
-		<title>Socket sharing test</title>
-		<script type="text/javascript" src="http://code.jquery.com/jquery-1.9.0.js"></script>
-		<script type="text/javascript" src="portal.js"></script>
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<title>Sharing test</title>
+		<script type="text/javascript" src="http://code.jquery.com/jquery-1.10.2.js"></script>
 		<script type="text/javascript">
 		$(function() {
-			var i = 1;
-			
-			portal.open("echo?close=10000", {
-				sharing: true,
-				prepare: function(connect) {
-					$("<div />").text("preparing").appendTo("body");
-					connect();
-				}
-			})
-			.connecting(function() {
-				$("<div />").text(i++).appendTo("body");
-				$("<div />").text("Connecting with the transport [" + this.data("transport") + "]").appendTo("body");
-			})
-			.open(function() {
-				$("<div />").text("Opened").appendTo("body");
-				this.send("message", "Current timestamp: " + $.now())
-				.send("timestamp", null, "timestamp")
-// 				.send("exception", null, null, "exception")
-				.broadcast("greeting", "Hello from " + this.option("id"));
-			})
-			.message(function(data) {
-				$("<div />").text(data).appendTo("body");
-			})
-			.on("timestamp", function(ts) {
-				$("<div />").text("Current timestamp of the server: " + ts).appendTo("body");
-			})
-// 			.on("exception", function(message) {
-// 				$("<div />").text("Exception message from the server: " + message).appendTo("body");
-// 			})
-			.on("greeting", function(message) {
-				$("<div />").text("Greeting: " + message).appendTo("body");
-			})
-			.close(function(reason) {
-				$("<div />").text("Closed by the reason [" + reason + "]").appendTo("body");
+			$("#form").submit(function() {
+				var li = $("<li />").appendTo("#iframes"),
+					iframe = $("<iframe src='" + $(this).find("input[name=src]:checked").val() + "'/>").appendTo(li),
+					close = $("<button />").addClass("button").text("Close").appendTo(li).click(function() {
+						li.remove();
+					});
 			});
 		});
 		</script>
+		<style type="text/css">
+		form {border: 1px solid #DDDDDD; padding: 20px;}
+		form fieldset {margin: 0; padding: 0; border: 0;}
+		form fieldset legend {width: 100%; display: block; font-size: 21px; font-family: "Helvetica Neue",Helvetica,Arial,sans-serif; line-height: 40px; margin-bottom: 20px; border-color: #E5E5E5; border-style: none none solid; border-width: 0 0 1px;}
+		form fieldset label {display: block;}
+		form fieldset label * {vertical-align: middle;}
+		form fieldset code {background-color: #F8F8F8; border: 1px solid #DDDDDD; margin: 0 2px; padding: 0 5px; font-size: 12px; font-family: Consolas,​Courier,​monospace;}
+		ul {list-style: none; margin: 0; padding: 0;}
+		ul li {display: inline-block; margin: 10px; padding: 10px;}
+		iframe {border: none; width: 200px; height: 35px; vertical-align: middle;}
+		.button {margin: 0; background-color: #F5F5F5; background-image: linear-gradient(to bottom, #FFFFFF, #E6E6E6); border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) #B3B3B3; border-image: none; border-style: solid; border-width: 1px; color: #333333; cursor: pointer; display: inline-block; font-size: 14px; line-height: 18px; padding: 4px 8px; text-align: center; vertical-align: top;}
+		.add {margin-top: 20px;}
+		</style>
 	</head>
 	<body>
+		<form id="form" action="#" onsubmit="return false;">
+			<fieldset>
+				<legend>Add iframe</legend>
+				<label class="radio">
+					<input type="radio" name="src" value="sharing-inner.html" checked>
+					<code>sharing-inner.html</code>
+				</label>
+				<label class="radio">
+					<input type="radio" name="src" value="path/sharing-inner.html">
+					<code>path/sharing-inner.html</code>
+				</label>
+				<button class="button add" type="submit">Add</button>
+			</fieldset>
+		</form>
+		<ul id="iframes">
+		</ul>
 	</body>
 </html>

@@ -943,7 +943,8 @@
 							// Opera 12.00's parseFloat and JSON.stringify causes a strange bug with a number larger than 10 digit
 							// JSON.stringify(parseFloat(10000000000) + 1).length === 11;
 							// JSON.stringify(parseFloat(10000000000 + 1)).length === 10;
-							encodeURIComponent(portal.support.stringifyJSON({ts: portal.support.now() + 1, heir: (server.get("children") || [])[0]}));
+							encodeURIComponent(portal.support.stringifyJSON({ts: portal.support.now() + 1, heir: (server.get("children") || [])[0]})) +
+							"; path=/";
 					}
 					
 					// Chooses a server
@@ -971,7 +972,7 @@
 						// Clears trace timer
 						clearInterval(traceTimer);
 						// Removes the trace
-						document.cookie = encodeURIComponent(name) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+						document.cookie = encodeURIComponent(name) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
 						// The heir is the parent unless unloading
 						server.broadcast({target: "c", type: "close", data: {reason: reason, heir: !unloading ? opts.id : (server.get("children") || [])[0]}});
 						self.off("_message", propagateMessageEvent);

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<title>Socket sharing misc test</title>
+		<script type="text/javascript" src="http://code.jquery.com/jquery-1.10.2.js"></script>
+		<script type="text/javascript" src="../portal.js"></script>
+		<script type="text/javascript">
+		$(function() {
+			portal.open("../echo", {sharing: true}).connecting(function() {
+				var transport = this.data("transport");
+				$("#transport").text(transport).addClass(transport === "session" ? "" : "physical");
+				$("#message").text(0);
+			})
+			.message(function(data) {
+				$("#message").text(data);
+			});
+			
+			$("#incrementor").click(function() {
+				portal.find().send("message", +$("#message").text() + 1);
+			});
+		});
+		</script>
+		<style type="text/css">
+		body {margin: 0; font-family: Consolas,"Liberation Mono",Courier,monospace; font-size: 18px; width: 200px; text-align: right;}
+		#transport {float: left; margin-top: 4px;}
+		.physical {color: #cc0000;}
+		#message {font-family: Consolas,"Liberation Mono",Courier,monospace; background-color: #F8F8F8; border: 1px solid #DDDDDD; margin: 0 2px; padding: 0 5px; vertical-align: middle;}
+		#incrementor {margin: 0; background-color: #F5F5F5; background-image: linear-gradient(to bottom, #FFFFFF, #E6E6E6); border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) #B3B3B3; border-image: none; border-style: solid; border-width: 1px; color: #333333; cursor: pointer; display: inline-block; font-size: 14px; line-height: 18px; padding: 4px 8px; text-align: center;}
+		</style>
+	</head>
+	<body>
+		<span id="transport"></span>
+		<span id="message"></span>
+		<button id="incrementor">++</button>
+	</body>
+</html>
