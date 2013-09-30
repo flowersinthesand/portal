@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit;
 
 import com.github.flowersinthesand.portal.Bean;
 import com.github.flowersinthesand.portal.Data;
-import com.github.flowersinthesand.portal.Fn;
 import com.github.flowersinthesand.portal.On;
 import com.github.flowersinthesand.portal.Reply;
 import com.github.flowersinthesand.portal.Socket;
@@ -31,7 +30,7 @@ public class EchoHandler {
 
 	private ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
 
-	@On.open
+	@On
 	public void open(final Socket socket) {
 		String close = socket.param("close");
 		if (close != null) {
@@ -49,14 +48,14 @@ public class EchoHandler {
 		}
 	}
 
-	@On.message
+	@On
 	public void message(Socket socket, @Data String data) {
 		socket.send("message", data);
 	}
 
-	@On("timestamp")
-	public void timestamp(@Reply Fn.Callback1<Long> reply) {
-		reply.call(System.currentTimeMillis());
+	@On
+	public void timestamp(@Reply Reply.Fn reply) {
+		reply.done(System.currentTimeMillis());
 	}
 
 }

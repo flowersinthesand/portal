@@ -6,7 +6,7 @@
 	<version>0</version>
 	<packaging>war</packaging>
 	<properties>
-		<portal.version>0.5</portal.version>
+		<portal.version>0.7</portal.version>
 		<slf4j.version>1.7.2</slf4j.version>
 	</properties>
 	<dependencies>
@@ -68,12 +68,12 @@
 				</configuration>
 			</plugin>
 			<plugin>
-				<groupId>org.mortbay.jetty</groupId>
+				<groupId>org.eclipse.jetty</groupId>
 				<artifactId>jetty-maven-plugin</artifactId>
-				<version>8.1.8.v20121106</version>
+				<version>9.0.5.v20130815</version>
 				<configuration>
 					<webAppConfig>
-						<contextPath>/${project.artifactId}</contextPath>
+						<contextPath>/</contextPath>
 					</webAppConfig>
 				</configuration>
 			</plugin>
