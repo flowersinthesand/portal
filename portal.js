@@ -1332,7 +1332,7 @@
 						socket.data("event", event).fire("open");
 					};
 					ws.onmessage = function(event) {
-						socket.data("event", event)._fire(event.data);
+						socket.data("event", event)._fire("message", event.data);
 					};
 					ws.onerror = function(event) {
 						socket.data("event", event).fire("close", aborted ? "aborted" : "error");
