@@ -1409,7 +1409,7 @@ test("stream response should accord with the event stream format", function() {
 });
 
 function testTransport(transport, fn) {
-	var url = "/echo";
+	var url = "/echo", urlParams = QUnit.urlParams;
 	
 	if ((transport === "ws" && !window.WebSocket && !window.MozWebSocket) || 
 		(transport === "sse" && !window.EventSource) || 
@@ -1428,12 +1428,12 @@ function testTransport(transport, fn) {
 		}
 	}
 	
-	if (QUnit.urlParams.crossdomain) {
+	if (urlParams.crossdomain) {
 		if (/streamiframe/.test(transport) || (/streamxhr|longpollajax/.test(transport) && !portal.support.corsable)) {
 			return;
 		}
 		
-		url = "http://localhost:8081" + url;
+		url = (urlParams.crossdomainURL ? decodeURIComponent(urlParams.crossdomainURL) : "http://localhost:8081") + url;
 	}
 	
 	if (fn) {
