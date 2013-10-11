@@ -1431,17 +1431,9 @@ function testTransport(transport, fn) {
 	if (QUnit.urlParams.crossdomain) {
 		if (/streamiframe/.test(transport) || (/streamxhr|longpollajax/.test(transport) && !portal.support.corsable)) {
 			return;
-		} else if (/sse/.test(transport)) {
-			try {
-				if (!("withCredentials" in new window.EventSource("about:blank"))) {
-					return;
-				}
-			} catch (e) {
-				return;
-			}
 		}
 		
-		url = remoteURL + url;
+		url = "http://localhost:8081" + url;
 	}
 	
 	if (fn) {

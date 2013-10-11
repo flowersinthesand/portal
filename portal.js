@@ -1436,14 +1436,6 @@
 			
 			if (!EventSource) {
 				return;
-			} else if (options.crossDomain) {
-				try {
-					if (!portal.support.corsable || !("withCredentials" in new EventSource("about:blank"))) {
-						return;
-					}
-				} catch(e) {
-					return;
-				}
 			}
 			
 			return portal.support.extend(portal.transports.httpbase(socket, options), {

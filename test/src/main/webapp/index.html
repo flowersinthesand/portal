@@ -9,10 +9,11 @@
 		<script type="text/javascript" src="http://code.jquery.com/jquery-1.10.2.js"></script>
 		<script type="text/javascript" src="portal.js"></script>
 		<script type="text/javascript">
-		var remoteURL = "http://124.197.206.49:8081";
-		
-		QUnit.config.urlConfig.push("crossdomain");
-		</script>
+		QUnit.config.urlConfig.push({
+			id: "crossdomain",
+			label: "Cross domain",
+			tooltip: "Connects to http://localhost:8081/"
+		});		</script>
 		<script type="text/javascript" src="transport.js"></script>
 		<script type="text/javascript" src="test.js"></script>
 	</head>
