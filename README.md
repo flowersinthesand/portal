@@ -1,9 +1,7 @@
 # Portal
 The **Portal** is a server agnostic JavaScript library that not just provides a socket for browser-based applications that need two-way communication with servers, but also aims to utilize a full duplex connection for modern web application development.
 
-There is the **Portal for Java** project which is a reference implementation of the server counterpart written in Java. Look at it to implement a portal server in other languages. Sample applications are available in each server counterpart project.
-
-The **Portal** and **Portal for Java** project is developed and maintained by [Donghwan Kim](http://twitter.com/flowersits). If you are interested, please subscribe to the [discussion group](https://groups.google.com/d/forum/portal_project).
+The **Portal** project is licensed under the [Apache 2 license](http://www.apache.org/licenses/LICENSE-2.0) and developed and maintained by Donghwan Kim. If you are interested, please follow [@flowersits](https://twitter.com/flowersits) and subscribe to the [discussion group](https://groups.google.com/d/forum/portal_project).
 
 ## How to use
 Load portal.js to your application:
@@ -11,7 +9,7 @@ Load portal.js to your application:
 <script src="/portal/portal.js"></script>
 ```
 
-Then, open a connection to the Portal server.
+Then, open a connection to the portal server.
 ```html
 <script>
 portal.open("/portal").on({
@@ -23,19 +21,7 @@ portal.open("/portal").on({
     close: function(reason) {},
     // Message event
     message: function(data) {},
-    eventname: function(data) {}
+    eventname: function(eventdata) {}
 });
 </script>
 ```
-
-## Server
-* [Portal for Java](https://github.com/flowersinthesand/portal-java)
-
-
-## Documentation
-* [API](https://github.com/flowersinthesand/portal/wiki/API)
-* [Features](https://github.com/flowersinthesand/portal/wiki/Features)
-* [Socket Life Cycle and Events](https://github.com/flowersinthesand/portal/wiki/Socket-Life-Cycle-and-Events)
-* [Supported Transports and Browsers](https://github.com/flowersinthesand/portal/wiki/Supported-Transports-and-Browsers)
-* [Browser Quirks](https://github.com/flowersinthesand/portal/wiki/Browser-Quirks)
-* [Server Side Processing](https://github.com/flowersinthesand/portal/wiki/Server-Side-Processing)
