@@ -3,7 +3,7 @@ The following are supported transports in order of providing stable connection.
 
 ### `ws`
 
-WebSocket. Works if the browser supports [`WebSocket`](http://caniuse.com/#search=websocket) or `MozWebSocket`. After the `open`, `message`, `close` and all the custom event, it's possible to access a used WebSocket's original event by calling `.session('event')`.
+WebSocket. Works if the browser supports [`WebSocket`](http://caniuse.com/#search=websocket) or `MozWebSocket`. After the `open`, `message`, `close` and all the custom event, it's possible to access a used WebSocket's original event by calling `.data('event')`.
 
 ### `httpbase`
 
@@ -11,7 +11,7 @@ Gives http based transports the capability to send data to the server.
 
 ### `sse`
 
-Server-Sent Events. Works if the browser supports [`EventSource`](http://caniuse.com/#search=eventsource) and the given url is from the same-origin or from the cross-origin and the `EventSource` supports [`CORS`](http://caniuse.com/#search=cors). After the `open`, `message`, `close` whose the reason is `done` and all the custom event, it's possible to access a used Event Source's original event by calling `.session('event')`. By reason of the Server-Sent Events spec's ambiguity, there is no way to determine whether a connection closed normally or not so that the `close` event's reason will be `done` even though the connection closed due to an error.
+Server-Sent Events. Works if the browser supports [`EventSource`](http://caniuse.com/#search=eventsource) and the given url is from the same-origin or from the cross-origin and the `EventSource` supports [`CORS`](http://caniuse.com/#search=cors). After the `open`, `message`, `close` whose the reason is `done` and all the custom event, it's possible to access a used Event Source's original event by calling `.data('event')`. By reason of the Server-Sent Events spec's ambiguity, there is no way to determine whether a connection closed normally or not so that the `close` event's reason will be `done` even though the connection closed due to an error.
 
 ### `stream`
 

@@ -235,7 +235,7 @@ A function to parse stream response to find data from chunks. The function recei
         var data = chunk.split(";");
         
         data[0] = (this.data("data") || "") + data[0];
-        this.session("data", data[data.length - 1]);
+        this.data("data", data[data.length - 1]);
         
         return data.slice(0, data.length - 1);
     }
