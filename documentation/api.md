@@ -52,7 +52,7 @@ A initial value for the last event id to be passed to the `urlBuilder` function.
 
 ### `sharing`
 
-A flag indicating that sharing socket across tabs and windows is enabled or not. If this is turned on, as long as the cookie is enabled, the socket object will try to automatically share a real connection if there is no corresponding one, and find and use a shared connection if it exists within the cookie's scope. Windows don't need to have any parent window. By default, the value is set to `false`.
+A flag indicating that connection sharing across tabs and windows is enabled or not. If this is turned on, as long as the cookie is enabled, the socket object will try to automatically share a real connection if there is no corresponding one, and find and use a shared connection if it exists within the cookie's scope. Note that if the web page becomes horribly busy, a newly created socket might establish a physical connection. By default, the value is set to `false`.
 
 ```js
 {sharing: true};
