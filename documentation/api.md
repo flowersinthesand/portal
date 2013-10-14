@@ -20,7 +20,7 @@ Closes all sockets and removes all their traces.
 ## Options
 ### `transports`
 
-An array of the transport ids, in order of index. The transport is used to establish a connection, send data and close the connection. The default is `["ws", "sse", "stream", "longpoll"]`. For details, see [[Supported Transports and Browsers]].
+An array of the transport ids, in order of index. The transport is used to establish a connection, send data and close the connection. The default is `["ws", "sse", "stream", "longpoll"]`. For details, see the Transport and the Browser support documentation.
 
 ```js
 {transports: ["sse", "stream"]};
