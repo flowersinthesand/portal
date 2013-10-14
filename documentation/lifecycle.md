@@ -43,7 +43,7 @@ The socket waits out the reconnection delay. The `waiting` event is fired with t
 State transition occurs to
 * preparing: After the reconnection delay.
 
-## Events
+## Event
 From the semantic point of view, the unit of data to be sent and be received is the event, like the interaction between user and browser. The socket object's events can be classified like the following. Each signature in parentheses corresponds to each event handler's signature.
 
 ### Pseudo event
