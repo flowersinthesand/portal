@@ -239,8 +239,7 @@
 	// Browser sniffing
 	(function() {
 		var ua = navigator.userAgent.toLowerCase(),
-			match = /(chrome)[ \/]([\w.]+)/.exec(ua) ||
-				/(webkit)[ \/]([\w.]+)/.exec(ua) ||
+			match = /(webkit)[ \/]([\w.]+)/.exec(ua) ||
 				/(opera)(?:.*version|)[ \/]([\w.]+)/.exec(ua) ||
 				/(msie) ([\w.]+)/.exec(ua) ||
 				ua.indexOf("compatible") < 0 && /(mozilla)(?:.*? rv:([\w.]+)|)/.exec(ua) ||
@@ -1442,8 +1441,7 @@
 				open: function() {
 					var url = socket.data("url");
 					
-					// Uses proper constructor for Chrome 10-15
-					es = !options.crossDomain ? new EventSource(url) : new EventSource(url, {withCredentials: options.credentials});
+					es = new EventSource(url, {withCredentials: options.credentials});
 					es.onopen = function(event) {
 						socket.data("event", event).fire("open");
 					};
