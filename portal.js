@@ -239,8 +239,7 @@
 	// Browser sniffing
 	(function() {
 		var ua = navigator.userAgent.toLowerCase(),
-			match = /(webkit)[ \/]([\w.]+)/.exec(ua) ||
-				/(opera)(?:.*version|)[ \/]([\w.]+)/.exec(ua) ||
+			match = /(opera)(?:.*version|)[ \/]([\w.]+)/.exec(ua) ||
 				/(msie) ([\w.]+)/.exec(ua) ||
 				[];
 		
