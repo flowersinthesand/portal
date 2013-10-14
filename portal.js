@@ -457,14 +457,8 @@
 			// Socket object
 			self = {
 				// Finds the value of an option
-				option: function(key, /* undocumented */ value) {
-					if (value === undefined) {
-						return opts[key];
-					}
-					
-					opts[key] = value;
-					
-					return this;
+				option: function(key) {
+					return opts[key];
 				},
 				// Gets or sets a connection-scoped value
 				data: function(key, value) {
