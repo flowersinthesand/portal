@@ -242,14 +242,13 @@
 			match = /(webkit)[ \/]([\w.]+)/.exec(ua) ||
 				/(opera)(?:.*version|)[ \/]([\w.]+)/.exec(ua) ||
 				/(msie) ([\w.]+)/.exec(ua) ||
-				ua.indexOf("compatible") < 0 && /(mozilla)(?:.*? rv:([\w.]+)|)/.exec(ua) ||
 				[];
 		
 		portal.support.browser[match[1] || ""] = true;
 		portal.support.browser.version = match[2] || "0";
 		
-		// The storage event of Internet Explorer and Firefox 3 works strangely
-		if (portal.support.browser.msie || (portal.support.browser.mozilla && portal.support.browser.version.split(".")[0] === "1")) {
+		// The storage event of Internet Explorer works strangely
+		if (portal.support.browser.msie) {
 			portal.support.storage = false;
 		}
 	})();
@@ -1312,7 +1311,7 @@
 		ws: function(socket) {
 			var ws,
 				aborted,
-				WebSocket = window.WebSocket || window.MozWebSocket;
+				WebSocket = window.WebSocket;
 			
 			if (!WebSocket) {
 				return;
