@@ -1,4 +1,6 @@
-## Life cycle
+# Life cycle
+
+## State
 Socket always is in a specific state. According to the status of connection to the server, transition between states occurs and this circulating transition makes a life cycle. The following list is a list of state which a socket can be in.
 
 ### preparing
@@ -6,40 +8,40 @@ As an initial state of life cycle, the `preparing` state gives opportunity to pr
 
 When you need to work with the server before connecting like overriding options, handshaking and authenticating user, you can do that in `preparing` state using `prepare` handler.
 
-Transition occurs to
-* `connecting`: If `prepare` handler's `connect` function is executed. The default `prepare` handler executes `connect` function simply.
-* `closed`: If `prepare` handler's `cancel` function is executed - `canceled`. if there is no available transport in `transports` option under given options and situation - `notransport`.
+State transition occurs to
+* connecting: If `prepare` handler's `connect` function is executed. The default `prepare` handler executes `connect` function simply.
+* closed: If `prepare` handler's `cancel` function is executed - `canceled`. if there is no available transport in `transports` option under given options and situation - `notransport`.
 
 ### connecting
 The selected transport starts connecting to the server and the `connecting` event is fired. Timer for time-out is activated, environment for connection sharing is constructed and the socket starts to share its connection if corresponding options allow to do that.
 
 The `connecting` event is an initial event which the socket fires, so that you can set session-scoped value to initialize or configure application in connecting event handlers.
 
-Transition occurs to
-* `opened`: If transport succeeds in establishing a connection.
-* `closed`: If transport fails to connect - `error` or `done` if there is no way to find whether the connection closed normally or not like when using the `sse` transport. If timed out - `timeout`.
+State transition occurs to
+* opened: If transport succeeds in establishing a connection.
+* closed: If transport fails to connect - `error` or `done` if there is no way to find whether the connection closed normally or not like when using the `sse` transport. If timed out - `timeout`.
 
 ### opened
 The connection is established successfully and communication is possible. The `open` event is fired. Heartbeat communication between the socket and the server starts if enabled. Accumulated events, which are sent when communication is not possible before this state, are sent to the server by the transport.
 
 Only in this state, the socket can send and receive events via connection to the server. Since the connection is shareable, if you have used the socket as data accesser like Ajax, synchronizing status of applications existing in other tabs or windows can be possible with only one connection.
 
-Transition occurs to
-* `closed`: If heartbeat communication fails or connection is disconnected - `error` or `done`.
+State transition occurs to
+* closed: If heartbeat communication fails or connection is disconnected - `error` or `done`.
 
 ### closed
 The connection has been closed, has been regarded as closed or could not be opened. The `close` event is fired with the close reason. If the `reconnect` handler is set to or returns `false`, the socket's life cycle ends here.
 
 Note that reinitializing occurs in the `preparing` state.
 
-Transition occurs to
-* `waiting`: If the `reconnect` handler returns a positive number.
+State transition occurs to
+* waiting: If the `reconnect` handler returns a positive number.
 
 ### waiting
 The socket waits out the reconnection delay. The `waiting` event is fired with the delay and the attempts.
 
-Transition occurs to
-* `preparing`: After the reconnection delay.
+State transition occurs to
+* preparing: After the reconnection delay.
 
 ## Events
 From the semantic point of view, the unit of data to be sent and be received is the event, like the interaction between user and browser. The socket object's events can be classified like the following. Each signature in parentheses corresponds to each event handler's signature.

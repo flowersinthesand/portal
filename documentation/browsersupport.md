@@ -1,4 +1,4 @@
-## Browser support
+# Browser support
 The policy for browser support is the same with the one of jQuery 1.x.
 
 * Internet Explorer: 6+

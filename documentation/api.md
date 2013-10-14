@@ -1,3 +1,4 @@
+# API
 `portal` is the feature-rich and flexible interface for two-way communication.
 
 ## portal

@@ -1,3 +1,4 @@
+# Features
 ### Server agnostic
 Any web app using the portal can work on any server. All you need to integrate in the server-side is to meet transport prerequisite, write and read some JSON. If you don't like default protocol, you can always implement and use your own protocol. The portal is flexible enough to accept other protocols.
 

@@ -1,3 +1,4 @@
+# Quirks
 Explanation and workaround for various browser quirks.
 
 ### The browser limits the number of simultaneous connections
