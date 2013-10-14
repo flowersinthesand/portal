@@ -15,7 +15,13 @@
 		// Is the unload event being processed?
 		unloading,
 		// Portal
-		portal = {},
+		portal,
+		// Convenience utilities
+		support,
+		// Default options
+		defaults,
+		// Transports
+		transports,
 		// Socket instances
 		sockets = {},
 		// Callback names for JSONP
@@ -25,353 +31,15 @@
 		hasOwn = Object.prototype.hasOwnProperty,
 		slice = Array.prototype.slice;
 	
-	// Convenience utilities
-	// Most utility functions are borrowed from jQuery
-	portal.support = {
-		now: function() {
-			return new Date().getTime();
-		},
-		isArray: function(array) {
-			return toString.call(array) === "[object Array]";
-		},
-		isBinary: function(data) {
-			var string = toString.call(data);
-			return string === "[object Blob]" || string === "[object ArrayBuffer]";
-		},
-		isFunction: function(fn) {
-			return toString.call(fn) === "[object Function]";
-		},
-		getAbsoluteURL: function(url) {
-			var div = document.createElement("div");
-			
-			// Uses an innerHTML property to obtain an absolute URL
-			div.innerHTML = '<a href="' + url + '"/>';
-			
-			// encodeURI and decodeURI are needed to normalize URL between IE and non-IE,
-			// since IE doesn't encode the href property value and return it - http://jsfiddle.net/Yq9M8/1/
-			return encodeURI(decodeURI(div.firstChild.href));
-		},
-		iterate: function(fn) {
-			var timeoutId;
-			
-			// Though the interval is 1ms for real-time application, there is a delay between setTimeout calls
-			// For detail, see https://developer.mozilla.org/en/window.setTimeout#Minimum_delay_and_timeout_nesting
-			(function loop() {
-				timeoutId = setTimeout(function() {
-					if (fn() === false) {
-						return;
-					}
-					
-					loop();
-				}, 1);
-			})();
-			
-			return function() {
-				clearTimeout(timeoutId);
-			};
-		},
-		each: function(array, callback) {
-			var i;
-			
-			for (i = 0; i < array.length; i++) {
-				callback(i, array[i]);
-			}
-		},
-		extend: function(target) {
-			var i, options, name;
-			
-			for (i = 1; i < arguments.length; i++) {
-				if ((options = arguments[i]) != null) {
-					for (name in options) {
-						target[name] = options[name];
-					}
-				}
-			}
-			
-			return target;
-		},
-		on: function(elem, type, fn) {
-			if (elem.addEventListener) {
-				elem.addEventListener(type, fn, false);
-			} else if (elem.attachEvent) {
-				elem.attachEvent("on" + type, fn);
-			}
-		},
-		off: function(elem, type, fn) {
-			if (elem.removeEventListener) {
-				elem.removeEventListener(type, fn, false);
-			} else if (elem.detachEvent) {
-				elem.detachEvent("on" + type, fn);
-			}
-		},
-		param: function(params) {
-			var prefix, s = [];
-			
-			function add(key, value) {
-				value = portal.support.isFunction(value) ? value() : (value == null ? "" : value);
-				s.push(encodeURIComponent(key) + "=" + encodeURIComponent(value));
-			}
-			
-			function buildParams(prefix, obj) {
-				var name;
-				
-				if (portal.support.isArray(obj)) {
-					portal.support.each(obj, function(i, v) {
-						if (/\[\]$/.test(prefix)) {
-							add(prefix, v);
-						} else {
-							buildParams(prefix + "[" + (typeof v === "object" ? i : "") + "]", v);
-						}
-					});
-				} else if (obj != null && toString.call(obj) === "[object Object]") {
-					for (name in obj) {
-						buildParams(prefix + "[" + name + "]", obj[name]);
-					}
-				} else {
-					add(prefix, obj);
-				}
-			}
-			
-			for (prefix in params) {
-				buildParams(prefix, params[prefix]);
-			}
-			
-			return s.join("&").replace(/%20/g, "+");
-		},
-		xhr: function() {
-			try {
-				return new window.XMLHttpRequest();
-			} catch (e1) {
-				try {
-					return new window.ActiveXObject("Microsoft.XMLHTTP");
-				} catch (e2) {}
-			}
-		},
-		parseJSON: function(data) {
-			return !data ?
-				null :
-				window.JSON && window.JSON.parse ?
-					window.JSON.parse(data) :
-					new Function("return " + data)();
-		},
-		// http://github.com/flowersinthesand/stringifyJSON
-		stringifyJSON: function(value) {
-			var escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g, 
-				meta = {
-					'\b': '\\b',
-					'\t': '\\t',
-					'\n': '\\n',
-					'\f': '\\f',
-					'\r': '\\r',
-					'"': '\\"',
-					'\\': '\\\\'
-				};
-			
-			function quote(string) {
-				return '"' + string.replace(escapable, function(a) {
-					var c = meta[a];
-					return typeof c === "string" ? c : "\\u" + ("0000" + a.charCodeAt(0).toString(16)).slice(-4);
-				}) + '"';
-			}
-			
-			function f(n) {
-				return n < 10 ? "0" + n : n;
-			}
-			
-			return window.JSON && window.JSON.stringify ?
-				window.JSON.stringify(value) :
-				(function str(key, holder) {
-					var i, v, len, partial, value = holder[key], type = typeof value;
-							
-					if (value && typeof value === "object" && typeof value.toJSON === "function") {
-						value = value.toJSON(key);
-						type = typeof value;
-					}
-					
-					switch (type) {
-					case "string":
-						return quote(value);
-					case "number":
-						return isFinite(value) ? String(value) : "null";
-					case "boolean":
-						return String(value);
-					case "object":
-						if (!value) {
-							return "null";
-						}
-						
-						switch (toString.call(value)) {
-						case "[object Date]":
-							return isFinite(value.valueOf()) ? 
-								'"' + value.getUTCFullYear() + "-" + f(value.getUTCMonth() + 1) + "-" + f(value.getUTCDate()) + 
-								"T" + f(value.getUTCHours()) + ":" + f(value.getUTCMinutes()) + ":" + f(value.getUTCSeconds()) + "Z" + '"' : 
-								"null";
-						case "[object Array]":
-							len = value.length;
-							partial = [];
-							for (i = 0; i < len; i++) {
-								partial.push(str(i, value) || "null");
-							}
-							
-							return "[" + partial.join(",") + "]";
-						default:
-							partial = [];
-							for (i in value) {
-								if (hasOwn.call(value, i)) {
-									v = str(i, value);
-									if (v) {
-										partial.push(quote(i) + ":" + v);
-									}
-								}
-							}
-							
-							return "{" + partial.join(",") + "}";
-						}
-					}
-				})("", {"": value});
-		},
-		browser: {},
-		storage: !!(window.localStorage && window.StorageEvent)
-	};
-	portal.support.corsable = "withCredentials" in portal.support.xhr();
-	guid = portal.support.now();
-	
-	// Browser sniffing
-	(function() {
-		var match = /(msie) ([\w.]+)/.exec(navigator.userAgent.toLowerCase()) || [];
-		
-		portal.support.browser[match[1] || ""] = true;
-		portal.support.browser.version = match[2] || "0";
-		
-		// The storage event of Internet Explorer works strangely
-		if (portal.support.browser.msie) {
-			portal.support.storage = false;
-		}
-	})();
-	
-	// Finds the socket object which is mapped to the given url
-	portal.find = function(url) {
-		var i;
-		
-		// Returns the first socket in the document
-		if (!arguments.length) {
-			for (i in sockets) {
-				if (sockets[i]) {
-					return sockets[i];
-				}
-			}
-			return null;
-		}
-		
-		// The url is a identifier of this socket within the document
-		return sockets[portal.support.getAbsoluteURL(url)] || null;
-	};
-	// Creates a new socket and connects to the given url
-	portal.open = function(url, options) {
-		// Makes url absolute to normalize URL
-		url = portal.support.getAbsoluteURL(url);
-		sockets[url] = socket(url, options);
-		
-		return portal.find(url);
-	};
-	// Default options
-	portal.defaults = {
-		// Socket options
-		transports: ["ws", "sse", "stream", "longpoll"],
-		timeout: false,
-		heartbeat: false,
-		_heartbeat: 5000,
-		lastEventId: 0,
-		sharing: false,
-		prepare: function(connect) {
-			connect();
-		},
-		reconnect: function(lastDelay) {
-			return 2 * (lastDelay || 250);
-		},
-		idGenerator: function() {
-			// Generates a random UUID
-			// Logic borrowed from http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/2117523#2117523
-			return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
-				var r = Math.random() * 16 | 0, v = c === "x" ? r : (r & 0x3 | 0x8);
-				return v.toString(16);
-			});
-		},
-		urlBuilder: function(url, params, when) {
-			return url + (/\?/.test(url) ? "&" : "?") + "when=" + when + "&" + portal.support.param(params);
-		},
-		inbound: portal.support.parseJSON,
-		outbound: portal.support.stringifyJSON,
-		
-		// Transport options
-		credentials: false,
-		notifyAbort: false,
-		xdrURL: function(url) {
-			// Maintaining session by rewriting URL
-			// http://stackoverflow.com/questions/6453779/maintaining-session-by-rewriting-url
-			var match = /(?:^|; )(JSESSIONID|PHPSESSID)=([^;]*)/.exec(document.cookie);
-			
-			switch (match && match[1]) {
-			case "JSESSIONID":
-				return url.replace(/;jsessionid=[^\?]*|(\?)|$/, ";jsessionid=" + match[2] + "$1");
-			case "PHPSESSID":
-				return url.replace(/\?PHPSESSID=[^&]*&?|\?|$/, "?PHPSESSID=" + match[2] + "&").replace(/&$/, "");
-			default:
-				return false;
-			}
-		},
-		streamParser: function(chunk) {
-			// Chunks are formatted according to the event stream format
-			// http://www.w3.org/TR/eventsource/#event-stream-interpretation
-			var reol = /\r\n|[\r\n]/g, lines = [], data = this.data("data"), array = [], i = 0,
-				match, line;
-			
-			// Strips off the left padding of the chunk
-			// the first chunk of some streaming transports and every chunk for Android browser 2 and 3 has padding
-			chunk = chunk.replace(/^\s+/g, "");
-			
-			// String.prototype.split is not reliable cross-browser
-			while (match = reol.exec(chunk)) {
-				lines.push(chunk.substring(i, match.index));
-				i = match.index + match[0].length;
-			}
-			lines.push(chunk.length === i ? "" : chunk.substring(i));
-			
-			if (!data) {
-				data = [];
-				this.data("data", data);
-			}
-			
-			// Processes the data field only
-			for (i = 0; i < lines.length; i++) {
-				line = lines[i];
-				if (!line) {
-					// Finish
-					array.push(data.join("\n"));
-					data = [];
-					this.data("data", data);
-				} else if (/^data:\s/.test(line)) {
-					// A single data field
-					data.push(line.substring("data: ".length));
-				} else {
-					// A fragment of a data field
-					data[data.length - 1] += line;
-				}
-			}
-			
-			return array;
-		}
-	};
-	
 	// Callback function
 	function callbacks(deferred) {
-		var list = [],
-			locked,
+		var locked,
 			memory,
 			firing,
 			firingStart,
 			firingLength,
 			firingIndex,
+			list = [],
 			fire = function(context, args) {
 				args = args || [];
 				memory = !deferred || [context, args];
@@ -440,6 +108,10 @@
 			transport,
 			// The state of the connection
 			state,
+			// Reconnection
+			reconnectTimer,
+			reconnectDelay,
+			reconnectTry,
 			// Event helpers
 			events = {},
 			eventId = 0,
@@ -447,10 +119,6 @@
 			replyCallbacks = {},
 			// Buffer
 			buffer = [],
-			// Reconnection
-			reconnectTimer,
-			reconnectDelay,
-			reconnectTry,
 			// Map of the connection-scoped values
 			connection = {},
 			parts = /^([\w\+\.\-]+:)(?:\/\/([^\/?#:]*)(?::(\d+))?)?/.exec(url.toLowerCase()),
@@ -547,7 +215,7 @@
 									type = candidates.shift();
 									connection.transport = type;
 									connection.url = self.buildURL("open");
-									transport = portal.transports[type](self, opts);
+									transport = transports[type](self, opts);
 								}
 								
 								// Increases the number of reconnection attempts
@@ -591,7 +259,7 @@
 					// Check if possible to make use of a shared socket
 					if (opts.sharing) {
 						connection.transport = "session";
-						transport = portal.transports.session(self, opts);
+						transport = transports.session(self, opts);
 					}
 					
 					// Executes the prepare handler if a physical connection is needed
@@ -634,7 +302,7 @@
 					}
 					
 					// Delegates to the transport
-					transport.send(portal.support.isBinary(data) ? data : opts.outbound.call(self, event));
+					transport.send(support.isBinary(data) ? data : opts.outbound.call(self, event));
 					
 					return this;
 				},
@@ -698,15 +366,15 @@
 						return this;
 					}
 					
-					if (portal.support.isBinary(data)) {
+					if (support.isBinary(data)) {
 						array = [{type: "message", data: data}];
 					} else {
 						array = opts.inbound.call(self, data);
-						array = array == null ? [] : !portal.support.isArray(array) ? [array] : array;
+						array = array == null ? [] : !support.isArray(array) ? [array] : array;
 					}
 					
 					connection.lastEventIds = [];
-					portal.support.each(array, function(i, event) {
+					support.each(array, function(i, event) {
 						var latch, args = [event.type, event.data];
 						
 						opts.lastEventId = event.id;
@@ -742,13 +410,13 @@
 							} :
 							{};
 					
-					portal.support.extend(p, {id: opts.id, _: guid++}, opts.params && opts.params[when], params);
+					support.extend(p, {id: opts.id, _: guid++}, opts.params && opts.params[when], params);
 					return opts.urlBuilder.call(self, url, p, when);
 				}
 			};
 		
 		// Create the final options
-		opts = portal.support.extend({}, portal.defaults, options);
+		opts = support.extend({}, defaults, options);
 		if (options) {
 			// Array should not be deep extended
 			if (options.transports) {
@@ -765,7 +433,7 @@
 			// port
 			(parts[3] || (parts[1] === "http:" ? 80 : 443)) != (location.port || (location.protocol === "http:" ? 80 : 443))));
 		
-		portal.support.each(["connecting", "open", "message", "close", "waiting"], function(i, type) {
+		support.each(["connecting", "open", "message", "close", "waiting"], function(i, type) {
 			// Creates event helper
 			events[type] = callbacks(type !== "message");
 			events[type].order = i;
@@ -777,7 +445,7 @@
 				};
 			
 			self[type] = !old ? on : function(fn) {
-				return (portal.support.isFunction(fn) ? on : old).apply(this, arguments);
+				return (support.isFunction(fn) ? on : old).apply(this, arguments);
 			};
 		});
 		
@@ -811,7 +479,7 @@
 							// Powered by the storage event and the localStorage
 							// http://www.w3.org/TR/webstorage/#event-storage
 							storage: function() {
-								if (!portal.support.storage) {
+								if (!support.storage) {
 									return;
 								}
 								
@@ -827,9 +495,9 @@
 										}
 										
 										// Handles the storage event
-										portal.support.on(window, "storage", onstorage);
+										support.on(window, "storage", onstorage);
 										self.one("close", function() {
-											portal.support.off(window, "storage", onstorage);
+											support.off(window, "storage", onstorage);
 											// Defers again to clean the storage
 											self.one("close", function() {
 												storage.removeItem(name);
@@ -839,17 +507,17 @@
 										});
 									},
 									broadcast: function(obj) {
-										var string = portal.support.stringifyJSON(obj);
+										var string = support.stringifyJSON(obj);
 										storage.setItem(name, string);
 										setTimeout(function() {
 											listener(string);
 										}, 50);
 									},
 									get: function(key) {
-										return portal.support.parseJSON(storage.getItem(name + "-" + key));
+										return support.parseJSON(storage.getItem(name + "-" + key));
 									},
 									set: function(key, value) {
-										storage.setItem(name + "-" + key, portal.support.stringifyJSON(value));
+										storage.setItem(name + "-" + key, support.stringifyJSON(value));
 									}
 								};
 							},
@@ -887,7 +555,7 @@
 									},
 									broadcast: function(obj) {
 										if (!win.closed && win.fire) {
-											win.fire(portal.support.stringifyJSON(obj));
+											win.fire(support.stringifyJSON(obj));
 										}
 									},
 									get: function(key) {
@@ -904,7 +572,7 @@
 					
 					// Receives send and close command from the children
 					function listener(string) {
-						var command = portal.support.parseJSON(string), data = command.data;
+						var command = support.parseJSON(string), data = command.data;
 						
 						if (!command.target) {
 							if (command.type === "fire") {
@@ -928,7 +596,7 @@
 					
 					function leaveTrace() {
 						document.cookie = encodeURIComponent(name) + "=" +
-							encodeURIComponent(portal.support.stringifyJSON({ts: portal.support.now(), heir: (server.get("children") || [])[0]})) +
+							encodeURIComponent(support.stringifyJSON({ts: support.now(), heir: (server.get("children") || [])[0]})) +
 							"; path=/";
 					}
 					
@@ -1059,7 +727,7 @@
 				if (callback) {
 					fn = exception ? callback.fail : callback.done;
 					if (fn) {
-						if (portal.support.isFunction(fn)) {
+						if (support.isFunction(fn)) {
 							fn.call(self, data);
 						} else {
 							self.fire(fn, data).fire("_message", [fn, data]);
@@ -1073,10 +741,390 @@
 		
 		return self.open();
 	}
+		
+	// Defines the portal
+	portal = {
+		// Creates a new socket and connects to the given url
+		open: function(url, options) {
+			// Makes url absolute to normalize URL
+			url = support.getAbsoluteURL(url);
+			sockets[url] = socket(url, options);
+			
+			return portal.find(url);
+		},
+		// Finds the socket object which is mapped to the given url
+		find: function(url) {
+			var i;
+			
+			// Returns the first socket in the document
+			if (!arguments.length) {
+				for (i in sockets) {
+					if (sockets[i]) {
+						return sockets[i];
+					}
+				}
+				return null;
+			}
+			
+			// The url is a identifier of this socket within the document
+			return sockets[support.getAbsoluteURL(url)] || null;
+		},
+		// Closes all sockets
+		finalize: function() {
+			var url, socket;
+			
+			for (url in sockets) {
+				socket = sockets[url];
+				if (socket.state() !== "closed") {
+					socket.close();
+				}
+				
+				// To run the test suite
+				delete sockets[url];
+			}
+		}
+	};
 	
-	// Transports
-	portal.transports = {
-		// Session socket
+	// Most utility functions are borrowed from jQuery
+	portal.support = support = {
+		now: function() {
+			return new Date().getTime();
+		},
+		isArray: function(array) {
+			return toString.call(array) === "[object Array]";
+		},
+		isBinary: function(data) {
+			var string = toString.call(data);
+			return string === "[object Blob]" || string === "[object ArrayBuffer]";
+		},
+		isFunction: function(fn) {
+			return toString.call(fn) === "[object Function]";
+		},
+		getAbsoluteURL: function(url) {
+			var div = document.createElement("div");
+			
+			// Uses an innerHTML property to obtain an absolute URL
+			div.innerHTML = '<a href="' + url + '"/>';
+			
+			// encodeURI and decodeURI are needed to normalize URL between IE and non-IE,
+			// since IE doesn't encode the href property value and return it - http://jsfiddle.net/Yq9M8/1/
+			return encodeURI(decodeURI(div.firstChild.href));
+		},
+		iterate: function(fn) {
+			var timeoutId;
+			
+			// Though the interval is 1ms for real-time application, there is a delay between setTimeout calls
+			// For detail, see https://developer.mozilla.org/en/window.setTimeout#Minimum_delay_and_timeout_nesting
+			(function loop() {
+				timeoutId = setTimeout(function() {
+					if (fn() === false) {
+						return;
+					}
+					
+					loop();
+				}, 1);
+			})();
+			
+			return function() {
+				clearTimeout(timeoutId);
+			};
+		},
+		each: function(array, callback) {
+			var i;
+			
+			for (i = 0; i < array.length; i++) {
+				callback(i, array[i]);
+			}
+		},
+		extend: function(target) {
+			var i, options, name;
+			
+			for (i = 1; i < arguments.length; i++) {
+				if ((options = arguments[i]) != null) {
+					for (name in options) {
+						target[name] = options[name];
+					}
+				}
+			}
+			
+			return target;
+		},
+		on: function(elem, type, fn) {
+			if (elem.addEventListener) {
+				elem.addEventListener(type, fn, false);
+			} else if (elem.attachEvent) {
+				elem.attachEvent("on" + type, fn);
+			}
+		},
+		off: function(elem, type, fn) {
+			if (elem.removeEventListener) {
+				elem.removeEventListener(type, fn, false);
+			} else if (elem.detachEvent) {
+				elem.detachEvent("on" + type, fn);
+			}
+		},
+		param: function(params) {
+			var prefix, s = [];
+			
+			function add(key, value) {
+				value = support.isFunction(value) ? value() : (value == null ? "" : value);
+				s.push(encodeURIComponent(key) + "=" + encodeURIComponent(value));
+			}
+			
+			function buildParams(prefix, obj) {
+				var name;
+				
+				if (support.isArray(obj)) {
+					support.each(obj, function(i, v) {
+						if (/\[\]$/.test(prefix)) {
+							add(prefix, v);
+						} else {
+							buildParams(prefix + "[" + (typeof v === "object" ? i : "") + "]", v);
+						}
+					});
+				} else if (obj != null && toString.call(obj) === "[object Object]") {
+					for (name in obj) {
+						buildParams(prefix + "[" + name + "]", obj[name]);
+					}
+				} else {
+					add(prefix, obj);
+				}
+			}
+			
+			for (prefix in params) {
+				buildParams(prefix, params[prefix]);
+			}
+			
+			return s.join("&").replace(/%20/g, "+");
+		},
+		xhr: function() {
+			try {
+				return new window.XMLHttpRequest();
+			} catch (e1) {
+				try {
+					return new window.ActiveXObject("Microsoft.XMLHTTP");
+				} catch (e2) {}
+			}
+		},
+		parseJSON: function(data) {
+			return !data ?
+				null :
+				window.JSON && window.JSON.parse ?
+					window.JSON.parse(data) :
+					new Function("return " + data)();
+		},
+		// http://github.com/flowersinthesand/stringifyJSON
+		stringifyJSON: function(value) {
+			var escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g, 
+				meta = {
+					'\b': '\\b',
+					'\t': '\\t',
+					'\n': '\\n',
+					'\f': '\\f',
+					'\r': '\\r',
+					'"': '\\"',
+					'\\': '\\\\'
+				};
+			
+			function quote(string) {
+				return '"' + string.replace(escapable, function(a) {
+					var c = meta[a];
+					return typeof c === "string" ? c : "\\u" + ("0000" + a.charCodeAt(0).toString(16)).slice(-4);
+				}) + '"';
+			}
+			
+			function f(n) {
+				return n < 10 ? "0" + n : n;
+			}
+			
+			return window.JSON && window.JSON.stringify ?
+				window.JSON.stringify(value) :
+				(function str(key, holder) {
+					var i, v, len, partial, value = holder[key], type = typeof value;
+							
+					if (value && typeof value === "object" && typeof value.toJSON === "function") {
+						value = value.toJSON(key);
+						type = typeof value;
+					}
+					
+					switch (type) {
+					case "string":
+						return quote(value);
+					case "number":
+						return isFinite(value) ? String(value) : "null";
+					case "boolean":
+						return String(value);
+					case "object":
+						if (!value) {
+							return "null";
+						}
+						
+						switch (toString.call(value)) {
+						case "[object Date]":
+							return isFinite(value.valueOf()) ? 
+								'"' + value.getUTCFullYear() + "-" + f(value.getUTCMonth() + 1) + "-" + f(value.getUTCDate()) + 
+								"T" + f(value.getUTCHours()) + ":" + f(value.getUTCMinutes()) + ":" + f(value.getUTCSeconds()) + "Z" + '"' : 
+								"null";
+						case "[object Array]":
+							len = value.length;
+							partial = [];
+							for (i = 0; i < len; i++) {
+								partial.push(str(i, value) || "null");
+							}
+							
+							return "[" + partial.join(",") + "]";
+						default:
+							partial = [];
+							for (i in value) {
+								if (hasOwn.call(value, i)) {
+									v = str(i, value);
+									if (v) {
+										partial.push(quote(i) + ":" + v);
+									}
+								}
+							}
+							
+							return "{" + partial.join(",") + "}";
+						}
+					}
+				})("", {"": value});
+		},
+		browser: {},
+		storage: !!(window.localStorage && window.StorageEvent)
+	};
+	guid = support.now();
+	support.corsable = "withCredentials" in support.xhr();
+	support.on(window, "unload", function() {
+		// Check the unload event is fired by the browser
+		unloading = true;
+		// Closes all sockets when the document is unloaded
+		portal.finalize();
+	});
+	support.on(window, "online", function() {
+		var url, socket;
+		
+		for (url in sockets) {
+			socket = sockets[url];
+			// There is no reason to wait
+			if (socket.state() === "waiting") {
+				socket.open();
+			}
+		}
+	});
+	support.on(window, "offline", function() {
+		var url, socket;
+		
+		for (url in sockets) {
+			socket = sockets[url];
+			// Closes sockets which cannot detect disconnection manually
+			if (socket.state() === "opened") {
+				socket.fire("close", "error");
+			}
+		}
+	});
+	// Browser sniffing
+	(function() {
+		var match = /(msie) ([\w.]+)/.exec(navigator.userAgent.toLowerCase()) || [];
+		
+		support.browser[match[1] || ""] = true;
+		support.browser.version = match[2] || "0";
+		
+		// The storage event of Internet Explorer works strangely
+		// TODO test IE 11
+		if (support.browser.msie) {
+			support.storage = false;
+		}
+	})();
+	
+	portal.defaults = defaults = {
+		// Socket options
+		transports: ["ws", "sse", "stream", "longpoll"],
+		timeout: false,
+		heartbeat: false,
+		_heartbeat: 5000,
+		lastEventId: 0,
+		sharing: false,
+		prepare: function(connect) {
+			connect();
+		},
+		reconnect: function(lastDelay) {
+			return 2 * (lastDelay || 250);
+		},
+		idGenerator: function() {
+			// Generates a random UUID
+			// Logic borrowed from http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/2117523#2117523
+			return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+				var r = Math.random() * 16 | 0, v = c === "x" ? r : (r & 0x3 | 0x8);
+				return v.toString(16);
+			});
+		},
+		urlBuilder: function(url, params, when) {
+			return url + (/\?/.test(url) ? "&" : "?") + "when=" + when + "&" + support.param(params);
+		},
+		inbound: support.parseJSON,
+		outbound: support.stringifyJSON,
+		
+		// Transport options
+		credentials: false,
+		notifyAbort: false,
+		xdrURL: function(url) {
+			// Maintaining session by rewriting URL
+			// http://stackoverflow.com/questions/6453779/maintaining-session-by-rewriting-url
+			var match = /(?:^|; )(JSESSIONID|PHPSESSID)=([^;]*)/.exec(document.cookie);
+			
+			switch (match && match[1]) {
+			case "JSESSIONID":
+				return url.replace(/;jsessionid=[^\?]*|(\?)|$/, ";jsessionid=" + match[2] + "$1");
+			case "PHPSESSID":
+				return url.replace(/\?PHPSESSID=[^&]*&?|\?|$/, "?PHPSESSID=" + match[2] + "&").replace(/&$/, "");
+			default:
+				return false;
+			}
+		},
+		streamParser: function(chunk) {
+			// Chunks are formatted according to the event stream format
+			// http://www.w3.org/TR/eventsource/#event-stream-interpretation
+			var match, line, reol = /\r\n|[\r\n]/g, lines = [], data = this.data("data"), array = [], i = 0;
+			
+			// Strips off the left padding of the chunk
+			// the first chunk of some streaming transports and every chunk for Android browser 2 and 3 has padding
+			chunk = chunk.replace(/^\s+/g, "");
+			
+			// String.prototype.split is not reliable cross-browser
+			while (match = reol.exec(chunk)) {
+				lines.push(chunk.substring(i, match.index));
+				i = match.index + match[0].length;
+			}
+			lines.push(chunk.length === i ? "" : chunk.substring(i));
+			
+			if (!data) {
+				data = [];
+				this.data("data", data);
+			}
+			
+			// Processes the data field only
+			for (i = 0; i < lines.length; i++) {
+				line = lines[i];
+				if (!line) {
+					// Finish
+					array.push(data.join("\n"));
+					data = [];
+					this.data("data", data);
+				} else if (/^data:\s/.test(line)) {
+					// A single data field
+					data.push(line.substring("data: ".length));
+				} else {
+					// A fragment of a data field
+					data[data.length - 1] += line;
+				}
+			}
+			
+			return array;
+		}
+	};
+	
+	portal.transports = transports = {
+		// Session socket for connection sharing
 		session: function(socket, options) {
 			var trace,
 				orphan,
@@ -1084,18 +1132,18 @@
 				name = "socket-" + options.url,
 				connectors = {
 					storage: function() {
-						if (!portal.support.storage) {
+						if (!support.storage) {
 							return;
 						}
 						
 						var storage = window.localStorage;
 						
 						function get(key) {
-							return portal.support.parseJSON(storage.getItem(name + "-" + key));
+							return support.parseJSON(storage.getItem(name + "-" + key));
 						}
 						
 						function set(key, value) {
-							storage.setItem(name + "-" + key, portal.support.stringifyJSON(value));
+							storage.setItem(name + "-" + key, support.stringifyJSON(value));
 						}
 						
 						return {
@@ -1107,12 +1155,12 @@
 								}
 								
 								set("children", get("children").concat([options.id]));
-								portal.support.on(window, "storage", onstorage);
+								support.on(window, "storage", onstorage);
 								
 								socket.one("close", function() {
 									var children = get("children");
 									
-									portal.support.off(window, "storage", onstorage);
+									support.off(window, "storage", onstorage);
 									if (children) {
 										if (removeFromArray(children, options.id)) {
 											set("children", children);
@@ -1123,7 +1171,7 @@
 								return get("opened");
 							},
 							broadcast: function(obj) {
-								var string = portal.support.stringifyJSON(obj);
+								var string = support.stringifyJSON(obj);
 								
 								storage.setItem(name, string);
 								setTimeout(function() {
@@ -1156,7 +1204,7 @@
 							},
 							broadcast: function(obj) {
 								if (!win.closed && win.fire) {
-									win.fire(portal.support.stringifyJSON(obj));
+									win.fire(support.stringifyJSON(obj));
 								}
 							}
 						};
@@ -1178,7 +1226,7 @@
 			
 			// Receives open, close and message command from the parent
 			function listener(string) {
-				var command = portal.support.parseJSON(string), data = command.data;
+				var command = support.parseJSON(string), data = command.data;
 				
 				if (!command.target) {
 					if (command.type === "fire") {
@@ -1223,13 +1271,13 @@
 			function findTrace() {
 				var matcher = new RegExp("(?:^|; )(" + encodeURIComponent(name) + ")=([^;]*)").exec(document.cookie);
 				if (matcher) {
-					return portal.support.parseJSON(decodeURIComponent(matcher[2]));
+					return support.parseJSON(decodeURIComponent(matcher[2]));
 				}
 			}
 			
 			// Finds and validates the parent socket's trace from the cookie
 			trace = findTrace();
-			if (!trace || portal.support.now() - trace.ts > 1000) {
+			if (!trace || support.now() - trace.ts > 1000) {
 				return;
 			}
 			
@@ -1263,7 +1311,7 @@
 						trace = findTrace();
 						if (!trace || oldTrace.ts === trace.ts) {
 							// Simulates a close signal
-							listener(portal.support.stringifyJSON({target: "c", type: "close", data: {reason: "error", heir: oldTrace.heir}}));
+							listener(support.stringifyJSON({target: "c", type: "close", data: {reason: "error", heir: oldTrace.heir}}));
 						}
 					}, 1000);
 					
@@ -1308,7 +1356,7 @@
 				feedback: true,
 				open: function() {
 					// Makes an absolute url whose scheme is ws or wss
-					var url = portal.support.getAbsoluteURL(socket.data("url")).replace(/^http/, "ws");
+					var url = support.getAbsoluteURL(socket.data("url")).replace(/^http/, "ws");
 					
 					socket.data("url", url);
 					
@@ -1351,9 +1399,9 @@
 			
 			// The Content-Type is not application/x-www-form-urlencoded but text/plain on account of XDomainRequest
 			// See the fourth at http://blogs.msdn.com/b/ieinternals/archive/2010/05/13/xdomainrequest-restrictions-limitations-and-workarounds.aspx
-			send = !options.crossDomain || portal.support.corsable ?
+			send = !options.crossDomain || support.corsable ?
 			function(url, data) {
-				var xhr = portal.support.xhr();
+				var xhr = support.xhr();
 				
 				xhr.onreadystatechange = function() {
 					if (xhr.readyState === 4) {
@@ -1363,7 +1411,7 @@
 				
 				xhr.open("POST", url);
 				xhr.setRequestHeader("Content-Type", "text/plain; charset=UTF-8");
-				if (portal.support.corsable) {
+				if (support.corsable) {
 					xhr.withCredentials = options.credentials;
 				}
 				
@@ -1394,7 +1442,7 @@
 				textarea.value = data;
 				
 				iframe = form.lastChild;
-				portal.support.on(iframe, "load", function() {
+				support.on(iframe, "load", function() {
 					document.body.removeChild(form);
 					post();
 				});
@@ -1423,7 +1471,7 @@
 				return;
 			}
 			
-			return portal.support.extend(portal.transports.httpbase(socket, options), {
+			return support.extend(transports.httpbase(socket, options), {
 				open: function() {
 					var url = socket.data("url");
 					
@@ -1454,13 +1502,13 @@
 		streamxhr: function(socket, options) {
 			var xhr;
 			
-			if ((portal.support.browser.msie && +portal.support.browser.version < 10) || (options.crossDomain && !portal.support.corsable)) {
+			if ((support.browser.msie && +support.browser.version < 10) || (options.crossDomain && !support.corsable)) {
 				return;
 			}
 			
-			return portal.support.extend(portal.transports.httpbase(socket, options), {
+			return support.extend(transports.httpbase(socket, options), {
 				open: function() {
-					xhr = portal.support.xhr();
+					xhr = support.xhr();
 					xhr.onreadystatechange = function() {
 						function onprogress() {
 							var index = socket.data("index"),
@@ -1483,7 +1531,7 @@
 					};
 					
 					xhr.open("GET", socket.data("url"));
-					if (portal.support.corsable) {
+					if (support.corsable) {
 						xhr.withCredentials = options.credentials;
 					}
 					
@@ -1511,7 +1559,7 @@
 				}
 			}
 			
-			return portal.support.extend(portal.transports.httpbase(socket, options), {
+			return support.extend(transports.httpbase(socket, options), {
 				open: function() {
 					var iframe, cdoc;
 					
@@ -1524,13 +1572,13 @@
 					doc.body.appendChild(iframe);
 					
 					cdoc = iframe.contentDocument || iframe.contentWindow.document;
-					stop = portal.support.iterate(function() {
+					stop = support.iterate(function() {
 						// Response container
 						var container;
 						
 						function readDirty() {
-							var clone = container.cloneNode(true),
-								text;
+							var text, 
+								clone = container.cloneNode(true);
 							
 							// Adds a character not CR and LF to circumvent an Internet Explorer bug
 							// If the contents of an element ends with one or more CR or LF, Internet Explorer ignores them in the innerText property
@@ -1556,7 +1604,7 @@
 						socket.fire("open")._fire(readDirty(), true);
 						container.innerText = "";
 						
-						stop = portal.support.iterate(function() {
+						stop = support.iterate(function() {
 							var text = readDirty();
 							
 							if (text) {
@@ -1588,7 +1636,7 @@
 				return;
 			}
 			
-			return portal.support.extend(portal.transports.httpbase(socket, options), {
+			return support.extend(transports.httpbase(socket, options), {
 				open: function() {
 					var url = options.xdrURL.call(socket, socket.data("url"));
 					
@@ -1633,18 +1681,18 @@
 				// deprecated
 				count = 0;
 			
-			if (options.crossDomain && !portal.support.corsable) {
+			if (options.crossDomain && !support.corsable) {
 				return;
 			}
 			
-			return portal.support.extend(portal.transports.httpbase(socket, options), {
+			return support.extend(transports.httpbase(socket, options), {
 				open: function() {
 					function poll() {
 						var url = socket.buildURL(!count ? "open" : "poll", {count: ++count});
 						
 						socket.data("url", url);
 						
-						xhr = portal.support.xhr();
+						xhr = support.xhr();
 						xhr.onreadystatechange = function() {
 							var data;
 							
@@ -1670,7 +1718,7 @@
 						};
 						
 						xhr.open("GET", url);
-						if (portal.support.corsable) {
+						if (support.corsable) {
 							xhr.withCredentials = options.credentials;
 						}
 						
@@ -1696,7 +1744,7 @@
 				return;
 			}
 			
-			return portal.support.extend(portal.transports.httpbase(socket, options), {
+			return support.extend(transports.httpbase(socket, options), {
 				open: function() {
 					function poll() {
 						var url = options.xdrURL.call(socket, socket.buildURL(!count ? "open" : "poll", {count: ++count}));
@@ -1742,7 +1790,7 @@
 				count = 0,
 				callback = jsonpCallbacks.pop() || ("socket_" + (++guid));
 			
-			return portal.support.extend(portal.transports.httpbase(socket, options), {
+			return support.extend(transports.httpbase(socket, options), {
 				open: function() {
 					function poll() {
 						var url = socket.buildURL(!count ? "open" : "poll", {callback: callback, count: ++count}),
@@ -1805,50 +1853,6 @@
 			});
 		}
 	};
-	
-	// Closes all sockets
-	portal.finalize = function() {
-		var url, socket;
-		
-		for (url in sockets) {
-			socket = sockets[url];
-			if (socket.state() !== "closed") {
-				socket.close();
-			}
-			
-			// To run the test suite
-			delete sockets[url];
-		}
-	};
-	
-	portal.support.on(window, "unload", function() {
-		// Check the unload event is fired by the browser
-		unloading = true;
-		// Closes all sockets when the document is unloaded
-		portal.finalize();
-	});
-	portal.support.on(window, "online", function() {
-		var url, socket;
-		
-		for (url in sockets) {
-			socket = sockets[url];
-			// There is no reason to wait
-			if (socket.state() === "waiting") {
-				socket.open();
-			}
-		}
-	});
-	portal.support.on(window, "offline", function() {
-		var url, socket;
-		
-		for (url in sockets) {
-			socket = sockets[url];
-			// Closes sockets which cannot detect disconnection manually
-			if (socket.state() === "opened") {
-				socket.fire("close", "error");
-			}
-		}
-	});
 	
 	// Exposes portal to the global object
 	window.portal = portal;
