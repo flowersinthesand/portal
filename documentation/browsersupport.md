@@ -10,7 +10,7 @@ The policy for browser support is the same with the one of jQuery 1.x.
 In like manner, (Current - 1) or Current indicates that current stable version of the browser and the version that preceded it. Contrary to jQuery, in portal, supporting Internet Explorer 6, 7 and 8 almost never contributes to the performance penalty, yet increase size of code.
 
 ## Transport availability
-The following list of available transports have been tested with 1.0 and each given browser and the transports not in parenthesis are recommended that is to say `ws` over WebSocket protocol and `see` for streaming and `longpollajax` for long polling over HTTP protocol. Note that some old browsers supporting `ws` implement old WebSocket protocol like hixie-76, therefore in order to support them, the server has to be able to support those protocols.
+The following list of available transports have been tested with the latest snapshot version of portal.js in current repository and each given browser and the transports not in parenthesis are recommended that is to say `ws` over WebSocket protocol and `see` for streaming and `longpollajax` for long polling over HTTP protocol. Note that some old browsers supporting `ws` implement old WebSocket protocol like hixie-76, therefore in order to support them, the server has to be able to support those protocols.
 
 ### Firefox
 #### 11
@@ -38,11 +38,15 @@ The following list of available transports have been tested with 1.0 and each gi
 * same origin - `ws`, `sse`, `longpollajax` (`streamxhr`, `longpolljsonp`)
 * cross origin - `ws`, `sse`, `longpollajax` (`streamxhr`, `longpolljsonp`)
 
-#### 10
+#### 16
 * same origin - `ws`, `sse`, `longpollajax` (`streamxhr`, `longpolljsonp`)
 * cross origin - `ws`, `streamxhr`, `longpollajax` (`longpolljsonp`)
 
 `ws`: 16 supports [rfc6455](http://tools.ietf.org/html/rfc6455), 14 supports [hybi-10](http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10)
+
+#### 10
+* same origin - `ws`, `streamxhr`, `longpollajax` (`longpolljsonp`)
+* cross origin - `ws`, `streamxhr`, `longpollajax` (`longpolljsonp`)
 
 #### 6
 * same origin - `ws`, `streamxhr`, `longpollajax` (`longpolljsonp`)
@@ -102,25 +106,29 @@ The following list of available transports have been tested with 1.0 and each gi
 * same origin - `streamxhr`, `longpollajax` (`longpolljsonp`)
 
 ### Opera
-#### 12.10
+#### 15
 * same origin - `ws`, `sse`, `longpollajax` (`streamxhr`, `longpolljsonp`)
 * cross origin - `ws`, `sse`, `longpollajax` (`streamxhr`, `longpolljsonp`)
+
+#### 12.10
+* same origin - `ws`, `sse`, `longpollajax` (`longpolljsonp`)
+* cross origin - `ws`, `sse`, `longpollajax` (`longpolljsonp`)
 
 `ws`: 12.10 supports [rfc6455](http://tools.ietf.org/html/rfc6455)
 
 #### 12
-* same origin - `sse`, `longpollajax` (`streamxhr`, `longpolljsonp`)
-* cross origin - `sse`, `longpollajax` (`streamxhr`, `longpolljsonp`)
+* same origin - `sse`, `longpollajax` (`longpolljsonp`)
+* cross origin - `sse`, `longpollajax` (`longpolljsonp`)
 
 #### 11.60
-* same origin - `sse`, `longpollajax` (`streamxhr`, `longpolljsonp`)
-* cross origin - `longpolljsonp`</font>
+* same origin - `sse`, `longpollajax` (`longpolljsonp`)
+* cross origin - `longpolljsonp`
 
 #### 11.0
-* same origin - `sse`, `longpollajax` (`streamxhr`)
+* same origin - `sse`, `longpollajax`
 
 #### 10.0
-* same origin - `streamxhr`, `longpollajax`
+* same origin - `longpollajax`
 
 ### Android
 #### 2.1

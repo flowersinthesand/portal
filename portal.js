@@ -238,10 +238,7 @@
 	
 	// Browser sniffing
 	(function() {
-		var ua = navigator.userAgent.toLowerCase(),
-			match = /(opera)(?:.*version|)[ \/]([\w.]+)/.exec(ua) ||
-				/(msie) ([\w.]+)/.exec(ua) ||
-				[];
+		var match = /(msie) ([\w.]+)/.exec(navigator.userAgent.toLowerCase()) || [];
 		
 		portal.support.browser[match[1] || ""] = true;
 		portal.support.browser.version = match[2] || "0";
@@ -937,10 +934,7 @@
 					
 					function leaveTrace() {
 						document.cookie = encodeURIComponent(name) + "=" +
-							// Opera 12.00's parseFloat and JSON.stringify causes a strange bug with a number larger than 10 digit
-							// JSON.stringify(parseFloat(10000000000) + 1).length === 11;
-							// JSON.stringify(parseFloat(10000000000 + 1)).length === 10;
-							encodeURIComponent(portal.support.stringifyJSON({ts: portal.support.now() + 1, heir: (server.get("children") || [])[0]})) +
+							encodeURIComponent(portal.support.stringifyJSON({ts: portal.support.now(), heir: (server.get("children") || [])[0]})) +
 							"; path=/";
 					}
 					
@@ -1472,8 +1466,6 @@
 			
 			return portal.support.extend(portal.transports.httpbase(socket, options), {
 				open: function() {
-					var stop;
-					
 					xhr = portal.support.xhr();
 					xhr.onreadystatechange = function() {
 						function onprogress() {
@@ -1490,17 +1482,8 @@
 						}
 						
 						if (xhr.readyState === 3 && xhr.status === 200) {
-							// Despite the change in response, Opera doesn't fire the readystatechange event
-							if (portal.support.browser.opera && !stop) {
-								stop = portal.support.iterate(onprogress);
-							} else {
-								onprogress();
-							}
+							onprogress();
 						} else if (xhr.readyState === 4) {
-							if (stop) {
-								stop();
-							}
-							
 							socket.fire("close", xhr.status === 200 ? "done" : "error");
 						}
 					};
