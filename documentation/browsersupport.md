@@ -90,8 +90,6 @@ The following list of available transports have been tested with the latest snap
 * same origin - `ws`, `sse`, `longpollajax` (`streamxhr`, `longpolljsonp`)
 * cross origin - `ws`, `streamxhr`, `longpollajax` (`longpolljsonp`)
 
-`ws`: 5.0.1 supports [hixie-76](http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-76)
-
 #### 5.0.1
 * same origin - `ws`, `streamxhr`, `longpollajax` (`longpolljsonp`)
 * cross origin - `ws`, `streamxhr`, `longpollajax` (`longpolljsonp`)
