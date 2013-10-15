@@ -1,5 +1,5 @@
 /*
- * Portal v1.1
+ * Portal v1.1-snapshot
  * http://github.com/flowersinthesand/portal
  * 
  * Copyright 2011-2013, Donghwan Kim 
