@@ -1570,7 +1570,8 @@ if (!QUnit.isLocal) {
 					start();
 				});
 			});
-		}
+		},
+		streamiframe: $.noop
 	}, function(transport, fn) {
 		var transportName = ({streamxdr: "XDomainRequest", streamiframe: "ActiveXObject('htmlfile')", streamxhr: "XMLHttpRequest"})[transport];
 		
