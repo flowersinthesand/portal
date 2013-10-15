@@ -479,7 +479,9 @@
 							// Powered by the storage event and the localStorage
 							// http://www.w3.org/TR/webstorage/#event-storage
 							storage: function() {
-								if (!support.storage) {
+								// The storage event of Internet Explorer works strangely
+								// TODO test Internet Explorer 11
+								if (support.browser.msie) {
 									return;
 								}
 								
@@ -544,7 +546,7 @@
 									init: function() {
 										// Callbacks from different windows
 										win.callbacks = [listener];
-										// In IE 8 and less, only string argument can be safely passed to the function in other window
+										// In Internet Explorer 8 and less, only string argument can be safely passed to the function in other window
 										win.fire = function(string) {
 											var i;
 											
@@ -806,8 +808,8 @@
 			// Uses an innerHTML property to obtain an absolute URL
 			div.innerHTML = '<a href="' + url + '"/>';
 			
-			// encodeURI and decodeURI are needed to normalize URL between IE and non-IE,
-			// since IE doesn't encode the href property value and return it - http://jsfiddle.net/Yq9M8/1/
+			// encodeURI and decodeURI are needed to normalize URL between Internet Explorer and non-Internet Explorer,
+			// since Internet Explorer doesn't encode the href property value and return it - http://jsfiddle.net/Yq9M8/1/
 			return encodeURI(decodeURI(div.firstChild.href));
 		},
 		each: function(array, callback) {
@@ -1003,18 +1005,12 @@
 			}
 		}
 	});
-	// Browser sniffing
+	// Browser sniffing to determine the browser is Internet Explorer
 	(function() {
 		var match = /(msie) ([\w.]+)/.exec(navigator.userAgent.toLowerCase()) || [];
 		
 		support.browser[match[1] || ""] = true;
 		support.browser.version = match[2] || "0";
-		
-		// The storage event of Internet Explorer works strangely
-		// TODO test IE 11
-		if (support.browser.msie) {
-			support.storage = false;
-		}
 	})();
 	
 	portal.defaults = defaults = {
@@ -1113,7 +1109,9 @@
 				name = "socket-" + options.url,
 				connectors = {
 					storage: function() {
-						if (!support.storage) {
+						// The storage event of Internet Explorer works strangely
+						// TODO test Internet Explorer 11
+						if (support.browser.msie) {
 							return;
 						}
 						
@@ -1413,7 +1411,7 @@
 				form.action = url;
 				form.target = "socket-" + (++guid);
 				form.method = "POST";
-				// IE 6 needs encoding property
+				// Internet Explorer 6 needs encoding property
 				form.enctype = form.encoding = "text/plain";
 				form.acceptCharset = "UTF-8";
 				form.style.display = "none";
@@ -1532,7 +1530,7 @@
 			if (!ActiveXObject || options.crossDomain) {
 				return;
 			} else {
-				// IE 10 Metro doesn't support ActiveXObject
+				// Internet Explorer 10 Metro doesn't support ActiveXObject
 				try {
 					new ActiveXObject("htmlfile");
 				} catch (e) {
