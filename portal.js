@@ -810,25 +810,6 @@
 			// since IE doesn't encode the href property value and return it - http://jsfiddle.net/Yq9M8/1/
 			return encodeURI(decodeURI(div.firstChild.href));
 		},
-		iterate: function(fn) {
-			var timeoutId;
-			
-			// Though the interval is 1ms for real-time application, there is a delay between setTimeout calls
-			// For detail, see https://developer.mozilla.org/en/window.setTimeout#Minimum_delay_and_timeout_nesting
-			(function loop() {
-				timeoutId = setTimeout(function() {
-					if (fn() === false) {
-						return;
-					}
-					
-					loop();
-				}, 1);
-			})();
-			
-			return function() {
-				clearTimeout(timeoutId);
-			};
-		},
 		each: function(array, callback) {
 			var i;
 			
@@ -1563,6 +1544,26 @@
 				open: function() {
 					var iframe, cdoc;
 					
+					function iterate(fn) {
+						var timeoutId;
+						
+						// Though the interval is 1ms for real-time application, there is a delay between setTimeout calls
+						// For detail, see https://developer.mozilla.org/en/window.setTimeout#Minimum_delay_and_timeout_nesting
+						(function loop() {
+							timeoutId = setTimeout(function() {
+								if (fn() === false) {
+									return;
+								}
+								
+								loop();
+							}, 1);
+						})();
+						
+						return function() {
+							clearTimeout(timeoutId);
+						};
+					}
+					
 					doc = new ActiveXObject("htmlfile");
 					doc.open();
 					doc.close();
@@ -1572,7 +1573,7 @@
 					doc.body.appendChild(iframe);
 					
 					cdoc = iframe.contentDocument || iframe.contentWindow.document;
-					stop = support.iterate(function() {
+					stop = iterate(function() {
 						// Response container
 						var container;
 						
@@ -1604,7 +1605,7 @@
 						socket.fire("open")._fire(readDirty(), true);
 						container.innerText = "";
 						
-						stop = support.iterate(function() {
+						stop = iterate(function() {
 							var text = readDirty();
 							
 							if (text) {
