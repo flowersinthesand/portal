@@ -21,10 +21,20 @@ Closes all sockets and removes all their traces.
 ## Options
 ### `transports`
 
-An array of the transport ids, in order of index. The transport is used to establish a connection, send data and close the connection. The default is `["ws", "sse", "stream", "longpoll"]`. For details, see the Transport and the Browser support documentation.
+An array of the transport ids, in order of index. The transport is used to establish a connection, send data and close the connection. The default is `["ws", "sse", "stream", "longpoll"]`.
+
+**Note**
+
+Guide to choose a transport list:
+* Add `ws` as a first element of the list if your portal server supports `ws` transport.
+* Add fallback transports.
+  * `sse` and `stream` for streaming. 
+  * `longpoll` for long polling. 
+
+For details about features and issues of fallback transports and transport availability in the browser, see the Transport and the Browser support documentation.
 
 ```js
-{transports: ["sse", "stream"]};
+{transports: ["ws", "sse", "stream"]};
 ```
 
 ### `timeout`
@@ -47,13 +57,21 @@ A heartbeat interval value in milliseconds. A opened socket continuously sends a
 
 A initial value for the last event id to be passed to the `urlBuilder` function. The default is `0`.
 
+**Note**
+
+This is valid only when the server assures the message-sending order.
+
 ```js
 {lastEventId: window.localStorage && window.localStorage["eventId"] || 0};
 ```
 
 ### `sharing`
 
-A flag indicating that connection sharing across tabs and windows is enabled or not. If this is turned on, as long as the cookie is enabled, the socket object will try to automatically share a real connection if there is no corresponding one, and find and use a shared connection if it exists within the cookie's scope. Note that if the web page becomes horribly busy, a newly created socket might establish a physical connection. By default, the value is set to `false`.
+A flag indicating that connection sharing across tabs and windows is enabled or not. If this is turned on, as long as the cookie is enabled, the socket object will try to automatically share a real connection if there is no corresponding one, and find and use a shared connection if it exists within the cookie's scope. By default, the value is set to `false`.
+
+**Note**
+
+If the web page or computer becomes horribly busy, a newly created socket might establish a physical connection. 
 
 ```js
 {sharing: true};
@@ -61,7 +79,12 @@ A flag indicating that connection sharing across tabs and windows is enabled or 
 
 ### `prepare(connect, cancel, options)`
 
-A function that is called before the socket tries to connect and determines whether to allow the socket to try to connect or not when a physical connection is needed. In other words, if the option `sharing` is `true` and there is an available shared socket, the function will not be executed. The function receives three arguments: The callback to connect, the callback to cancel and merged options object. You can use this when the opening handshake is needed, the user is needed to be authenticated and the option is needed to be managed by the server. The default function simply executes the connect function.
+A function that is called before the socket tries to connect and determines whether to allow the socket to try to connect or not when a physical connection is needed. The function receives three arguments: The callback to connect, the callback to cancel and merged options object. You can use this when the opening handshake is needed, the user is needed to be authenticated and the option is needed to be managed by the server. The default function simply executes the connect function.
+
+
+**Note**
+
+If the option `sharing` is `true` and there is an available shared connection, this function will not be executed.
 
 ```js
 {
@@ -94,12 +117,16 @@ A function to be used to schedule reconnection. The function is called every tim
 
 ### `idGenerator()`
 
-A function to be used to generate a socket id. The function should return a string and the returned string should be unique enough for the server to use it as a identifier of the connection until the connection disconnects. The default function generates a random UUID.
+A function to be used to generate a socket id. The function should return a string and the returned string should be unique enough for the server to use it as a identifier of the connection until the connection disconnects. The default function generates a random UUID based on the `Math.random`.
+
+**Note**
+
+The default function is enough for the transient use, but if you are going to use it permanently e.g. a persistent field of persistent entity, you have to consider to introduce higher quality of [UUID generator](https://github.com/broofa/node-uuid) based on the `crypto.getRandomValues` or handshake request utilizing `prepare` function.
 
 ```js
 {
     idGenerator: function() {
-        return Math.random().toFixed(20).substring(2);
+        return uuid.v4();
     }
 };
 ```
@@ -147,7 +174,11 @@ An additional parameters to be merged with the default parameters and passed to 
 
 ### `inbound(data)`
 
-A function to be used to convert data sent by the server into an event object. Every data sent by the server except binary invokes the function and it should return an event object having `type`. Binary data is considered as a `message` event instead. The event object can have the following optional properties: `id`(an event id), `reply`(if true then a reply event will be sent) and `data`(the first argument of corresponding handlers). The default function parses the data as JSON and returns the parsed value because the server sends a JSON string representing the event as data by default.
+A function to be used to convert data sent by the server into an event object. Every data sent by the server invokes the function and it should return an event object having `type`. The event object can have the following optional properties: `id`(an event id), `reply`(if true then a reply event will be sent) and `data`(the first argument of corresponding handlers). The default function parses the data as JSON and returns the parsed value because the server sends a JSON string representing the event as data by default.
+
+**Note**
+
+Binary data is considered as a `message` event without calling the function.
 
 ```js
 {
@@ -163,7 +194,12 @@ A function to be used to convert data sent by the server into an event object. E
 
 ### `outbound(event)`
 
-A function to be used to convert an event object into data to be sent to the server. Every data to be sent to the server except binary invokes the function and it should return a string. Binary data is sent as it is instead. The given event object has `id`(an event id), `type`(a event type which the user input), `reply`(if true then a reply event will be received), `socket`(a socket id) and `data`(data which the user input) properties. The default function serializes the event object into JSON and returns it because the server accepts a JSON string representing the event as data by default.
+A function to be used to convert an event object into data to be sent to the server. Every data to be sent to the server invokes the function and it should return a string. The given event object has `id`(an event id), `type`(a event type which the user input), `reply`(if true then a reply event will be received), `socket`(a socket id) and `data`(data which the user input) properties. The default function serializes the event object into JSON and returns it because the server accepts a JSON string representing the event as data by default.
+
+**Note**
+
+Binary data is sent as it is instead without calling the function.
+
 
 ```js
 {
@@ -193,7 +229,7 @@ This option helps the server detect disconnection of HTTP connection when the se
 
 Applied to: `sse`, `stramxhr`, `longpollajax` in the browser supporting [Cross-Origin Resource Sharing](http://www.w3.org/TR/cors/)
 
-If the value is `true`, user credentials such as cookies and HTTP authentication is to be included in a cross-origin connection. The spec requires the server to add some [response headers](http://www.w3.org/TR/cors/#resource-requests). The default is `false`
+If the value is `true`, user credentials such as cookies and HTTP authentication is to be included in a cross-origin connection. The default is `false`
 
 ```js
 {credentials: true};
@@ -213,13 +249,12 @@ By default, the first long polling request is supposed to be complete instantly 
 
 Applied to: `streamxdr`, `longpollxdr`
 
-A function that can be used to modify a url to be used by the `XDomainRequest`. For security reasons, the `XDomainRequest` excludes cookies when sending a request, so a session state cannot be maintained. This problem can be solved by rewriting the url to contain session information. How to rewrite the url is depending on the server app. For details, see my [Q&A](http://stackoverflow.com/questions/6453779/maintaining-session-by-rewriting-url) on StackOverflow. If you wish to disable applied transports, set the value to `false`. The default function modifies the url only if `JSESSIONID` or `PHPSESSID` cookie exists. For example, If the url is `url?key=value` and `JSESSIONID` cookie exists, the url becomes `url;jsessionid=${cookie.JSESSIONID}?key=value`, and if `PHPSESSID` cookie exists, the url becomes `url?PHPSESSID=${cookie.PHPSESSID}&key=value`. Otherwise, it returns `false`.
+A function used to add session information to an url. For security reasons, the `XDomainRequest` excludes cookie when sending a request, so the session cannot be tracked by cookie. However, if the server supports session tracking by url, it is possible to track the session by [rewriting the url](http://stackoverflow.com/questions/6453779/maintaining-session-by-rewriting-url). If you wish to disable applied transports, set the value to `false` or function returning `false`. The default function modifies the url only if `JSESSIONID` or `PHPSESSID` cookie exists. For example, If the url is `url?k=v` and `JSESSIONID` cookie exists, the url becomes `url;jsessionid=${cookie.JSESSIONID}?k=v`, and if `PHPSESSID` cookie exists, the url becomes `url?PHPSESSID=${cookie.PHPSESSID}&k=v`. Otherwise, it returns `false`.
 
 ```js
 {
      xdrURL: function(url) {
-          var match = /(?:^|;\s*)JSESSIONID=([^;]*)/.exec(document.cookie);
-          return match ? url.replace(/;jsessionid=[^\?]*|(\?)|$/, ";jsessionid=" + match[1] + "$1") : url;
+          return url;
      }
 };
 ```
@@ -249,7 +284,7 @@ A function to parse stream response to find data from chunks. The function recei
 Finds the value of an option from the options merged with the default options and the given options. `.option("id")` returns the socket id and `.option("url")` returns the original url.
 
 ```js
-portal.find().option("url");
+socket.option("url");
 ```
 
 ### `data(key, [value])`
@@ -257,15 +292,15 @@ portal.find().option("url");
 Gets or sets the connection-scoped value with the specified key. The connection scope is reset every time the socket opens.
 
 ```js
-portal.find().data("url");
+socket.data("url");
 ```
 
 ### `state()`
 
-Determines the state of the socket. It can be in one of five states: `preparing`, `connecting`, `opened`, `closed` and `waiting`.
+Determines the state of the socket. It can be in one of five states: `preparing`, `connecting`, `opened`, `closed` and `waiting`. For details, see the Life cycle document.
 
 ```js
-portal.find().state();
+socket.state();
 ```
 
 ### `on(handlers)`
@@ -273,7 +308,7 @@ portal.find().state();
 Adds event handlers from a given map of event type and event handler. Use this signature when initializing a socket. Actually, a single event handler is enough for most cases. When the handler executes, the `this` keyword refers to the socket where the event occurred. 
 
 ```js
-portal.open("events").on({
+socket.on({
     message: function() {
         this.data("counts", (this.data("counts") || 0) + 1);
     }
@@ -285,7 +320,7 @@ portal.open("events").on({
 Adds a given event handler for a given event.
 
 ```js
-portal.find().on("message", function() {
+socket.on("message", function() {
     this.data("counts", (this.data("counts") || 0) + 1);
 });
 ```
@@ -295,48 +330,48 @@ portal.find().on("message", function() {
 Removes a given event handler for a given event.
 
 ```js
-portal.find().off("notification", app.handleNotification);
+socket.off("notification", app.handleNotification);
 ```
 
 ### `one(event, handler)`
 
-Adds a given one time event handler for a given event. A handler bound by `one` can be called only once in a socket life cycle. In other words, the handler will not be reset upon reconnection.
+Adds a given one time event handler for a given event. A handler bound by `one` can be called only once. In other words, the handler will not be reset upon reconnection.
 
 ```js
-portal.find().one("message", function() {
+socket.one("message", function() {
     alert("first message!");
 });
 ```
 
+### `send(event, [data])`
+
+Sends an event whose type is a given event and data is a given data to the server. The data is optional.
+
+```js
+socket.send("signal").send("event", {foo: "bar"});
+```
+
 ### `send(event, [data], [doneCallback], [failCallback])`
 
-Sends an event whose type is a given event and data is a given data to the server. 
+Sends the event and registers callbacks. If a callback is string, it is regarded as the callback event name and that event will be fired with data returned from the server, if a callback is function, it will be invoked with the data. The reply event sent by the server determines whether to invoke the done callback or the fail callback. 
+
+**Note**
+
+When connection sharing is enabled, passing event name and passing function lead to totally different result. Through the former way, it is possible to share callback result but in case of the latter way, of course it can't be. So, in that situation, you have to consider what way is suitable. Also, you don't need to adopt the former if you will never enable connection sharing.
 
 ```js
-portal.find()
-.send("signal")
-.send("event", {foo: "bar"});
-```
-
-If a callback is string, it is regarded as the callback event name and that event will be fired with data returned from the server, if a callback is function, it will be invoked with the data. The reply event sent by the server determines whether to invoke the done callback or the fail callback. Note that passing function is not shareable.
-
-```js
-portal.find()
-.send("account:add", {username: "flowersinthesand"}, "account:add:done", "account:add:fail");
-// Use this way only if the reply result doesn't need to be shared
-.send("account:find", 45, function(account) {
+socket.send("account:find", 45, function(account) {
     // ...
-});
+})
+.send("account:add", {username: "flowersinthesand"}, "account:add:done", "account:add:fail");
 ```
-<!--
+<!-- undocumented
 ### `fire(event, [data])`
 
 Fires all event handlers attached to the local socket for the given event type.
 
 ```js
-portal.find()
-.fire("init")
-.fire("account.added", {username: "flowersinthesand", twitter: "flowersits"});
+socket.fire("init").fire("account.added", {username: "flowersinthesand", twitter: "flowersits"});
 ```
 
 ### `broadcast(event, [data])`
@@ -344,9 +379,7 @@ portal.find()
 Broadcasts an event to session sockets which means a socket sharing its connection and sockets connecting to that connection.
 
 ```js
-portal.find()
-.broadcast("ready")
-.broadcast("notification", {type: "success", msg: "Well done!"});
+socket.broadcast("ready").broadcast("notification", {type: "success", msg: "Well done!"});
 ```
 -->
 ### `close()`
@@ -354,7 +387,7 @@ portal.find()
 Closes the socket.
 
 ```js
-portal.find().close();
+socket.close();
 ```
 
 ### `connecting(handler)`, `open(handler)`, `message(handler)`, `close(handler)`, `waiting(handler)`
