@@ -1270,14 +1270,9 @@ test("transport used for connection should be exposed by data('transport')", fun
 	ok(portal.open("url").data("transport"));
 });
 
-if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKitBlobBuilder)) {
+if (window.Blob || window.ArrayBuffer || window.Int8Array) {
 	asyncTest("binary data should be sent transparently", function() {
-		var BlobBuilder = window.MozBlobBuilder || window.WebKitBlobBuilder, i = 0;
-		
-		function isBinary(data) {
-			var string = Object.prototype.toString.call(data);
-			return string === "[object Blob]" || string === "[object ArrayBuffer]";
-		}
+		var i = 0, binary = [];
 		
 		portal.defaults.inbound = portal.defaults.outbound = function() {
 			ok(false);
@@ -1286,21 +1281,33 @@ if (window.Blob && window.ArrayBuffer && (window.MozBlobBuilder || window.WebKit
 		portal.open("url", {
 			server: function(request) {
 				request.accept().on("message", function(data) {
-					ok(isBinary(data));
+					ok(portal.support.isBinary(data));
 					this.send("message", data);
 				});
 			}
 		})
 		.message(function(data) {
 			i++;
-			ok(isBinary(data));
+			ok(portal.support.isBinary(data));
 			
-			if (i === 2) {
+			if (i === binary.length) {
 				start();
 			}
-		})
-		.send("message", new BlobBuilder().getBlob())
-		.send("message", new window.ArrayBuffer());
+		});
+		
+		if (window.Blob) {
+			binary.push(new window.Blob());
+		}
+		if (window.ArrayBuffer) {
+			binary.push(new window.ArrayBuffer());
+		}
+		if (window.Int8Array) {
+			binary.push(new window.Int8Array());
+		}
+		
+		$.each(binary, function(i, elem) {
+			portal.find().send("message", elem);
+		});
 	});
 }
 

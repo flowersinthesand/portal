@@ -796,8 +796,8 @@
 			return toString.call(array) === "[object Array]";
 		},
 		isBinary: function(data) {
-			var string = toString.call(data);
-			return string === "[object Blob]" || string === "[object ArrayBuffer]";
+			// True if data is an instance of Blob, ArrayBuffer or ArrayBufferView 
+			return /^\[object\s(?:Blob|ArrayBuffer|.+Array)\]$/.test(toString.call(data));
 		},
 		isFunction: function(fn) {
 			return toString.call(fn) === "[object Function]";
