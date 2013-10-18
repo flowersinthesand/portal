@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Portal by flowersinthesand</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Portal</h1>
+        <p>Project for realtime web application</p>
+
+        <p class="view"><a href="https://github.com/flowersinthesand/portal">View the Project on GitHub <small>flowersinthesand/portal</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/flowersinthesand/portal/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/flowersinthesand/portal/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/flowersinthesand/portal">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>
+<a name="portal" class="anchor" href="#portal"><span class="octicon octicon-link"></span></a>Portal</h1>
+
+<p>The <strong>Portal</strong> is a server agnostic JavaScript library that not just provides a socket for browser-based applications that need two-way communication with servers, but also aims to utilize a full duplex connection for modern web application development.</p>
+
+<p>The <strong>Portal</strong> project is licensed under the <a href="http://www.tldrlegal.com/l/APACHE2">Apache License 2.0</a> and developed and maintained by Donghwan Kim. If you are interested, please follow <a href="https://twitter.com/flowersits">@flowersits</a> and subscribe to the <a href="https://groups.google.com/d/forum/portal_project">discussion group</a>.</p>
+
+<h2>
+<a name="how-to-use" class="anchor" href="#how-to-use"><span class="octicon octicon-link"></span></a>How to use</h2>
+
+<p>Load portal.js to your application:</p>
+
+<div class="highlight highlight-html"><pre><span class="nt">&lt;script </span><span class="na">src=</span><span class="s">"/portal/portal.js"</span><span class="nt">&gt;&lt;/script&gt;</span>
+</pre></div>
+
+<p>Then, open a connection to the portal server.</p>
+
+<div class="highlight highlight-html"><pre><span class="nt">&lt;script&gt;</span>
+<span class="nx">portal</span><span class="p">.</span><span class="nx">open</span><span class="p">(</span><span class="s2">"/portal"</span><span class="p">).</span><span class="nx">on</span><span class="p">({</span>
+    <span class="c1">// Pseudo event</span>
+    <span class="nx">connecting</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{},</span>
+    <span class="nx">waiting</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">delay</span><span class="p">,</span> <span class="nx">attempts</span><span class="p">)</span> <span class="p">{},</span>
+    <span class="c1">// Network event</span>
+    <span class="nx">open</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{},</span>
+    <span class="nx">close</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">reason</span><span class="p">)</span> <span class="p">{},</span>
+    <span class="c1">// Message event</span>
+    <span class="nx">message</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span> <span class="p">{},</span>
+    <span class="nx">eventname</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">eventdata</span><span class="p">)</span> <span class="p">{}</span>
+<span class="p">});</span>
+<span class="nt">&lt;/script&gt;</span>
+</pre></div>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/flowersinthesand">flowersinthesand</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+              <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-44968335-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+  </body>
+</html>
