@@ -98,8 +98,6 @@ Opens a socket and returns it.
         
         A function to parse stream response to find data from chunks. The function receives [chunk](http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.6.1) and should return an array of data and the returned array's length varies with each chunk because a single chunk may contain a single data, multiple data or a fragment of a data. The default function parses a chunk according to the [event stream format](http://www.w3.org/TR/eventsource/#parsing-an-event-stream), but deals with the data field only.
         
-TODO Example
-
 #### `find()`
 
 Returns the first socket.
@@ -186,8 +184,8 @@ A pseudo event which is fired only once when a connection is tried.
 
 A pseudo event which is fired only once when a reconnection has scheduled. 
 
-* **delay** (type: Number): the reconnection delay in milliseconds.
-* **attempts** (type: Number): the total number of reconnection attempts.
+* **delay** (type: Number): The reconnection delay in milliseconds.
+* **attempts** (type: Number): The total number of reconnection attempts.
 
 #### `open()`
 
@@ -200,12 +198,12 @@ The `connecting` event becomes locked. An event handler registered when the stat
 A network event which is fired once when a connection has been closed. 
 
 * **reason** (type: String): The connection close reason. 
-    * canceled: preparation failure.
-    * notransport: no available transport.
-    * done: closed normally.
-    * aborted: closed by the user.
-    * timeout: timed out.
-    * error: closed due to a server error or could not be opened.
+    * canceled: Preparation failure.
+    * notransport: No available transport.
+    * done: Closed normally.
+    * aborted: Closed by the user.
+    * timeout: Timed out.
+    * error: Closed due to a server error or could not be opened.
 
 The `connecting`, `open`, `message` and all the custom events become locked. An event handler registered when the state is not `closed` is executed when it becomes `closed`. An event handler added when the state is `closed` is executed immediately. 
 
@@ -225,9 +223,9 @@ A message event which is fired multiple times when a heartbeat event has been ec
 A message event which is fired multiple times when a reply event has been received from the server.
 
 * **info** (type: Object): The reply information is passed to event handlers and has three properties: 
-    * id: the original event which requested reply
-    * data: the reply of the server
-    * exception: tells there was exception and determines whether to invoke the done callback or the fail callback.
+    * id: The original event which requested reply
+    * data: The reply of the server
+    * exception: Tells there was exception and determines whether to invoke the done callback or the fail callback.
 
 ### Method
 
@@ -238,8 +236,8 @@ Finds the value of an option from the options merged with the default options an
 * **key** (type: String): A key of option.
 
 In addition to merged options, the following options are available:
-* id: the socket id 
-* url: the original url.
+* id: The socket id.
+* url: The original url.
 
 #### `data(key)`
 
@@ -247,7 +245,15 @@ Returns the connection-scoped data with the specified key. The connection scope 
 
 * **key** (type: String): A key of stored data.
 
-TODO mention reserved data list
+The followings are reserved data managed by the socket and internally used. Don't rely on them or use them with care.
+* candidates: The transport candidates.
+* transport: The transport name.
+* url: The final url.
+* broadcastable: The broadcaster for connection sharing.
+* lastEventIds: The event ids contained by the previous message.
+* data: An incomplete message text consisting of chunks. Used by `streamParser` option for `stream` transport.
+* event: The original event object of `ws` transport's WebSocket and `sse` transport's EventSource.
+* index: An index indicating where message text ends. Used by `streamxhr` and `streamxdr`.
 
 #### `data(key, value)`
 
