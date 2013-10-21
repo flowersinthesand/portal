@@ -1,4 +1,4 @@
-baseurl: /portal
+baseurl: http://flowersinthesand.github.io/portal
 markdown: redcarpet
 redcarpet:
   extensions:
@@ -9,4 +9,5 @@ redcarpet:
     - fenced_code_blocks
     - tables
     - with_toc_data
+relative_permalinks: false
 permalink: pretty
