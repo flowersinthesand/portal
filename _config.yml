@@ -1,4 +1,4 @@
-baseurl: http://flowersinthesand.github.io/portal
+baseurl: /portal
 markdown: redcarpet
 redcarpet:
   extensions:
