@@ -1,7 +1,6 @@
 ---
 layout: news
 title: "The new web site"
-date: "2013-10-21 03:00:00 +0900"
 categories: [news]
 ---
 
