@@ -1,27 +1,8 @@
 # Portal
-The **Portal** is a server agnostic JavaScript library that not just provides a socket for browser-based applications that need two-way communication with servers, but also aims to utilize a full duplex connection for modern web application development.
+The **Portal** is a concise, lightweight and feature-rich JavaScript library for real-time web application development. The <strong>Portal</strong> provides socket for browser-based applications that need two-way communication with servers, but also aims to utilize a full duplex connection for modern web application development.
 
-The **Portal** project is licensed under the [Apache License 2.0](http://www.tldrlegal.com/l/APACHE2) and developed and maintained by Donghwan Kim. If you are interested, please follow [@flowersits](https://twitter.com/flowersits) and subscribe to the [discussion group](https://groups.google.com/d/forum/portal_project).
+The **Portal** greatly simplifies things essential to real-time web applications like connection sharing, reply, heartbeat and disconnection detection. The <strong>Portal</strong> is designed by carefully considering known issues and best practices of real-time web to provide a reliable socket based on its simple protocol.
 
-## How to use
-Load portal.js to your application:
-```html
-<script src="/portal/portal.js"></script>
-```
-
-Then, open a connection to the portal server.
-```html
-<script>
-portal.open("/portal").on({
-    // Pseudo event
-    connecting: function() {},
-    waiting: function(delay, attempts) {},
-    // Network event
-    open: function() {},
-    close: function(reason) {},
-    // Message event
-    message: function(data) {},
-    eventname: function(eventdata) {}
-});
-</script>
-```
+* Website: http://flowersinthesand.github.io/portal/
+* Twitter: http://twitter.com/flowersits
+* Mailing list: https://groups.google.com/d/forum/portal_project
