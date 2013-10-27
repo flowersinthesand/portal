@@ -9,9 +9,8 @@ title: Installation
 
 ### Git repository
 
-Download portal.js and copy it to the static folder. The portal server may do that for you. Latest snapshot is also available, but don't use it for production unless you know well the portal.js inside.
+Download portal.js and copy it to the static folder. The portal server may do that for you.
 
-* [portal v1.1-snapshot](https://raw.github.com/flowersinthesand/portal/master/portal.js)
 * [portal v1.0.1 compressed](https://raw.github.com/flowersinthesand/portal/1.0.1/portal.min.js)
 * [portal v1.0.1 uncompressed](https://raw.github.com/flowersinthesand/portal/1.0.1/portal.js)
 
