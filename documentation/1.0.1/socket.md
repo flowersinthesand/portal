@@ -134,7 +134,7 @@ Finds the value of an option from the options merged with the default options an
 
 In addition to merged options, the following options are available:
 * id: The socket id.
-* url: The original url.
+* url: An absolute url of the original url.
 
 ### `data(key)`
 
