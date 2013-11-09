@@ -6,8 +6,25 @@
  * Licensed under the Apache License, Version 2.0
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-(function() {
+
+// Implement the Universal Module Definition (UMD) pattern 
+// see https://github.com/umdjs/umd/blob/master/returnExports.js
+(function(root, factory) {               
+	if (typeof define === 'function' && define.amd) {
+		// AMD
+		define(factory);
+	} else if (typeof exports === 'object') {
+		// Node
+		// but this requires Window and is not enough to run portal.js on Node
+		// will be fixed in #115
+		module.exports = factory();
+	} else {
+		// Browser globals, Window
+		root.portal = factory();
+	}
+}(this, function() {
 	
+	// Enables  ECMAScript 5′s strict mode
 	"use strict";
 	
 	var // A global identifier
@@ -1853,8 +1870,6 @@
 		}
 	};
 	
-	// Exposes portal to the global object
-	window.portal = portal;
-	
-})();
+	return portal;
+}));
 /* jshint noarg:true, noempty:true, eqeqeq:true, evil:true, laxbreak:true, undef:true, browser:true, jquery:true, indent:4, maxerr:50 */
