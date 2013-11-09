@@ -9,7 +9,7 @@
 
 // Implement the Universal Module Definition (UMD) pattern 
 // see https://github.com/umdjs/umd/blob/master/returnExports.js
-(function(root, factory) {               
+(function(root, factory) {
 	if (typeof define === 'function' && define.amd) {
 		// AMD
 		define(factory);
@@ -24,7 +24,7 @@
 	}
 }(this, function() {
 	
-	// Enables  ECMAScript 5′s strict mode
+	// Enables ECMAScript 5′s strict mode
 	"use strict";
 	
 	var // A global identifier
