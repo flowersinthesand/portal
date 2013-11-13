@@ -26,5 +26,24 @@ local.properties
 # PDT-specific
 .buildpath
 
+
+
 # Maven - https://github.com/github/gitignore/blob/master/Maven.gitignore
 target/
+
+
+# Node - https://github.com/github/gitignore/blob/master/Node.gitignore
+lib-cov
+*.seed
+*.log
+*.csv
+*.dat
+*.out
+*.pid
+*.gz
+
+pids
+logs
+results
+
+node_modules

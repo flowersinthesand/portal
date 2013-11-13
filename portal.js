@@ -12,17 +12,25 @@
 (function(root, factory) {
 	if (typeof define === 'function' && define.amd) {
 		// AMD
-		define(factory);
+		define(function() {
+			return factory(root);
+		});
 	} else if (typeof exports === 'object') {
 		// Node
-		// but this requires Window and is not enough to run portal.js on Node
-		// will be fixed in #115
-		module.exports = factory();
+		module.exports = factory(function() {
+			// Prepare the window powered by jsdom
+			var window = require('jsdom').jsdom().createWindow();
+			window.WebSocket = require('ws');
+			// TODO inject EventSource to window
+			return window;
+		}());
+		// node-XMLHttpRequest 1.x conforms XMLHttpRequest Level 1 but can perform a cross-domain request
+		module.exports.support.corsable = true;
 	} else {
 		// Browser globals, Window
-		root.portal = factory();
+		root.portal = factory(root);
 	}
-}(this, function() {
+}(this, function(window) {
 	
 	// Enables ECMAScript 5′s strict mode
 	"use strict";
@@ -46,7 +54,10 @@
 		// Core prototypes
 		toString = Object.prototype.toString,
 		hasOwn = Object.prototype.hasOwnProperty,
-		slice = Array.prototype.slice;
+		slice = Array.prototype.slice,
+		// Regard for Node since these are not defined
+		document = window.document,
+		location = window.location;
 	
 	// Callback function
 	function callbacks(deferred) {
@@ -1024,7 +1035,7 @@
 	});
 	// Browser sniffing to determine the browser is Internet Explorer
 	(function() {
-		var match = /(msie) ([\w.]+)/.exec(navigator.userAgent.toLowerCase()) || [];
+		var match = /(msie) ([\w.]+)/.exec(window.navigator.userAgent.toLowerCase()) || [];
 		
 		support.browser[match[1] || ""] = true;
 		support.browser.version = match[2] || "0";

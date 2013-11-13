@@ -1,0 +1,26 @@
+{
+  "name": "portal-client",
+  "version": "0.0.0",
+  "description": "A client for the portal",
+  "main": "portal.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/flowersinthesand/portal.git"
+  },
+  "keywords": [],
+  "author": {
+    "name": "Donghwan Kim",
+    "email": "flowersinthesand@gmail.com"
+  },
+  "license": "Apache License, Version 2.0",
+  "bugs": {
+    "url": "https://github.com/flowersinthesand/portal/issues"
+  },
+  "dependencies": {
+    "jsdom": "0.8.8",
+    "ws": "0.4.31"
+  }
+}
