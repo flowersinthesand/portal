@@ -10,17 +10,17 @@
 // Implement the Universal Module Definition (UMD) pattern 
 // see https://github.com/umdjs/umd/blob/master/returnExports.js
 (function(root, factory) {
-	if (typeof define === 'function' && define.amd) {
+	if (typeof define === "function" && define.amd) {
 		// AMD
 		define(function() {
 			return factory(root);
 		});
-	} else if (typeof exports === 'object') {
+	} else if (typeof exports === "object") {
 		// Node
 		module.exports = factory(function() {
 			// Prepare the window powered by jsdom
-			var window = require('jsdom').jsdom().createWindow();
-			window.WebSocket = require('ws');
+			var window = require("jsdom").jsdom().createWindow();
+			window.WebSocket = require("ws");
 			// TODO inject EventSource to window
 			return window;
 		}());
