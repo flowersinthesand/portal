@@ -1000,7 +1000,6 @@
 					}
 				})("", {"": value});
 		},
-		browser: {},
 		storage: !!(window.localStorage && window.StorageEvent)
 	};
 	guid = support.now();
@@ -1034,12 +1033,22 @@
 		}
 	});
 	// Browser sniffing to determine the browser is Internet Explorer
-	(function() {
-		var match = /(msie) ([\w.]+)/.exec(window.navigator.userAgent.toLowerCase()) || [];
+	(function(ua) {
+		var browser = {},
+			match = /(msie) ([\w.]+)/.exec(ua) ||
+				/(trident)(?:.*? rv:([\w.]+)|)/.exec(ua) ||
+				[];
 		
-		support.browser[match[1] || ""] = true;
-		support.browser.version = match[2] || "0";
-	})();
+		browser[match[1] || ""] = true;
+		browser.version = match[2] || "0";
+		
+		// Trident is the layout engine of the Internet Explorer
+		if (browser.trident) {
+			browser.msie = true;
+		}
+		
+		support.browser = browser;
+	})(window.navigator.userAgent.toLowerCase());
 	
 	portal.defaults = defaults = {
 		// Socket options
