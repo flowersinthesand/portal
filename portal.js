@@ -21,7 +21,7 @@
 			// Prepare the window powered by jsdom
 			var window = require("jsdom").jsdom().createWindow();
 			window.WebSocket = require("ws");
-			// TODO inject EventSource to window
+			window.EventSource = require("eventsource");
 			return window;
 		}());
 		// node-XMLHttpRequest 1.x conforms XMLHttpRequest Level 1 but can perform a cross-domain request
@@ -1491,9 +1491,12 @@
 				open: function() {
 					var url = socket.data("url");
 					
+					// eventsource 0.0.9 doesn't provide Event object on open and error event 
+					// so chaining is not possible
 					es = new EventSource(url, {withCredentials: options.credentials});
 					es.onopen = function(event) {
-						socket.data("event", event).fire("open");
+						socket.data("event", event);
+						socket.fire("open");
 					};
 					es.onmessage = function(event) {
 						socket.data("event", event)._fire(event.data);
@@ -1501,8 +1504,9 @@
 					es.onerror = function(event) {
 						es.close();
 						
+						socket.data("event", event);
 						// There is no way to find whether this connection closed normally or not
-						socket.data("event", event).fire("close", "done");
+						socket.fire("close", "done");
 					};
 				},
 				close: function() {
