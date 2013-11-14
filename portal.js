@@ -1518,7 +1518,7 @@
 		streamxhr: function(socket, options) {
 			var xhr;
 			
-			if ((support.browser.msie && +support.browser.version < 10) || (options.crossDomain && !support.corsable)) {
+			if ((support.browser.msie && +support.browser.version.split(".")[0] < 10) || (options.crossDomain && !support.corsable)) {
 				return;
 			}
 			
