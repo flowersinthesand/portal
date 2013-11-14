@@ -22,9 +22,9 @@ portal.open("/events")
 
 ### Pressing ESC key aborts the connection
 
-Applies to: Firefox
+Applies to: Firefox less than 20
 
-One of default behaviors of pressing ESC key in Firefox is to cancel all open networking requests fired by `XMLHttpRequest`, `EventSource`, `WebSocket` and so on. The workaround is to prevent that behavior, and its drawback is that the user can't expect the default behavior of pressing ESC key.
+One of default behaviors of pressing ESC key in Firefox is to cancel all open networking requests fired by `XMLHttpRequest`, `EventSource`, `WebSocket` and so on. The workaround is to prevent that behavior, and its drawback is that the user can't expect the default behavior of pressing ESC key. [Fixed](https://bugzilla.mozilla.org/show_bug.cgi?id=614304) in Firefox 20.
 
 ```js
 $(window).keydown(function(event) {
