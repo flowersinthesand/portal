@@ -73,6 +73,10 @@ The following list of available transports have been tested with the latest snap
 * same origin - `streamxhr`, `longpollajax` (`longpolljsonp`)
 
 ### Internet Explorer
+#### 11
+* same origin - `ws`, `streamxhr`, `longpollajax` (`longpolljsonp`)
+* cross origin - `ws`, `streamxhr`, `longpollajax` (`longpolljsonp`)
+
 #### 10
 * same origin - `ws`, `streamxhr`, `longpollajax` (`streamxdr`, `streamiframe`, `longpollxdr`, `longpolljsonp`)
 * cross origin - `ws`, `streamxhr`, `longpollajax` (`streamxdr`, `longpollxdr`, `longpolljsonp`)
