@@ -1032,10 +1032,13 @@
 			}
 		}
 	});
-	// Browser sniffing to determine the browser is Internet Explorer
+	// Browser sniffing
 	(function(ua) {
 		var browser = {},
-			match = /(msie) ([\w.]+)/.exec(ua) ||
+			match =
+				// IE 6-10
+				/(msie) ([\w.]+)/.exec(ua) ||
+				// IE 11+
 				/(trident)(?:.*? rv:([\w.]+)|)/.exec(ua) ||
 				[];
 		
