@@ -1845,7 +1845,7 @@
 						script.async = true;
 						script.src = url;
 						script.clean = function() {
-							script.clean = script.onerror = script.onload = script.onreadystatechange = null;
+							script.clean = script.src = script.onerror = script.onload = script.onreadystatechange = null;
 							if (script.parentNode) {
 								script.parentNode.removeChild(script);
 							}
