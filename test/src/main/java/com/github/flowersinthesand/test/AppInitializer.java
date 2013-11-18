@@ -24,13 +24,13 @@ import com.github.flowersinthesand.portal.Options;
 import com.github.flowersinthesand.portal.atmosphere.AtmosphereModule;
 
 @WebListener
-public class EchoInitializer implements ServletContextListener {
+public class AppInitializer implements ServletContextListener {
 	
 	private App app;
 
 	@Override
 	public void contextInitialized(ServletContextEvent event) {
-		app = new App(new Options().url("/echo").packageOf(this), new AtmosphereModule(event.getServletContext()));
+		app = new App(new Options().url("/test").packageOf(this), new AtmosphereModule(event.getServletContext()));
 	}
 
 	@Override

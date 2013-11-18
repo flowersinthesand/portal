@@ -28,3 +28,5 @@ function okTrue() {
 function okFalse() {
 	ok(false);
 }
+
+QUnit.config.autostart = false;
