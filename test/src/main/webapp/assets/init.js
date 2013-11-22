@@ -29,4 +29,4 @@ function okFalse() {
 	ok(false);
 }
 
-QUnit.config.autostart = false;
+QUnit.config.testTimeout = 10000;

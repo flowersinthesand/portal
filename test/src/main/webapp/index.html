@@ -6,61 +6,20 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Portal Test Suite</title>
 		<link rel="stylesheet" media="screen" href="assets/qunit-1.12.0.css" />
+	</head>
+	<body>
+		<h1 id="qunit-header">Portal Test Suite</h1>
+		<h2 id="qunit-banner"></h2>
+		<div id="qunit-testrunner-toolbar"></div>
+		<h2 id="qunit-userAgent"></h2>
+		<div id="portal-test-info"></div>
+		<ol id="qunit-tests"></ol>
 		<script type="text/javascript" src="assets/qunit-1.12.0.js"></script>
 		<script type="text/javascript" src="assets/jquery-1.10.2.js"></script>
 		<script type="text/javascript" src="portal.js"></script>
 		<script type="text/javascript" src="assets/transport.js"></script>
 		<script type="text/javascript" src="assets/init.js"></script>
-		<script type="text/javascript">
-		$(function() {
-			switch(QUnit.urlParams.mode) {
-			case "client":
-				$.ajax("client.js").done(function() {
-					$("#qunit-container").show();
-					QUnit.start();
-				});
-				break;
-			case "server":
-				$.ajax("server.js").done(function() {
-					$("#qunit-container").show();
-					QUnit.start();
-				});
-				break;
-			default:
-				$("#testrunner").show().submit(function() {
-					location.href = (/(.+)\?/.exec(location.href) || ["", location.href])[1] + 
-						"?mode=" + $(this).find("input[name=mode]:checked").val();
-					return false;
-				});
-				break;
-			}
-		});
-		</script>
-		<style type="text/css">
-		#testrunner {display: none;}
-		#qunit-container {display: none;}
-		</style>
-	</head>
-	<body>
-		<form id="testrunner">
-			<fieldset>
-				<div>
-					<label>
-						<input type="radio" name="mode" value="client" /> Client
-					</label>
-					<label>
-						<input type="radio" name="mode" value="server" /> Server
-					</label>
-					<button type="submit">Run</button>
-				</div>
-			</fieldset>
-		</form>
-		<div id="qunit-container">
-			<h1 id="qunit-header">Portal Test Suite</h1>
-			<h2 id="qunit-banner"></h2>
-			<div id="qunit-testrunner-toolbar"></div>
-			<h2 id="qunit-userAgent"></h2>
-			<ol id="qunit-tests"></ol>
-		</div>
+		<script type="text/javascript" src="client.js"></script>
+		<script type="text/javascript" src="server.js"></script>
 	</body>
 </html>

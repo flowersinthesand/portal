@@ -1,7 +1,7 @@
 (function() {
 	
 	var transport, 
-		url = QUnit.urlParams.url ? decodeURIComponent(QUnit.urlParams.crossdomainURL) : "/test",
+		url = QUnit.urlParams.url || "/test",
 		crossDomain = new RegExp("^" + portal.support.getAbsoluteURL("")).exec(portal.support.getAbsoluteURL(url)), 
 		transports = QUnit.urlParams.transports && QUnit.urlParams.transports.split(",") || portal.defaults.transports,
 		text2KB = (function() {
@@ -138,11 +138,13 @@
 		});
 		
 		asyncTest("transport should close connection on socket.close()", 1, function() {
-			portal.open(url).close(function(reason) {
+			portal.open(url).open(function() {
 				ok(true);
-				start();
+				this.close();
 			})
-			.close();
+			.close(function() {
+				start();
+			});
 		});
 		
 		asyncTest("transport should be notified of close", 1, function() {
@@ -152,14 +154,16 @@
 				setTimeout(function() {
 					self.send("closebyserver");
 				}, 100);
-			})
-			.close(function(reason) {
 				ok(true);
+			})
+			.close(function() {
 				start();
 			});
 		});
 	}
-	 
+	
+	$("<div />").text(portal.support.getAbsoluteURL(url) + " (" + transports.join(",") + ")").appendTo("#qunit-testrunner-toolbar");
+
 	while(transports.length) {
 		transport = transports.shift();
 		if (transport === "stream") {
