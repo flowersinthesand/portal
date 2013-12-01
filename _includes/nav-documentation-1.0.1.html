@@ -1,23 +1,17 @@
-<li>
-	<div class="sidebar-nav-header">Getting started</div>
-	<ul class="nav">
-		<li><a class="{% if page.path contains '/home.md' %}active{% endif%}" href="{{ site.baseurl }}/documentation/1.0.1/home/">Welcome</a></li>
-		<li><a class="{% if page.path contains '/installation.md' %}active{% endif%}" href="{{ site.baseurl }}/documentation/1.0.1/installation/">Installation</a></li>
-		<li><a class="{% if page.path contains '/suite.md' %}active{% endif%}" href="{{ site.baseurl }}/documentation/1.0.1/suite/">Suite</a></li>
+<nav>
+	<ul class="side-nav">
+		<li><label>Getting started</label></li>
+		<li><a href="{{ site.baseurl }}/documentation/1.0.1/home/">Welcome</a></li>
+		<li><a href="{{ site.baseurl }}/documentation/1.0.1/installation/">Installation</a></li>
+		<li><a href="{{ site.baseurl }}/documentation/1.0.1/suite/">Suite</a></li>
+		<li class="divider"></li>
+		<li><label>API Reference</label></li>
+		<li><a href="{{ site.baseurl }}/documentation/1.0.1/portal/">portal</a></li>
+		<li><a href="{{ site.baseurl }}/documentation/1.0.1/socket/">Socket</a></li>
+		<li><a href="{{ site.baseurl }}/documentation/1.0.1/transport/">Transport</a></li>
+		<li class="divider"></li>
+		<li><label>Detailed topics</label></li>
+		<li><a href="{{ site.baseurl }}/documentation/1.0.1/quirks/">Quirks</a></li>
+		<li><a href="{{ site.baseurl }}/documentation/1.0.1/protocol/">Protocol</a></li>
 	</ul>
-</li>
-<li>
-	<div class="sidebar-nav-header">API Reference</div>
-	<ul class="nav">
-		<li><a class="{% if page.path contains '/portal.md' %}active{% endif%}" href="{{ site.baseurl }}/documentation/1.0.1/portal/">portal</a></li>
-		<li><a class="{% if page.path contains '/socket.md' %}active{% endif%}" href="{{ site.baseurl }}/documentation/1.0.1/socket/">Socket</a></li>
-		<li><a class="{% if page.path contains '/transport.md' %}active{% endif%}" href="{{ site.baseurl }}/documentation/1.0.1/transport/">Transport</a></li>
-	</ul>
-</li>
-<li>
-	<div class="sidebar-nav-header">Detailed topics</div>
-	<ul class="nav">
-		<li><a class="{% if page.path contains '/quirks.md' %}active{% endif%}" href="{{ site.baseurl }}/documentation/1.0.1/quirks/">Quirks</a></li>
-		<li><a class="{% if page.path contains '/protocol.md' %}active{% endif%}" href="{{ site.baseurl }}/documentation/1.0.1/protocol/">Protocol</a></li>
-	</ul>
-</li>
+</nav>

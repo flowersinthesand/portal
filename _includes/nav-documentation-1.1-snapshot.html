@@ -1,24 +1,18 @@
-<li>
-	<div class="sidebar-nav-header">Getting started</div>
-	<ul class="nav">
-		<li><a class="{% if page.path contains '/home.md' %}active{% endif%}" href="{{ site.baseurl }}/documentation/1.1-snapshot/home/">Welcome</a></li>
-		<li><a class="{% if page.path contains '/installation.md' %}active{% endif%}" href="{{ site.baseurl }}/documentation/1.1-snapshot/installation/">Installation</a></li>
-		<li><a class="{% if page.path contains '/suite.md' %}active{% endif%}" href="{{ site.baseurl }}/documentation/1.1-snapshot/suite/">Suite</a></li>
-		<li><a class="{% if page.path contains '/browser-support.md' %}active{% endif%}" href="{{ site.baseurl }}/documentation/1.1-snapshot/browser-support/">Browser support</a></li>
+<nav>
+	<ul class="side-nav">
+		<li><label>Getting started</label></li>
+		<li><a href="{{ site.baseurl }}/documentation/1.1-snapshot/home/">Welcome</a></li>
+		<li><a href="{{ site.baseurl }}/documentation/1.1-snapshot/installation/">Installation</a></li>
+		<li><a href="{{ site.baseurl }}/documentation/1.1-snapshot/suite/">Suite</a></li>
+		<li><a href="{{ site.baseurl }}/documentation/1.1-snapshot/browser-support/">Browser support</a></li>
+		<li class="divider"></li>
+		<li><label>API Reference</label></li>
+		<li><a href="{{ site.baseurl }}/documentation/1.1-snapshot/portal/">portal</a></li>
+		<li><a href="{{ site.baseurl }}/documentation/1.1-snapshot/socket/">Socket</a></li>
+		<li><a href="{{ site.baseurl }}/documentation/1.1-snapshot/transport/">Transport</a></li>
+		<li class="divider"></li>
+		<li><label>Detailed topics</label></li>
+		<li><a href="{{ site.baseurl }}/documentation/1.1-snapshot/quirks/">Quirks</a></li>
+		<li><a href="{{ site.baseurl }}/documentation/1.1-snapshot/protocol/">Protocol</a></li>
 	</ul>
-</li>
-<li>
-	<div class="sidebar-nav-header">API Reference</div>
-	<ul class="nav">
-		<li><a class="{% if page.path contains '/portal.md' %}active{% endif%}" href="{{ site.baseurl }}/documentation/1.1-snapshot/portal/">portal</a></li>
-		<li><a class="{% if page.path contains '/socket.md' %}active{% endif%}" href="{{ site.baseurl }}/documentation/1.1-snapshot/socket/">Socket</a></li>
-		<li><a class="{% if page.path contains '/transport.md' %}active{% endif%}" href="{{ site.baseurl }}/documentation/1.1-snapshot/transport/">Transport</a></li>
-	</ul>
-</li>
-<li>
-	<div class="sidebar-nav-header">Detailed topics</div>
-	<ul class="nav">
-		<li><a class="{% if page.path contains '/quirks.md' %}active{% endif%}" href="{{ site.baseurl }}/documentation/1.1-snapshot/quirks/">Quirks</a></li>
-		<li><a class="{% if page.path contains '/protocol.md' %}active{% endif%}" href="{{ site.baseurl }}/documentation/1.1-snapshot/protocol/">Protocol</a></li>
-	</ul>
-</li>
+</nav>

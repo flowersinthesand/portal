@@ -1,32 +1,25 @@
-<header class="navbar navbar-inverse navbar-fixed-top docs-nav">
-	<div class="container">
-		<div class="navbar-header">
-			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-				<span class="icon-bar"></span>
-				<span class="icon-bar"></span>
-				<span class="icon-bar"></span>
-			</button>
-			<a class="navbar-brand" href="{{ site.baseurl }}/">Portal</a>
-		</div>
-		<div class="collapse navbar-collapse">
-			<ul class="nav navbar-nav">
-				<li class="{% if page.url contains '/news/' %}active{% endif %}">
-					<a href="{{ site.baseurl }}/news/2013/10/21/the-new-web-site">News</a>
-				</li>
-				<li class="{% if page.url contains '/documentation/' %}active{% endif %} dropdown-split-left">
-					<a class="" href="{{ site.baseurl }}/documentation/1.0.1/home/">Documentation</a>
-				</li>
-				<li class="{% if page.url contains '/documentation/' %}active{% endif %} dropdown-split-right">
-					{% if page.url contains '/documentation/' %}
-						{% assign tokens = page.url | split: "/" %}
-					{% endif %}
-					<a class="dropdown-toggle" data-toggle="dropdown" href="#"><span class="badge">{% if tokens[2] %}{{tokens[2]}}{% else %}1.0.1{% endif %}</span></a>
-					<ul class="dropdown-menu pull-right">
-						<li><a href="{{ site.baseurl }}/documentation/1.1-snapshot/home/">1.1-snapshot</a></li>
-						<li><a href="{{ site.baseurl }}/documentation/1.0.1/home/">1.0.1</a></li>
+<div class="top-bar-wrapper">
+	<div class="row">
+		<div class="large-12 columns">
+			<nav class="top-bar" data-topbar>
+				<ul class="title-area">
+					<li class="name">
+						<h1><a href="{{ site.baseurl }}/">Portal</a></h1>
+					</li>
+				</ul>
+				<section class="top-bar-section">
+					<ul class="right">
+						<li><a href="{{ site.baseurl }}/news/2013/10/21/the-new-web-site">News</a></li>
+						<li class="has-dropdown">
+							<a href="#">Documentation</a>
+							<ul class="dropdown">
+								<li><a href="{{ site.baseurl }}/documentation/1.1-snapshot/home/">1.1-snapshot</a></li>
+								<li><a href="{{ site.baseurl }}/documentation/1.0.1/home/">1.0.1</a></li>
+							</ul>
+						</li>
 					</ul>
-				</li>
-			</ul>
+				</section>
+			</nav>
 		</div>
 	</div>
-</header>
+</div>

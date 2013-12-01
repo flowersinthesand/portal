@@ -1,3 +1,38 @@
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.0.0/js/bootstrap.min.js"></script>
-<script src="{{ site.baseurl }}/assets/js/application.js"></script>
+<div class="row">
+	<div class="large-12 columns">
+		<footer class="footer">
+			<div class="social">
+				<ul class="social-buttons">
+					<li><iframe class="github-btn" src="http://ghbtns.com/github-btn.html?user=flowersinthesand&amp;repo=portal&amp;type=watch&amp;count=true" width="95" height="20" title="Star on GitHub"></iframe></li>
+					<li><iframe class="github-btn" src="http://ghbtns.com/github-btn.html?user=flowersinthesand&amp;repo=portal&amp;type=fork&amp;count=true" width="95" height="20" title="Fork on GitHub"></iframe></li>
+				</ul>
+			</div>
+			<p>Licensed under the <a href="http://www.tldrlegal.com/l/APACHE2" target="_blank">Apache License 2.0</a>.</p>
+			<p>Developed and maintained by <a href="http://twitter.com/flowersits" target="_blank">Donghwan Kim</a>.</p>
+			<ul class="footer-links">
+				<li><a href="https://groups.google.com/d/forum/portal_project">Mailing list</a></li>
+				<li>&middot;</li>
+				<li><a href="https://github.com/flowersinthesand/portal/issues?state=open">Issues</a></li>
+				<li>&middot;</li>
+				<li><a href="https://github.com/flowersinthesand/portal/releases">Releases</a></li>
+			</ul>
+		</footer>
+	</div>
+</div>
+<script src="{{ site.baseurl }}/assets/js/jquery.js"></script>
+<script src="{{ site.baseurl }}/assets/js/foundation.min.js"></script>
+<script src="{{ site.baseurl }}/assets/js/app.js"></script>
+{% if site.baseurl != "" %}
+<script>
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-44968335-1']);
+  _gaq.push(['_trackPageview']);
+  (function() {
+  var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true; 
+
+  ga.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'stats.g.doubleclick.net/dc.js';
+
+  var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+</script>
+{% endif %}

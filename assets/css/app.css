@@ -1,0 +1,34 @@
+html {font-size: 95%;}
+body {font-family: "Open Sans", "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif;}
+pre code {font-weight: normal; color: inherit;}
+
+.row {max-width: 80rem;}
+.top-bar {height: auto;}
+
+.top-bar-wrapper {background: #333;}
+.sidebar {background: #fafafa; padding: 30px 20px;}
+.sidebar h5 {font-weight: bold; font-size: 0.77778rem;}
+.sidebar input[type="search"] {font-size: 0.77778rem; margin: 0 0 0.88889rem 0; padding: 0.44444rem; height: 2.05556rem;}
+.side-nav li {font-family: "Open Sans", "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif; font-size: 0.77778rem;}
+.side-nav li.active a:first-child {font-family: "Open Sans", "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif; font-weight: bold; color: #008cba;}
+.side-nav li label {cursor: default;}
+.text {padding-top: 25px;}
+.highlight {margin-bottom: 1.25rem; line-height: 1.35rem;}
+
+.footer {margin-top: 20px; padding: 10px 0; color: #777;}
+.footer p, .footer li {font-size: 0.9rem;}
+.footer p:not(:last-of-type) {margin: 0;}
+.footer ul {margin-left: 0; margin-bottom: 0.9rem;}
+.footer p:last-of-type {margin-bottom: 0.9rem;}
+.social-buttons li {display: inline-block;}
+.github-btn {border: 0; overflow: hidden;}
+.footer-links li {display: inline; padding: 0 2px;}
+
+.main-header-wrapper {background: #222; padding: 3.5em 0;}
+.main-header-wrapper .row {max-width: 65em;}
+.main-header h1 {color: #fff; margin-bottom: 0; font-size: 4.5em;}
+.main-header p {color: #fff; font-size: 1.3em; font-weight: 100}
+.main p:first-child {margin-top: 2em;}
+.donate {color: #777;}
+.donate form button {padding: 0; margin: 0; color: #008cba; background: none;}
+.donate form button:hover {color: #0079a1;}

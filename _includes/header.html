@@ -1,7 +1,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="">
-<meta name="author" content="">
+<meta name="description" content="Portal is the JavaScript library for real-time web application development." />
+<meta name="author" content="Donghwan Kim" />
 <title> 
 {% if page.title == "Portal" %} 
 	{{ page.title }} 
@@ -9,24 +9,8 @@
 	{{ page.title }} - Portal 
 {% endif %}
 </title>
-<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.0.0/css/bootstrap.min.css">
-<link href="{{ site.baseurl }}/assets/css/pygments-github.css" rel="stylesheet">
-<link href="{{ site.baseurl }}/assets/css/docs.css" rel="stylesheet">
-<!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-<!--[if lt IE 9]>
-	<script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.6.2/html5shiv.js"></script>
-	<script src="//cdnjs.cloudflare.com/ajax/libs/respond.js/1.3.0/respond.min.js"></script>
-<![endif]-->
-{% if site.baseurl != "" %}
-<script>
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-44968335-1']);
-  _gaq.push(['_trackPageview']);
-  (function() {
-  var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true; 
-
-  ga.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'stats.g.doubleclick.net/dc.js';
-
-  var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })();</script>
-{% endif %}
+<link rel="stylesheet" href="{{ site.baseurl }}/assets/css/normalize.css" />
+<link rel="stylesheet" href="{{ site.baseurl }}/assets/css/foundation.css" />
+<link rel="stylesheet" href="{{ site.baseurl }}/assets/css/pygments-github.css" />
+<link rel="stylesheet" href="{{ site.baseurl }}/assets/css/app.css" />
+<script src="{{ site.baseurl }}/assets/js/modernizr.js"></script>
