@@ -1,6 +1,97 @@
+function setupTransport() {
+	// Dummy transport
+	portal.transports.dummy = function() {
+		return {
+			open: function() {},
+			send: function() {},
+			close: function() {}
+		};
+	};
+
+	// The server-side view of the socket handling
+	// when using this, the user must use the server.fire and not use the client.fire
+	portal.transports.mock = function(client, options) {
+		var server;
+		
+		// Hack for the server-side socket's transport
+		if (options.client) {
+			server = client;
+			client = options.client;
+			
+			// The server does
+			return {
+				open: function() {},
+				send: function(data) {
+					if (client.state() === "opened") {
+						client._fire(data);
+					}
+				},
+				close: function() {
+					server.fire("close", "aborted");
+				}
+			};
+		}
+		
+		// The client does 
+		return {
+			feedback: true,
+			open: function() {
+				// Forwards control to the user
+				client.server = function(opts) {
+					if (server) {
+						return server;
+					}
+					
+					// A server-side socket
+					opts = opts || {};
+					server = portal.open("/server~" + client.option("url"), {
+						reconnect: false,
+						sharing: false,
+						transports: ["mock"],
+						client: client
+					});
+					
+					return server.on({
+						open: function() {
+							client.fire("open");
+						},
+						close: function(reason) {
+							// Safe though this is done by the client
+							client.fire("close", reason);
+						},
+						// Incomplete implementation but fine
+						heartbeat: function() {
+							if (!opts.noHeartbeat) {
+								// Only heartbeat event should be sent with some delay
+								setTimeout(function() {
+									server.send("heartbeat");
+								}, 1);
+							}
+						}
+					});
+				};
+			},
+			send: function(data) {
+				if (server && server.state() === "opened") {
+					server._fire(data);
+				}
+			},
+			close: function() {
+				if (server) {
+					server.fire("close", "aborted");
+				}
+			}
+		};
+	};
+}
+
 module("portal", {
-	setup: moduleSetup,
-	teardown: moduleTeardown
+	setup: function() {
+		helper.setup();
+		setupTransport();
+		portal.defaults.transports = ["dummy"];
+	},
+	teardown: helper.teardown
 });
 
 test("portal.open(url) should opens and returns a socket", function() {
@@ -32,8 +123,12 @@ test("portal.find(url) should work with both absolute url and relative url", fun
 });
 
 module("socket", {
-	setup: moduleSetup,
-	teardown: moduleTeardown
+	setup: function() {
+		helper.setup();
+		setupTransport();
+		portal.defaults.transports = ["dummy"];
+	},
+	teardown: helper.teardown
 });
 
 // Event managing
@@ -339,7 +434,7 @@ test("close reason should be 'error' when the connection has been closed due to 
 	.fire("close", "error");
 });
 
-$.each("connecting open message event".split(" "), function(i, event) {
+helper.each("connecting open message event".split(" "), function(i, event) {
 	test(event + " event should become locked on the close event", 2, function() {
 		portal.open("dummy").on(event, okTrue).fire(event).close(okTrue).fire("close").on(event, okFalse).fire(event);
 	});
@@ -396,7 +491,7 @@ test("socket.send(event, data) should send an event whose type is a given event 
 	var client = portal.open("mock", {transports: ["mock"]}),
 		server = client.server();
 	
-	$.each({string: "string", number: 1, object: {a: 0}, array: [0], "true": true, "false": false}, function(k, v) {
+	helper.each({string: "string", number: 1, object: {a: 0}, array: [0], "true": true, "false": false}, function(k, v) {
 		client.send("event-" + k, v);
 		server.on("event-" + k, function(data) {
 			if (typeof data === "object") {
@@ -481,7 +576,7 @@ test("transports option should be an array of the transport candidate id to be u
 	var output = "",
 		transports = ["bus", "subway", "bicycle"];
 		
-	$.each(transports, function(i, name) {
+	helper.each(transports, function(i, name) {
 		portal.transports[name] = function() {
 			output += name;
 		};

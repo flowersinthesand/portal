@@ -162,7 +162,13 @@
 		});
 	}
 	
-	$("<div />").text(portal.support.getAbsoluteURL(url) + " (" + transports.join(",") + ")").appendTo("#qunit-testrunner-toolbar");
+	(function() {
+		var toolbar = document.getElementById("qunit-testrunner-toolbar"),
+			div = document.createElement("div");
+		
+		div.appendChild(document.createTextNode(portal.support.getAbsoluteURL(url) + " (" + transports.join(",") + ")"));
+		toolbar.appendChild(div);
+	})();
 
 	while(transports.length) {
 		transport = transports.shift();
@@ -178,14 +184,14 @@
 			if (group) {
 				module(transport, {
 					setup: function() {
-						moduleSetup();
+						helper.setup();
 						portal.defaults.transports = [transport];
 						if (group.setup) {
 							group.setup();
 						}
 					},
 					teardown: function() {
-						moduleTeardown();
+						helper.teardown();
 						if (group.teardown) {
 							group.teardown();
 						}
