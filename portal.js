@@ -1841,7 +1841,8 @@
 						script.async = true;
 						script.src = url;
 						script.clean = function() {
-							script.clean = script.onerror = script.onload = script.onreadystatechange = null;
+							// Assigning null to src attribute works in IE 6 and 7
+							script.clean = script.src = script.onerror = script.onload = script.onreadystatechange = null;
 							if (script.parentNode) {
 								script.parentNode.removeChild(script);
 							}
