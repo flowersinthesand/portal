@@ -1746,7 +1746,10 @@
 										if (data) {
 											socket._fire(data);
 										}
-										poll();
+										// Do not poll again if the connection has been aborted in open event
+										if (!aborted) {
+											poll();
+										}
 									} else {
 										socket.fire("close", "done");
 									}
@@ -1775,6 +1778,7 @@
 		// Long polling - XDomainRequest
 		longpollxdr: function(socket, options) {
 			var xdr,
+				aborted,
 				// deprecated
 				count = 0,
 				XDomainRequest = window.XDomainRequest;
@@ -1801,7 +1805,10 @@
 								if (data) {
 									socket._fire(data);
 								}
-								poll();
+								// Do not poll again if the connection has been aborted in open event
+								if (!aborted) {
+									poll();
+								}
 							} else {
 								socket.fire("close", "done");
 							}
@@ -1817,6 +1824,7 @@
 					poll();
 				},
 				close: function() {
+					aborted = true;
 					xdr.abort();
 				}
 			});
@@ -1825,6 +1833,7 @@
 		longpolljsonp: function(socket, options) {
 			var script,
 				called,
+				aborted,
 				// deprecated
 				count = 0,
 				callback = jsonpCallbacks.pop() || ("socket_" + (++guid));
@@ -1852,10 +1861,15 @@
 								script.clean();
 								if (called) {
 									called = false;
-									poll();
+									if (!aborted) {
+										poll();
+									}
 								} else if (count === 1) {
 									socket.fire("open");
-									poll();
+									// Do not poll again if the connection has been aborted in open event
+									if (!aborted) {
+										poll();
+									}
 								} else {
 									socket.fire("close", "done");
 								}
@@ -1886,6 +1900,7 @@
 					poll();
 				},
 				close: function() {
+					aborted = true;
 					if (script.clean) {
 						script.clean();
 					}
