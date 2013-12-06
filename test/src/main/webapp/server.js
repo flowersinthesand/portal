@@ -2,7 +2,7 @@
 	
 	var transport, 
 		url = QUnit.urlParams.url || "/test",
-		crossDomain = !new RegExp("^" + portal.support.getAbsoluteURL("/")).test(portal.support.getAbsoluteURL(url)), 
+		crossDomain = new RegExp("^" + portal.support.getAbsoluteURL("")).exec(portal.support.getAbsoluteURL(url)), 
 		transports = QUnit.urlParams.transports && QUnit.urlParams.transports.split(",") || portal.defaults.transports,
 		text2KB = (function() {
 			var i, text = "A";
@@ -60,7 +60,9 @@
 			streamiframe: {
 				can: function(crossDomain) {
 					try {
-						return !!(new ActiveXObject("htmlfile")) && !crossDomain;
+						// In IE 11 typeof ActiveXObject is undefined, 
+						// but new ActiveXObject("htmlfile") returns something but doesn't work 
+						return ActiveXObject && new ActiveXObject("htmlfile") && !crossDomain;
 					} catch(e) {
 						return false;
 					}
