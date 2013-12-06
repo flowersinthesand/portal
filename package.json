@@ -4,7 +4,7 @@
   "description": "A client for the portal",
   "main": "portal.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node tests/index"
   },
   "repository": {
     "type": "git",
@@ -23,5 +23,8 @@
     "jsdom": "0.8.8",
     "ws": "0.4.31",
     "eventsource": "0.0.10"
+  },
+  "devDependencies": {
+  	"qunit": "0.5.17"
   }
 }

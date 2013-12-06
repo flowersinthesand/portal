@@ -1,8 +1,7 @@
 (function() {
-	
 	var transport, 
-		url = QUnit.urlParams.url || "/test",
-		crossDomain = new RegExp("^" + portal.support.getAbsoluteURL("")).exec(portal.support.getAbsoluteURL(url)), 
+		url = QUnit.urlParams.url || ((typeof window === "undefined" ? "http://localhost:8080" : "") +  "/test"),
+		crossDomain = !new RegExp("^" + portal.support.getAbsoluteURL("/")).test(portal.support.getAbsoluteURL(url)), 
 		transports = QUnit.urlParams.transports && QUnit.urlParams.transports.split(",") || portal.defaults.transports,
 		text2KB = (function() {
 			var i, text = "A";
@@ -164,13 +163,23 @@
 		});
 	}
 	
-	(function() {
-		var toolbar = document.getElementById("qunit-testrunner-toolbar"),
-			div = document.createElement("div");
-		
-		div.appendChild(document.createTextNode(portal.support.getAbsoluteURL(url) + " (" + transports.join(",") + ")"));
-		toolbar.appendChild(div);
-	})();
+	if (typeof document !== "undefined") {
+		(function() {
+			var toolbar = document.getElementById("qunit-testrunner-toolbar"),
+				div = document.createElement("div");
+			
+			div.appendChild(document.createTextNode(portal.support.getAbsoluteURL(url) + " (" + transports.join(",") + ")"));
+			toolbar.appendChild(div);
+		})();
+	} else {
+		// If Node.js
+		groups.ws.can = groups.sse.can = groups.longpollajax.can = function() {
+			return true;
+		};
+		groups.longpolljsonp.can = function() {
+			return false;
+		};
+	}
 
 	while(transports.length) {
 		transport = transports.shift();
@@ -184,7 +193,7 @@
 		
 		(function(transport, group) {
 			if (group) {
-				module(transport, {
+				QUnit.module(transport, {
 					setup: function() {
 						helper.setup();
 						portal.defaults.transports = [transport];
@@ -203,11 +212,11 @@
 					group.test && group.test();
 					transportTest();
 				} else {
-					test(transport + " is not supported by the browser", okTrue);
+					test(transport + " is not supported by the browser", helper.okTrue);
 				}
 			} else {
-				module(transport);
-				test(transport + " is not supported by the portal", okFalse);
+				QUnit.module(transport);
+				test(transport + " is not supported by the portal", helper.okFalse);
 			}
 		})(transport, groups[transport]);
 	}

@@ -85,7 +85,7 @@ function setupTransport() {
 	};
 }
 
-module("portal", {
+QUnit.module("portal", {
 	setup: function() {
 		helper.setup();
 		setupTransport();
@@ -122,7 +122,7 @@ test("portal.find(url) should work with both absolute url and relative url", fun
 	strictEqual(socket, portal.find(portal.support.getAbsoluteURL("dummy")));
 });
 
-module("socket", {
+QUnit.module("socket", {
 	setup: function() {
 		helper.setup();
 		setupTransport();
@@ -133,7 +133,7 @@ module("socket", {
 
 // Event managing
 test("socket.on(event, handler) should add a given event handler for a given event", 2, function() {
-	portal.open("dummy").on("event", okTrue).fire("event").fire("event");
+	portal.open("dummy").on("event", helper.okTrue).fire("event").fire("event");
 });
 
 test("The 'this' of any event handler should refer the socket where the event occurs", 1, function() {
@@ -146,15 +146,15 @@ test("The 'this' of any event handler should refer the socket where the event oc
 });
 
 test("socket.on(handlers) should add a given event handlers from a given map of event type and event handler", 2, function() {
-	portal.open("dummy").on({event: okTrue}).fire("event").fire("event");
+	portal.open("dummy").on({event: helper.okTrue}).fire("event").fire("event");
 });
 
 test("socket.off(event, handler) should remove a given event handler for a given event", function() {
-	portal.open("dummy").on("event", okFalse).off("event", okFalse).on("event", okTrue).fire("event");
+	portal.open("dummy").on("event", helper.okFalse).off("event", helper.okFalse).on("event", helper.okTrue).fire("event");
 });
 
 test("socket.one(event, handler) should add a given one time event handler for a given event", 1, function() {
-	portal.open("dummy").one("event", okTrue).fire("event").fire("event");
+	portal.open("dummy").one("event", helper.okTrue).fire("event").fire("event");
 });
 
 // Life cycle and event
@@ -279,7 +279,7 @@ test("open event handler should receive no arguments", 1, function() {
 });
 
 test("connecting event should become locked on the open event", 2, function() {
-	portal.open("dummy").on("connecting", okTrue).open(okTrue).fire("open").on("connecting", okFalse);
+	portal.open("dummy").on("connecting", helper.okTrue).open(helper.okTrue).fire("open").on("connecting", helper.okFalse);
 });
 
 test("Accumulated events which are sent before the open event should be sent", function() {
@@ -436,7 +436,7 @@ test("close reason should be 'error' when the connection has been closed due to 
 
 helper.each("connecting open message event".split(" "), function(i, event) {
 	test(event + " event should become locked on the close event", 2, function() {
-		portal.open("dummy").on(event, okTrue).fire(event).close(okTrue).fire("close").on(event, okFalse).fire(event);
+		portal.open("dummy").on(event, helper.okTrue).fire(event).close(helper.okTrue).fire("close").on(event, helper.okFalse).fire(event);
 	});
 });
 
@@ -484,7 +484,7 @@ asyncTest("The connection scope should reset every time the socket opens", 2, fu
 // Communication
 test("socket.send(event) should send an event whose type is a given event to the server", 1, function() {
 	portal.open("mock", {transports: ["mock"]}).send("event")
-	.server().on("event", okTrue).fire("open");
+	.server().on("event", helper.okTrue).fire("open");
 });
 
 test("socket.send(event, data) should send an event whose type is a given event and data is a given data to the server", 6, function() {
@@ -510,10 +510,10 @@ test("socket.send(event, data, done, fail) should send the event and register do
 	}
 	
 	portal.open("mock", {transports: ["mock"]})
-	.send("event-donewithoutdata", "data", okTrue, okFalse)
-	.send("event-donewithdata", "data", assertData, okFalse)
-	.send("event-failwithoutdata", "data", okFalse, okTrue)
-	.send("event-failwithdata", "data", okFalse, assertData)
+	.send("event-donewithoutdata", "data", helper.okTrue, helper.okFalse)
+	.send("event-donewithdata", "data", assertData, helper.okFalse)
+	.send("event-failwithoutdata", "data", helper.okFalse, helper.okTrue)
+	.send("event-failwithdata", "data", helper.okFalse, assertData)
 	.server().on("event-donewithoutdata", function(data, reply) {
 		strictEqual(data, "data");
 		reply();
@@ -535,8 +535,8 @@ test("socket.send(event, data, done, fail) should send the event and register do
 
 test("socket.send(event, data, done, fail) should send the event and register done and fail callback event name", 8, function() {
 	portal.open("mock", {transports: ["mock"]})
-	.on("okTrue", okTrue)
-	.on("okFalse", okFalse)
+	.on("okTrue", helper.okTrue)
+	.on("okFalse", helper.okFalse)
 	.on("assert-data", function(data) {
 		strictEqual(data, "data");
 	})
@@ -564,11 +564,11 @@ test("socket.send(event, data, done, fail) should send the event and register do
 });
 
 test("socket.close() should close the socket", 1, function() {
-	portal.open("dummyk").close(okTrue).close();
+	portal.open("dummyk").close(helper.okTrue).close();
 });
 
 test("socket.close() should prevent reconnection", 1, function() {
-	portal.open("dummyk").close(okTrue).waiting(okFalse);
+	portal.open("dummyk").close(helper.okTrue).waiting(helper.okFalse);
 });
 
 // Options
@@ -586,16 +586,16 @@ test("transports option should be an array of the transport candidate id to be u
 });
 
 asyncTest("timeout option should start timeout timer on the connecting event", 2, function() {
-	portal.open("dummy", {timeout: 10}).connecting(okTrue).open(okFalse).close(function() {
+	portal.open("dummy", {timeout: 10}).connecting(helper.okTrue).open(helper.okFalse).close(function() {
 		ok(true);
 		start();
 	});
 });
 
 asyncTest("timeout option should cancel timeout timer on the open event", 2, function() {
-	var socket = portal.open("dummy", {timeout: 10}).connecting(okTrue).open(okTrue).fire("open").close(okFalse);
+	var socket = portal.open("dummy", {timeout: 10}).connecting(helper.okTrue).open(helper.okTrue).fire("open").close(helper.okFalse);
 	setTimeout(function() {
-		socket.off("close", okFalse);
+		socket.off("close", helper.okFalse);
 		start();
 	}, 10);
 });
@@ -612,16 +612,16 @@ asyncTest("heartbeat option should send a heartbeat event each time the value ha
 			start();
 		}
 	})
-	.server().fire("open").on("heartbeat", okTrue);
+	.server().fire("open").on("heartbeat", helper.okTrue);
 });
 
 asyncTest("heartbeat option should fire the close event if the server makes no response to a heartbeat", 1, function() {
 	portal.open("mock", {transports: ["mock"], heartbeat: 10, _heartbeat: 5})
-	.on("heartbeat", okFalse)
+	.on("heartbeat", helper.okFalse)
 	.close(function() {
 		start();
 	})
-	.server({noHeartbeat: true}).fire("open").on("heartbeat", okTrue);
+	.server({noHeartbeat: true}).fire("open").on("heartbeat", helper.okTrue);
 });
 
 test("lastEventId option should be the last event id", 5, function() {
@@ -647,7 +647,7 @@ test("lastEventId option should start from the assigned value if it is set", 2, 
 });
 
 test("prepare option should be called before the socket tries to connect", 1, function() {
-	portal.open("dummy", {prepare: okTrue}).connecting(okFalse);
+	portal.open("dummy", {prepare: helper.okTrue}).connecting(helper.okFalse);
 });
 
 test("prepare option should receive a callback to connect, a callback to cancel and merged modifiable options", 4, function() {
@@ -658,7 +658,7 @@ test("prepare option should receive a callback to connect, a callback to cancel 
 			connect();
 		}
 	})
-	.connecting(okTrue);
+	.connecting(helper.okTrue);
 	
 	portal.open("dummy2", {
 		prepare: function(connect, cancel, options) {
@@ -667,7 +667,7 @@ test("prepare option should receive a callback to connect, a callback to cancel 
 			cancel();
 		}
 	})
-	.connecting(okFalse)
+	.connecting(helper.okFalse)
 	.close(function() {
 		strictEqual(this.option("heartbeat"), 5000);
 	});
@@ -686,14 +686,14 @@ test("reconnect option should be executed to schedule reconnection on the close 
 });
 
 test("reconnect option should prevent the socket from reconnecting when it is or returns false", 3, function() {
-	portal.open("dummy1", {reconnect: false}).fire("close").close(okTrue).waiting(okFalse);
+	portal.open("dummy1", {reconnect: false}).fire("close").close(helper.okTrue).waiting(helper.okFalse);
 	portal.open("dummy2", {
 		reconnect: function() {
 			ok(true);
 			return false;
 		}
 	})
-	.fire("close").close(okTrue).waiting(okFalse);
+	.fire("close").close(helper.okTrue).waiting(helper.okFalse);
 });
 
 asyncTest("reconnect option should receive the last delay and the total number of reconnection attempts and return a delay to reconnect", 16, function() {
