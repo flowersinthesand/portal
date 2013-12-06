@@ -1,5 +1,4 @@
-// The index.js tests portal.js as a Node.js client and requires alive portal server
-// and requires a running portal server
+// The index.js tests portal.js as a Node.js client and requires a running portal server
 // 
 // To run portal server, execute the command in another console
 //     cd test 
