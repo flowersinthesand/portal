@@ -1,7 +1,8 @@
 {
   "name": "portal-client",
   "version": "1.1.0-snapshot",
-  "description": "A client for the portal",
+  "homepage": "http://flowersinthesand.github.io/portal/",
+  "description": "Portal client for Node.js",
   "main": "portal.js",
   "scripts": {
     "test": "node tests/index"
@@ -10,7 +11,14 @@
     "type": "git",
     "url": "https://github.com/flowersinthesand/portal.git"
   },
-  "keywords": [],
+  "keywords": [
+    "realtime",
+	"websocket",
+    "http",
+    "comet",
+    "streaming",
+    "longpolling"
+  ],
   "author": {
     "name": "Donghwan Kim",
     "email": "flowersinthesand@gmail.com"
@@ -20,7 +28,7 @@
     "url": "https://github.com/flowersinthesand/portal/issues"
   },
   "dependencies": {
-    "jsdom": "0.8.8",
+    "jsdom": "0.8.9",
     "ws": "0.4.31",
     "eventsource": "0.0.10"
   },
