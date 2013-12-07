@@ -23,7 +23,7 @@
 			window.WebSocket = require("ws");
 			window.EventSource = require("eventsource");
 			return window;
-		}());
+		})();
 		// node-XMLHttpRequest 1.x conforms XMLHttpRequest Level 1 but can perform a cross-domain request
 		module.exports.support.corsable = true;
 	} else {
@@ -825,7 +825,7 @@
 		},
 		isBinary: function(data) {
 			// True if data is an instance of Blob, ArrayBuffer or ArrayBufferView 
-			return /^\[object\s(?:Blob|ArrayBuffer|.+Array)\]$/.test(toString.call(data));
+			return (/^\[object\s(?:Blob|ArrayBuffer|.+Array)\]$/).test(toString.call(data));
 		},
 		isFunction: function(fn) {
 			return toString.call(fn) === "[object Function]";
@@ -922,11 +922,11 @@
 				null :
 				window.JSON && window.JSON.parse ?
 					window.JSON.parse(data) :
-					new Function("return " + data)();
+					Function("return " + data)();
 		},
 		// http://github.com/flowersinthesand/stringifyJSON
 		stringifyJSON: function(value) {
-			var escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g, 
+			var escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g,
 				meta = {
 					'\b': '\\b',
 					'\t': '\\t',
@@ -972,9 +972,9 @@
 						
 						switch (toString.call(value)) {
 						case "[object Date]":
-							return isFinite(value.valueOf()) ? 
-								'"' + value.getUTCFullYear() + "-" + f(value.getUTCMonth() + 1) + "-" + f(value.getUTCDate()) + 
-								"T" + f(value.getUTCHours()) + ":" + f(value.getUTCMinutes()) + ":" + f(value.getUTCSeconds()) + "Z" + '"' : 
+							return isFinite(value.valueOf()) ?
+								'"' + value.getUTCFullYear() + "-" + f(value.getUTCMonth() + 1) + "-" + f(value.getUTCDate()) +
+								"T" + f(value.getUTCHours()) + ":" + f(value.getUTCMinutes()) + ":" + f(value.getUTCSeconds()) + "Z" + '"' :
 								"null";
 						case "[object Array]":
 							len = value.length;
@@ -1616,7 +1616,7 @@
 						var container;
 						
 						function readDirty() {
-							var text, 
+							var text,
 								clone = container.cloneNode(true);
 							
 							// Adds a character not CR and LF to circumvent an Internet Explorer bug
@@ -1911,4 +1911,3 @@
 	
 	return portal;
 }));
-/* jshint noarg:true, noempty:true, eqeqeq:true, evil:true, laxbreak:true, undef:true, browser:true, jquery:true, indent:4, maxerr:50 */
