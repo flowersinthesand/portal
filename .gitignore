@@ -1,37 +1,3 @@
-# Eclipse - https://github.com/github/gitignore/blob/master/Global/Eclipse.gitignore
-*.pydevproject
-.project
-.metadata
-bin/**
-tmp/**
-tmp/**/*
-*.tmp
-*.bak
-*.swp
-*~.nib
-local.properties
-.classpath
-.settings/
-.loadpath
-
-# External tool builders
-.externalToolBuilders/
-
-# Locally stored "Eclipse launch configurations"
-*.launch
-
-# CDT-specific
-.cproject
-
-# PDT-specific
-.buildpath
-
-
-
-# Maven - https://github.com/github/gitignore/blob/master/Maven.gitignore
-target/
-
-
 # Node - https://github.com/github/gitignore/blob/master/Node.gitignore
 lib-cov
 *.seed
@@ -45,5 +11,6 @@ lib-cov
 pids
 logs
 results
+build
 
 node_modules
