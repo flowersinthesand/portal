@@ -5,7 +5,7 @@
   "description": "Portal client for Node.js",
   "main": "portal.js",
   "scripts": {
-    "test": "node tests/index"
+    "test": "node test/index"
   },
   "repository": {
     "type": "git",
