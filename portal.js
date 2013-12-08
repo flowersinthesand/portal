@@ -17,13 +17,13 @@
 		});
 	} else if (typeof exports === "object") {
 		// Node
-		module.exports = factory(function() {
+		module.exports = factory((function() {
 			// Prepare the window powered by jsdom
 			var window = require("jsdom").jsdom().createWindow();
 			window.WebSocket = require("ws");
 			window.EventSource = require("eventsource");
 			return window;
-		})();
+		})());
 		// node-XMLHttpRequest 1.x conforms XMLHttpRequest Level 1 but can perform a cross-domain request
 		module.exports.support.corsable = true;
 	} else {
@@ -910,6 +910,8 @@
 		},
 		xhr: function() {
 			try {
+				console.log(window);
+				console.log(window.XMLHttpRequest);
 				return new window.XMLHttpRequest();
 			} catch (e1) {
 				try {
