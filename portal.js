@@ -910,8 +910,6 @@
 		},
 		xhr: function() {
 			try {
-				console.log(window);
-				console.log(window.XMLHttpRequest);
 				return new window.XMLHttpRequest();
 			} catch (e1) {
 				try {
