@@ -33,6 +33,7 @@
     "eventsource": "0.0.10"
   },
   "devDependencies": {
-    "qunit": "0.5.17"
+    "qunit": "0.5.17",
+    "node-uuid": "1.4.1"
   }
 }
