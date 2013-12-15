@@ -174,7 +174,7 @@ on.http = function(req, res) {
 		// Applies to streamxdr and longpollxdr
 		// Access-Control-Allow-Origin header should be either * or the value of the Origin request header
 		// Note that these transport need this header even in same-origin connection 
-		res.setHeader("access-control-allow-origin", req.headers["origin"] || "*");
+		res.setHeader("access-control-allow-origin", req.headers.origin || "*");
 		
 		// Do if you want
 		res.setHeader("access-control-allow-credentials", "true");
@@ -229,7 +229,7 @@ transports.ws = function(ws) {
 // streamiframe: Hidden Iframe streaming
 transports.stream = function(req, res) {
 	var // Prepare 2KB text for padding
-		text2KB = Array(2048).join(" "), 
+		text2KB = Array(2048).join(" "),
 		isAndroidLowerThan3 = /Android [23]./.test(req.headers["user-agent"]),
 		transport = new events.EventEmitter();
 	
@@ -398,13 +398,13 @@ transports.longpoll = function(req, res) {
 			// The 'ended' will be true after response.end(payload)
 			written = true;
 			
-			var payload = 
+			var payload =
 				// In case of longpolljsonp, the response text is a JavaScript code snippet 
 				// executing a given callback with data. The callback name is passed as the 
 				// first request's callback parameter and the data should be escaped to 
 				// a JavaScript string literal.
 				// Note that the first request's params is used
-				params.transport === "longpolljsonp" ? params.callback + "(" + JSON.stringify(data) + ");" : 
+				params.transport === "longpolljsonp" ? params.callback + "(" + JSON.stringify(data) + ");" :
 				// For others, no formatting is needed
 				data;
 
