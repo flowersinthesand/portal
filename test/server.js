@@ -441,7 +441,6 @@ var socket,
 	sockets = {},
 	uuid = require("node-uuid");
 
-// TODO implement and test heartbeat
 socket = function(params, transport) {
 	var socket = new events.EventEmitter();
 	
@@ -517,6 +516,13 @@ socket = function(params, transport) {
 		// See portal.defaults.inbound
 		transport.send(JSON.stringify(event));
 	};
+	socket.close = function() {
+		transport.close();
+	};
+	
+	// Register the socket to the repository
+	sockets[params.id] = socket;
+	
 	// Handle the rest of reply by client in the reply event
 	socket.on("reply", function(reply) {
 		if (reply.id in socket.callbacks) {
@@ -526,12 +532,32 @@ socket = function(params, transport) {
 		}
 	});
 	
-	socket.close = function() {
-		transport.close();
-	};
-	
-	// Register the socket to the repository
-	sockets[params.id] = socket;
+	// If heartbeat param is not 'false' and is a number
+	// FYI +'false' gives NaN and +'5000' gives 5000
+	if (+params.heartbeat) {
+		var heartbeatTimer; 
+		
+		// Set a heartbeat timer to close the socket after the heartbeat interval
+		setHeartbeatTimer();
+		// Client will send the heartbaet event periodically
+		socket.on("heartbeat", function() {
+			// Cancel the timer
+			clearTimeout(heartbeatTimer);
+			// Set the timer again
+			setHeartbeatTimer();
+			// As a response, send the heartbeat event
+			socket.send("heartbeat");
+		});
+		
+		function setHeartbeatTimer() {
+			// +params.heartbeat is number
+			heartbeatTimer = setTimeout(function() {
+				socket.close();
+			}, +params.heartbeat);
+		}
+		
+		// Client will start to heartbeat on its open event first so just wait
+	}
 	
 	return socket;
 };

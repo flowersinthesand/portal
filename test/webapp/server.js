@@ -195,8 +195,7 @@
 		asyncTest("transport should support reply by server", 2, function() {
 			var ready;
 			
-			portal.open(url)
-			.send("do-reply", true, function(echo) {
+			portal.open(url).send("do-reply", true, function(echo) {
 				strictEqual(echo, true);
 				if (ready) {
 					start();
@@ -214,7 +213,7 @@
 			});
 		});
 		
-		asyncTest("transport should should reply by client", 2, function() {
+		asyncTest("transport should support reply by client", 2, function() {
 			portal.open(url).on("bar", function(data, reply) {
 				strictEqual(data, 2);
 				reply("foo");
@@ -224,6 +223,18 @@
 				start();
 			})
 			.send("foo");
+		});
+		
+		asyncTest("transport should support heartbeat", 5, function() {
+			var i = 0;
+			
+			portal.open(url, {heartbeat: 500, _heartbeat: 250}).on("heartbeat", function() {
+				i++;
+				ok(true);
+				if (i > 4) {
+					start();
+				}
+			});
 		});
 	}
 	
