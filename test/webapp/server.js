@@ -191,7 +191,8 @@
 		
 		// From now on they are fully tested in client.js and have nothing to do with 
 		// transport itself, but are provided to help to implement the portal server
-		asyncTest("transport should support reply by server", function() {
+		
+		asyncTest("transport should support reply by server", 2, function() {
 			var ready;
 			
 			portal.open(url)
@@ -211,6 +212,18 @@
 					ready = true;
 				}
 			});
+		});
+		
+		asyncTest("transport should should reply by client", 2, function() {
+			portal.open(url).on("bar", function(data, reply) {
+				strictEqual(data, 2);
+				reply("foo");
+			})
+			.on("echo", function(word) {
+				strictEqual(word, "foo");
+				start();
+			})
+			.send("foo");
 		});
 	}
 	

@@ -441,7 +441,7 @@ var socket,
 	sockets = {},
 	uuid = require("node-uuid");
 
-// TODO implement and test heartbeat and reply by client
+// TODO implement and test heartbeat
 socket = function(params, transport) {
 	var socket = new events.EventEmitter();
 	
@@ -499,12 +499,33 @@ socket = function(params, transport) {
 		});
 	});
 	
-	socket.send = function(type, data) {
+	// A map for reply callbacks
+	socket.callbacks = {};
+	socket.send = function(type, data, callback) {
+		// If the event.reply is true, client will handle it as we did in the previous
+		var event = {id: uuid.v4(), type: type, data: data, reply: !!callback};
+		
+		if (event.reply) {
+			// This callback will be executed as reply by client
+			// Now portal.js support only a single type of callback 
+			// unlike socket.send in portal.js
+			socket.callbacks[event.id] = callback;
+		}
+		
 		// Convert event object to JSON string
 		// By default client decodes event in JSON
 		// See portal.defaults.inbound
-		transport.send(JSON.stringify({id: uuid.v4(), type: type, data: data}));
+		transport.send(JSON.stringify(event));
 	};
+	// Handle the rest of reply by client in the reply event
+	socket.on("reply", function(reply) {
+		if (reply.id in socket.callbacks) {
+			// Execute the stored callback with data and delete it
+			socket.callbacks[reply.id].call(socket, reply.data);
+			delete socket.callbacks[reply.id];
+		}
+	});
+	
 	socket.close = function() {
 		transport.close();
 	};
@@ -520,7 +541,7 @@ socket = function(params, transport) {
 // It's time to write the socket handler as an end-user
 on.socket = function(socket) {
 	socket.on("echo", function(data) {
-		this.send("echo", data);
+		socket.send("echo", data);
 	})
 	.on("disconnect", function() {
 		var self = this;
@@ -530,5 +551,10 @@ on.socket = function(socket) {
 	})
 	.on("do-reply", function(flag, reply) {
 		reply[flag ? "done" : "fail"](flag);
+	})
+	.on("foo", function() {
+		socket.send("bar", 2, function(word) {
+			socket.send("echo", word);
+		});
 	});
 };
