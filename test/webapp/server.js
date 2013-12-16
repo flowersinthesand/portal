@@ -224,6 +224,7 @@
 					setup: function() {
 						helper.setup();
 						portal.defaults.transports = [transport];
+						portal.defaults.notifyAbort = true;
 						if (group.setup) {
 							group.setup();
 						}

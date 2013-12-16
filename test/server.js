@@ -103,6 +103,10 @@ on.http = function(req, res) {
 			break;
 		// Detect disconnection
 		// This works only if notifyAbort option is true
+		// Since browser can't stop script tag used in longpolljsonp, server should 
+		// complete the response on abort request. Otherwise, browser can't send any 
+		// request due to restriction in the number of simultaneous connections 
+		// specified in the spec. That's why notifyAbort is true in the test suite  
 		// See portal.defaults.notifyAbort
 		case "abort":
 			// According to client and server, transport may detect disconnection or not
@@ -313,7 +317,6 @@ transports.longpoll = function(req, res) {
 		params = req.params,
 		// Cached data for client that missed some data
 		// It is optional unless the server sends data continuosly
-		// TODO find an exact ratio or a condition to lose data
 		buffer = [],
 		transport = new events.EventEmitter();
 	
