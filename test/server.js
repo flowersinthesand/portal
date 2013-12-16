@@ -575,12 +575,12 @@ on.socket = function(socket) {
 			self.close();
 		}, 100);
 	})
-	.on("do-reply", function(flag, reply) {
+	.on("reply-by-server", function(flag, reply) {
 		reply[flag ? "done" : "fail"](flag);
 	})
-	.on("foo", function() {
-		socket.send("bar", 2, function(word) {
-			socket.send("echo", word);
+	.on("reply-by-client", function() {
+		socket.send("reply-by-client", 1, function(type) {
+			socket.send(type);
 		});
 	});
 };
