@@ -38,6 +38,11 @@ http.createServer(function(req, res) {
 .listen(8080);
 
 
+// From now on, everything is about writing the portal server
+// You will see how to handle HTTP request and WebSocket, establish 
+// transport and socket and its listener in the end
+
+
 // Deal with HTTP request
 on.http = function(req, res) {
 	switch (req.method) {
@@ -68,6 +73,7 @@ on.http = function(req, res) {
 		
 		switch (req.params.when) {
 		// Publish socket establishing HTTP transport
+		// This HTTP response, res, is a persistent connection
 		case "open":
 			switch (req.params.transport) {
 			// The server-sent events in HTML5, sse, is just yet another streaming technique
@@ -104,6 +110,8 @@ on.http = function(req, res) {
 			if (req.params.id in sockets) {
 				sockets[req.params.id].close();
 			}
+			// Close response
+			res.end();
 			break;
 		default:
 			throw new Error("The when [" + req.params.when + "] is not supported");
@@ -474,7 +482,7 @@ socket = function(params, transport) {
 
 
 // Yay! 
-// It's time to write the socket event handler as an end-user
+// It's time to write the socket handler as an end-user
 on.socket = function(socket) {
 	socket.on("echo", function(data) {
 		this.send("echo", data);
