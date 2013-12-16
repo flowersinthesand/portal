@@ -441,7 +441,7 @@ var socket,
 	sockets = {},
 	uuid = require("node-uuid");
 
-// TODO implement and test heartbeat and reply
+// TODO implement and test heartbeat and reply by client
 socket = function(params, transport) {
 	var socket = new events.EventEmitter();
 	
@@ -458,13 +458,45 @@ socket = function(params, transport) {
 	});
 	// If the underlying transport receives a message
 	transport.on("message", function(data) {
-		// Convert JSON string into event object
-		// By default client encodes data in JSON
-		// See portal.defaults.outbound
-		var event = JSON.parse(data);
+		var // The latch prevents double reply 
+			latch,
+			// Convert JSON string into event object
+			// By default client encodes data in JSON
+			// See portal.defaults.outbound
+			event = JSON.parse(data);
 		
 		// Fires it
-		socket.emit(event.type, event.data);
+		socket.emit(
+			// Event type
+			event.type, 
+			// Event data
+			event.data, 
+			// If the event.reply is true, some measure should be available to return data to client 
+			// This support enables to use socket.send(type, data, done, fail) signature in client
+			!event.reply ? null : {
+			done: function(result) {
+				if (!latch) {
+					// Prevents double reply
+					latch = true;
+					
+					// Just send the reply event
+					// The client's done callback whose event id is 'event.id' will be executed 
+					// with 'result' since 'exception' is false
+					socket.send("reply", {id: event.id, data: result, exception: false});
+				}
+			},
+			fail: function(result) {
+				if (!latch) {
+					// Prevents double reply
+					latch = true;
+					
+					// Just send the reply event
+					// The client's fail callback whose event id is 'event.id' will be executed 
+					// with 'result' since 'exception' is true
+					socket.send("reply", {id: event.id, data: result, exception: true});
+				}
+			}
+		});
 	});
 	
 	socket.send = function(type, data) {
@@ -495,5 +527,8 @@ on.socket = function(socket) {
 		setTimeout(function() {
 			self.close();
 		}, 100);
+	})
+	.on("do-reply", function(flag, reply) {
+		reply[flag ? "done" : "fail"](flag);
 	});
 };

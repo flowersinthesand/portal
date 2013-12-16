@@ -188,6 +188,30 @@
 				start();
 			});
 		});
+		
+		// From now on they are fully tested in client.js and have nothing to do with 
+		// transport itself, but are provided to help to implement the portal server
+		asyncTest("transport should support reply by server", function() {
+			var ready;
+			
+			portal.open(url)
+			.send("do-reply", true, function(echo) {
+				strictEqual(echo, true);
+				if (ready) {
+					start();
+				} else {
+					ready = true;
+				}
+			}, helper.okFalse)
+			.send("do-reply", false, helper.okFalse, function(echo) {
+				strictEqual(echo, false);
+				if (ready) {
+					start();
+				} else {
+					ready = true;
+				}
+			});
+		});
 	}
 	
 	if (typeof document !== "undefined") {
