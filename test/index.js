@@ -1,13 +1,13 @@
-// The index.js tests portal.js as a Node.js client and requires a running portal server
+// The index.js tests portal.js as a Node.js client and 
+// requires a running portal server
 // 
 // To run portal server, execute the command in another console
-//     cd test 
-//     mvn clean package jetty:run-war
+//     node server
 
 var qunit = require("qunit");
 
 qunit.run({
-	deps: {path: "test/src/main/webapp/assets/helper.js", namespace: "helper"},
-	code: {path: "portal.js", namespace: "portal"},
-	tests: ["test/src/main/webapp/client.js", "test/src/main/webapp/server.js"]
+	deps: {path: "webapp/assets/helper.js", namespace: "helper"},
+	code: {path: "../portal.js", namespace: "portal"},
+	tests: ["webapp/client.js", "webapp/server.js"]
 });
