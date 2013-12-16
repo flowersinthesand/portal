@@ -122,19 +122,35 @@
 			.send("echo", "data");
 		});
 		
-		asyncTest("transport should be able to exchange multiple event", 10, function() {
-			var i = 0;
+		asyncTest("transport should be able to exchange one hundred of event with the interval of 1ms", 1, function() {
+			var i, array = [], returned = [];
 			
-			portal.open(url).on("echo", function(data) {
-				strictEqual(data, "data" + i);
-				i++;
-				if (i < 10) {
-					this.send("echo", "data" + i);
-				} else {
-					start();
+			for (i = 0; i < 100; i++) {
+				array.push(i + 1);
+			}
+			
+			portal.open(url).on({
+				open: function() {
+					var self = this;
+					for (i = 0; i < array.length; i++) {
+						(function(elem) {
+							setTimeout(function() {
+								self.send("echo", elem);
+							}, 1);
+						})(array[i]);
+					}
+				},
+				echo: function(data) {
+					returned.push(data);
+					if (returned.length === array.length) {
+						returned.sort(function(a, b) {
+							return a - b;
+						});
+						deepEqual(returned, array);
+						start();
+					}
 				}
-			})
-			.send("echo", "data" + i);
+			});
 		});
 		
 		asyncTest("trnasport should be able to exchange an event consisting of multi-byte characters", 1, function() {
