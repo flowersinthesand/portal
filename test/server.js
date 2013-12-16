@@ -490,7 +490,7 @@ on.socket = function(socket) {
 	socket.on("echo", function(data) {
 		this.send("echo", data);
 	})
-	.on("closebyserver", function() {
+	.on("disconnect", function() {
 		var self = this;
 		setTimeout(function() {
 			self.close();

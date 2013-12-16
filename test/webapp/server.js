@@ -181,7 +181,7 @@
 		
 		asyncTest("transport should be notified of close", 1, function() {
 			portal.open(url).open(function() {
-				this.send("closebyserver");
+				this.send("disconnect");
 				ok(true);
 			})
 			.close(function() {
