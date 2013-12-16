@@ -7,7 +7,7 @@
 var qunit = require("qunit");
 
 qunit.run({
-	deps: {path: "webapp/assets/helper.js", namespace: "helper"},
-	code: {path: "../portal.js", namespace: "portal"},
-	tests: ["webapp/client.js", "webapp/server.js"]
+	deps: {path: __dirname + "/webapp/assets/helper.js", namespace: "helper"},
+	code: {path: __dirname + "/../portal.js", namespace: "portal"},
+	tests: [__dirname + "/webapp/client.js", __dirname + "/webapp/server.js"]
 });
