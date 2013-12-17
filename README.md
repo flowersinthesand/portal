@@ -12,7 +12,7 @@ The **Portal** greatly simplifies things essential to real-time web applications
 Since this project follows Test Driven Development (TDD) principles well, looking at and running the test suite is a best way to understand the portal deeply. Every test has a title specifying a single behavior and is wrriten in QUnit.
 
 * [`client.js`](https://github.com/flowersinthesand/portal/blob/master/test/webapp/client.js): Tests portal and socket using dummy and mock transport.
-* [`server.js`](https://github.com/flowersinthesand/portal/blob/master/test/webapp/server.js): Tests transport by interacting with portal server, a very server passing the test suite. 
+* [`server.js`](https://github.com/flowersinthesand/portal/blob/master/test/webapp/server.js): Tests transports by interacting with portal server. 
 
 ### Running
 
@@ -38,3 +38,9 @@ node test/server
 ```
 
 To test portal.js as a browser client, open a browser to test and connect to http://localhost:8080. To test it as a Node.js client, type `node test/index` in other console and see the result.
+
+### Writing server
+
+A server passing the test suite is a very portal server. Writing portal server is not such hard. One of the goals of this project from day 1 (jquery-stream) is easy to implement in server-side as simple as dealing with Ajax. As various transports and features are added, it gets harder than dealing with Ajax, but still quite easy comparing to other similar projects. The portal server in test folder is less than 2KB minified and gzipped though it doesn't matter.
+
+Anyway, the portal server for running the test suite is a good example and tutorial to write portal server. check out [server.js](https://github.com/flowersinthesand/portal/blob/master/test/server.js).
