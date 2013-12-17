@@ -37,10 +37,10 @@ Start a server on localhost at port 8080.
 node test/server
 ```
 
-To test portal.js as a browser client, open a browser to test and connect to http://localhost:8080. To test it as a Node.js client, type `node test/index` in other console and see the result.
+To test portal.js as a browser client, open http://localhost:8080 in a browser and to test it as a Node.js client, type `node test/index` in other console and see the result.
 
 ### Writing server
 
 A server passing the test suite is a very portal server. Writing portal server is not such hard. One of the goals of this project from day 1 (jquery-stream) is easy to implement in server-side as simple as dealing with Ajax. As various transports and features are added, it gets harder than dealing with Ajax, but still quite easy comparing to other similar projects. The portal server in test folder is less than 2KB minified and gzipped though it doesn't matter.
 
-Anyway, the portal server for running the test suite is a good example and tutorial to write portal server. check out [server.js](https://github.com/flowersinthesand/portal/blob/master/test/server.js).
+Anyway, the portal server for running test suite is a good example and tutorial to write portal server. check out [server.js](https://github.com/flowersinthesand/portal/blob/master/test/server.js).
