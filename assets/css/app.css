@@ -32,6 +32,5 @@ pre code {font-weight: normal; color: inherit;}
 .main-header h1 {color: #fff; margin-bottom: 0; font-size: 4.5em;}
 .main-header p {color: #fff; font-size: 1.3em; font-weight: 100}
 .main p:first-child {margin-top: 2em;}
-.donate {color: #777;}
 .donate form button {padding: 0; margin: 0; color: #008cba; background: none;}
 .donate form button:hover {color: #0079a1;}
