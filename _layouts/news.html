@@ -12,6 +12,15 @@
 			</div>
 		</div>
 	</div>
+	<hr />
+	<div class="news-all">
+		<h5>All news</h5>
+		<ul class="pricing-table">
+		{% for post in site.posts %}
+			<li class="bullet-item"><a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a> on {{ post.date | date_to_string  }}</li>
+		{% endfor %}
+		</ul>
+	</div>
 	{% include footer.html %}
 </body>
 </html>
