@@ -15,7 +15,7 @@ pre code {font-weight: normal; color: inherit;}
 .text {padding-top: 25px;}
 .highlight {margin-bottom: 1.25rem; line-height: 1.35rem;}
 
-.news-all .pricing-table .bullet-item {text-align: inherit;}
+.news-all .pricing-table li {text-align: inherit;}
 .news-all h5 {padding-left: 1em;}
 
 .footer {margin-top: 20px; padding: 10px 0; color: #777;}
