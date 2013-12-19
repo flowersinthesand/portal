@@ -1,4 +1,4 @@
-html {font-size: 100%;}
+html {font-size: 90%;}
 body {font-family: "Open Sans", "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif;}
 pre code {font-weight: normal; color: inherit;}
 
@@ -7,9 +7,9 @@ pre code {font-weight: normal; color: inherit;}
 
 .top-bar-wrapper {background: #333;}
 .sidebar {background: #fafafa; padding: 30px 20px;}
-.sidebar h5 {font-weight: bold; font-size: 0.77778rem;}
-.sidebar input[type="search"] {font-size: 0.77778rem; margin: 0 0 0.88889rem 0; padding: 0.44444rem; height: 2.05556rem;}
-.side-nav li {font-family: "Open Sans", "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif; font-size: 0.77778rem;}
+.sidebar h5 {font-weight: bold; font-size: 0.85rem;}
+.sidebar input[type="search"] {font-size: 0.85rem; margin: 0 0 0.97rem 0; padding: 0.49rem; height: 2.06rem;}
+.side-nav li {font-family: "Open Sans", "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif; font-size: 0.85rem;}
 .side-nav li.active a:first-child {font-family: "Open Sans", "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif; font-weight: bold; color: #008cba;}
 .side-nav li label {cursor: default;}
 .text {padding-top: 25px;}
@@ -32,5 +32,6 @@ pre code {font-weight: normal; color: inherit;}
 .main-header h1 {color: #fff; margin-bottom: 0; font-size: 4.5em;}
 .main-header p {color: #fff; font-size: 1.3em; font-weight: 100}
 .main p:first-child {margin-top: 2em;}
+.features-header {margin-bottom: 1.5em;}
 .donate form button {padding: 0; margin: 0; color: #008cba; background: none;}
 .donate form button:hover {color: #0079a1;}
