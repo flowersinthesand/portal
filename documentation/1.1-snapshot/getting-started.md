@@ -59,12 +59,11 @@ Officially the following portal server is available:
 
 * [Portal for Java](https://github.com/flowersinthesand/portal-java)
 
-The more server will be supported. Writing portal server is not such hard. One of the goals of this project from day 1 (jquery-stream) is easy to implement in server-side as simple as dealing with Ajax. As various transports and features are added, it gets harder than dealing with Ajax, but still quite easy comparing to other similar projects.
-
-Check out [server.js](https://github.com/flowersinthesand/portal/blob/master/test/server.js). It is a good example and tutorial to write portal server and pass the test suite. If you just want to try out portal, follow instructions in [README](https://github.com/flowersinthesand/portal/blob/master/README.md#test-suite).  
-
-Please inform me if you write portal server passing the test suite.
+Or you can write your own portal server easier than expected. See [writing server]({{ site.baseurl }}/documentation/1.1-snapshot/writing-server/). If you just want to try out portal, you can use a test server written only to run test suite. Follow instructions in [README](https://github.com/flowersinthesand/portal/blob/master/README.md#test-suite).
 
 ## Play
 
+It's time to play.
+
 TODO
+Write examples
