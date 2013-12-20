@@ -1,7 +1,7 @@
 ---
 layout: news
 title: "Portal 1.1.0 released"
-categories: [news, release]
+categories: [news]
 ---
 
 # Portal 1.1.0 released
