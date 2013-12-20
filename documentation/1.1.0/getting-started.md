@@ -59,7 +59,7 @@ Officially the following portal server is available:
 
 * [Portal for Java](https://github.com/flowersinthesand/portal-java)
 
-Or you can write your own portal server easier than expected. See [writing server]({{ site.baseurl }}/documentation/1.1-snapshot/writing-server/). If you just want to try out portal, you can use a test server written only to run test suite. Follow instructions in [README](https://github.com/flowersinthesand/portal/blob/master/README.md#test-suite).
+Or you can write your own portal server easier than expected. See [writing server]({{ site.baseurl }}/documentation/1.1.0/writing-server/). If you just want to try out portal, you can use a test server written only to run test suite. Follow instructions in [README](https://github.com/flowersinthesand/portal/blob/master/README.md#test-suite).
 
 ## Play
 

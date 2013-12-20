@@ -15,8 +15,8 @@
 					<input type="search" name="q" placeholder="Search docs via Google" autocomplete="off" />
 					<input type="hidden" name="sitesearch" value="http://flowersinthesand.github.io/portal/documentation/{{version}}" />
 				</form>
-				{% if page.path contains "1.1-snapshot" %}
-					{% include nav-documentation-1.1-snapshot.html %}
+				{% if page.path contains "1.1.0" %}
+					{% include nav-documentation-1.1.0.html %}
 				{% elsif page.path contains "1.0.1" %}
 					{% include nav-documentation-1.0.1.html %}
 				{% endif %}
