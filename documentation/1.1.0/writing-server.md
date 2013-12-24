@@ -6,7 +6,27 @@ title: Writing server
 # Writing server
 Writing portal server is not such hard. One of the goals of this project from day 1 (jquery-stream) is easy to implement in server-side as simple as dealing with Ajax. As various transports and features are added, it gets harder than dealing with Ajax, but still quite easy comparing to other similar projects.
 
-A portal server is a very server passing the [portal test suite](https://github.com/flowersinthesand/portal/blob/master/test/webapp/index.html) in all the supported browser. Of course, test suite covers all the functionality of portal.js. However, in practice, you don't need to implement all transports and pass test suite. You only need to implement what your application needs. See [compatibility]({{ site.baseurl }}/documentation/1.1.0/compatibility/) of portal.js.
+To be a portal server
+
+**Required**
+
+* Pass the [test suite](https://github.com/flowersinthesand/portal/blob/master/test/webapp/index.html) in all the supported browser.
+
+**Preferable**
+
+* Clustering
+    * Application should be able to be clustered to scale.
+    * Messaging Oriented Middleware (MOM) is enough.
+      * Encode a given operation into message and broadcast it to nodes.
+      * Each node decodes message and performs that operation if possible.  
+* Transport negotiation
+    * Server should be able to return the best transports in handshake.
+    * Not sure about how it can be achieved.
+* Tag as socket selector
+    * Socket should be able to be tagged.
+    * Socket should be able to find by tag.
+
+That being said, you don't need to write this portal server. Implement only what your application needs. See [compatibility]({{ site.baseurl }}/documentation/1.1.0/compatibility/) of portal.js.
 
 To develop portal.js, I have written a test server, server.js, in JavaScript for Node.js and used it to run test suite. It covers all the words in this document as comment. Check out [server.js](https://github.com/flowersinthesand/portal/blob/master/test/server.js). One example is worth a thousand words.
 
