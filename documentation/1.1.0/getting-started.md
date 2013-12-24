@@ -65,5 +65,94 @@ Or you can write your own portal server easier than expected. See [writing serve
 
 It's time to play.
 
-TODO
-Write examples
+#### Realtime event channel
+
+Socket provided by portal is an realtime event channel between portal client and server. Server and client can send and receives events to each other.
+
+```javascript
+portal.open("/portal").on({
+    // Pseudo event
+    connecting: function() {}, // The selected transport starts connecting to the server
+    waiting: function(delay, attempts) {}, // The socket waits out the reconnection delay
+    // Network event
+    open: function() {}, // The connection is established successfully and communication is possible
+    close: function(reason) {}, // The connection has been closed or could not be opened
+    // Message event
+    message: function(data) {}, // Receive an event whose name is message sent by the server
+    event: function(data) {} // Receive an event whose name is event sent by the server
+})
+.send("greeting", "Hi"); // Send an event whose name is 'greeting' and data is 'Hi' to the server
+```
+
+#### Socket on Web for All
+
+Considering the real world, many coporate proxies, firewalls, antivirus softwares and cloud application platforms block WebSocket and some HTTP transports or servers can't detect disconnection or close connection.
+
+```javascript
+portal.open("/portal", {
+    heartbeat: true,
+    notifyAbort: true,
+    prepare: function(connect, cancel, options) {
+        // Assume that the server returns the best transports for client
+        // Transport negotiation or its guide will be introduced in later 
+        $.ajax("/portal/negotiation").done(function(transports) {
+            // Modify transport set and connects to the server
+            options.transports = trnasports;
+            connect();
+        });
+    }
+});
+```
+
+#### Connection sharing
+
+It's common case that user opens multiple tabs of same website and each tab have its persistent connection like portal. In the case of a web portal consisting of many portlets, if portlet has a persistent connection, it can't send any request, receive and display anything in violation of the simultaneous connection limit. By sharing a connection, it can be avoided.
+
+```javascript
+// Sockets using shared connection are considered as a single client to the server
+// More extended options will be provided later  
+portal.open("/portal", {sharing: true});
+```
+
+#### Remote Procedure Call (RPC)
+
+Socket can play a role of RPC client. Nothing new to traditional Ajax, but comparing to Ajax, WebSocket can reduce unnecessary traffic and the result can be shared by multiple tabs and windows. Building a web application with portal is a good way to create a economical webapp.
+
+```javascript
+portal.open("/portal")
+// If the server requests
+.on("user:stat", function(data, reply) {
+    // The client can respond with data
+    reply(user.stat);
+})
+// If the client requests
+.send("account:find", {id: "flowersinthesand"}, function(account) {
+    // The server can respond with data
+    console.log(account);
+});
+```
+
+#### Customization
+
+For some reason, you may want to or have to check authorization, perform handshake, handle low-level payload, build URL in REST format, use server-generated socket id and customize everything. Various options support to do that.
+
+```javascript
+portal.open("/portal", {
+    // Prepare something before connecting
+    prepare: function(connect, cancel, options) {},
+    // Convert raw string sent by the server to event object
+    inbound: function(data) {},
+    // Convert event object to raw string to be sent to the server
+    outbound: function(event) {},
+    // Build URL to be used by socket
+    urlBuilder: function(url, params, when) {},
+    // Generate a socket id
+    idGenerator: function() {},
+    // Determine reconnection delay
+    reconnect: function(lastDelay, attempts) {},
+    // Modify URL for XDomainRequest
+    xdrURL: function(url) {},
+    // Parse stream response and find stringified event
+    streamParser: function(chunk) {}
+});
+```
