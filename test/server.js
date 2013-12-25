@@ -170,7 +170,12 @@ on.http = function(req, res) {
 				id = /"socket":"([^\"]+)"/.exec(text)[1];
 			
 			// HTTP Transports are supplied with message event in POST request 
-			sockets[id].transport.emit("message", text);
+			if (id in sockets) {
+				sockets[id].transport.emit("message", text);
+			} else {
+				// 500 Internal Server Error
+				res.statusCode = 500;
+			}
 			// Close response
 			res.end();
 		});

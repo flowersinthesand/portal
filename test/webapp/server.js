@@ -227,7 +227,7 @@
 		asyncTest("transport should support heartbeat", 5, function() {
 			var i = 0;
 			
-			portal.open(url, {heartbeat: 500, _heartbeat: 250}).on("heartbeat", function() {
+			portal.open(url, {heartbeat: 1500, _heartbeat: 500}).on("heartbeat", function() {
 				i++;
 				ok(true);
 				if (i > 4) {
