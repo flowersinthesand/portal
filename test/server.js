@@ -45,6 +45,7 @@ http.createServer(function(req, res) {
 
 // Deal with HTTP request
 on.http = function(req, res) {
+	console.log("HTTP request: " + req + ":" + res);
 	switch (req.method) {
 	// GET method is used to establish and manage HTTP transport
 	// The following plain text is typical GET request
