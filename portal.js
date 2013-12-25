@@ -75,7 +75,7 @@
 				firingIndex = firingStart || 0;
 				firingStart = 0;
 				firingLength = list.length;
-				for (; firingIndex < firingLength; firingIndex++) {
+				for (; firingIndex < firingLength && !locked; firingIndex++) {
 					list[firingIndex].apply(context, args);
 				}
 				firing = false;

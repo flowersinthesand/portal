@@ -438,6 +438,13 @@ helper.each("connecting open message event".split(" "), function(i, event) {
 	test(event + " event should become locked on the close event", 2, function() {
 		portal.open("dummy").on(event, helper.okTrue).fire(event).close(helper.okTrue).fire("close").on(event, helper.okFalse).fire(event);
 	});
+	test(event + " event propagation should be stopped on the close event", 1, function() {
+		portal.open("dummy2").on(event, helper.okTrue)
+		.on(event, function() {
+			this.close();
+		})
+		.on(event, helper.okFalse).fire(event);
+	});
 });
 
 // Misc methods
