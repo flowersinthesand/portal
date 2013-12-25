@@ -28,12 +28,12 @@
     "url": "https://github.com/flowersinthesand/portal/issues"
   },
   "dependencies": {
-    "jsdom": "0.8.9",
+    "jsdom": "0.8.10",
     "ws": "0.4.31",
     "eventsource": "0.0.10"
   },
   "devDependencies": {
-    "qunit": "0.5.17",
+    "qunit": "0.5.18",
     "send": "0.1.4",
     "node-uuid": "1.4.1"
   }
