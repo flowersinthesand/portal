@@ -45,7 +45,6 @@ http.createServer(function(req, res) {
 
 // Deal with HTTP request
 on.http = function(req, res) {
-	console.log("HTTP request: " + req + ":" + res);
 	switch (req.method) {
 	// GET method is used to establish and manage HTTP transport
 	// The following plain text is typical GET request
@@ -90,7 +89,9 @@ on.http = function(req, res) {
 				on.socket(socket(req.params, transports.longpoll(req, res)));
 				break;
 			default:
-				throw new Error("The transport [" + req.params.transport + "] is not supported");
+				// 501 Not Implemented
+				res.statusCode = 501;
+				res.end();
 			}
 			break;
 		// Inject new request and response to long polling transport
@@ -119,7 +120,9 @@ on.http = function(req, res) {
 			res.end();
 			break;
 		default:
-			throw new Error("The when [" + req.params.when + "] is not supported");
+			// 501 Not Implemented
+			res.statusCode = 501;
+			res.end();
 		}
 		break;
 
@@ -173,7 +176,9 @@ on.http = function(req, res) {
 		});
 		break;
 	default:
-		throw new Error("The method [" + req.method + "] is not supported");
+		// 405 Method Not Allowed
+		res.statusCode = 405;
+		res.end();
 	}
 	
 	function nocache(req, res) {
