@@ -127,7 +127,8 @@ on.http = function(req, res) {
 			
 			// notifyAbort request is done by script tag
 			// Set content-type to text/javascript
-			res.setHeader("content-type", "text/javascript; charset=utf-8");			// Close response
+			res.setHeader("content-type", "text/javascript; charset=utf-8");			
+			// Close response
 			res.end();
 			break;
 		default:
