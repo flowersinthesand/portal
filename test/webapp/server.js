@@ -1,4 +1,4 @@
-var url = "http://localhost:8080/test",
+var url = "http://" + (typeof location !== "undefined" ? location.hostname : "localhost") + ":8080/test",
 	isNode = typeof exports === "object",
 	isCrossDomain = !new RegExp("^" + portal.support.getAbsoluteURL("/")).test(portal.support.getAbsoluteURL(url)), 
 	text2KB = (function() {
