@@ -11,8 +11,8 @@ The **Portal** greatly simplifies things essential to real-time web applications
 
 Since this project follows Test Driven Development (TDD) principles well, looking at and running the test suite is a best way to understand the portal deeply. Every test has a title specifying a single behavior and is wrriten in QUnit.
 
-* [`client.js`](https://github.com/flowersinthesand/portal/blob/master/test/webapp/client.js): Tests portal and socket using dummy and mock transport.
-* [`server.js`](https://github.com/flowersinthesand/portal/blob/master/test/webapp/server.js): Tests transports by interacting with portal server. 
+* [`client.js`](https://github.com/flowersinthesand/portal/blob/master/test/webapp/unit/client.js): Tests portal and socket using dummy and mock transport.
+* [`server.js`](https://github.com/flowersinthesand/portal/blob/master/test/webapp/unit/server.js): Tests transports by interacting with portal server. 
 
 ### Running
 
