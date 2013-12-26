@@ -1,8 +1,8 @@
 (function() {
 	var transport, 
-		url = QUnit.urlParams.url || ((typeof window === "undefined" ? "http://localhost:8080" : "") +  "/test"),
+		url = "http://localhost:8080/test",
 		crossDomain = !new RegExp("^" + portal.support.getAbsoluteURL("/")).test(portal.support.getAbsoluteURL(url)), 
-		transports = QUnit.urlParams.transports && QUnit.urlParams.transports.split(",") || portal.defaults.transports,
+		transports = ["ws", "sse", "streamxhr", "streamxdr", "streamiframe", "longpollajax", "longpollxdr", "longpolljsonp"],
 		text2KB = (function() {
 			var i, text = "A";
 			
@@ -12,15 +12,16 @@
 			
 			return text;
 		})(),
+		isNode = typeof exports === "object",
 		groups = {
 			ws: {
 				can: function() {
-					return typeof WebSocket !== "undefined";
+					return isNode || typeof WebSocket !== "undefined";
 				}
 			},
 			sse: {
 				can: function() {
-					return typeof EventSource !== "undefined";
+					return isNode || typeof EventSource !== "undefined";
 				}
 			},
 			streamxhr: {
@@ -69,7 +70,7 @@
 			},
 			longpollajax: {
 				can: function(crossDomain) {
-					return !crossDomain || portal.support.corsable;
+					return isNode || (!crossDomain || portal.support.corsable);
 				}
 			},
 			longpollxdr: {
@@ -101,7 +102,7 @@
 			},
 			longpolljsonp: {
 				can: function() {
-					return true;
+					return !isNode;
 				}
 			}
 		};
@@ -236,35 +237,9 @@
 			});
 		});
 	}
-	
-	if (typeof document !== "undefined") {
-		(function() {
-			var toolbar = document.getElementById("qunit-testrunner-toolbar"),
-				div = document.createElement("div");
-			
-			div.appendChild(document.createTextNode(portal.support.getAbsoluteURL(url) + " (" + transports.join(",") + ")"));
-			toolbar.appendChild(div);
-		})();
-	} else {
-		// If Node.js
-		groups.ws.can = groups.sse.can = groups.longpollajax.can = function() {
-			return true;
-		};
-		groups.longpolljsonp.can = function() {
-			return false;
-		};
-	}
 
 	while(transports.length) {
 		transport = transports.shift();
-		if (transport === "stream") {
-			transports.unshift("streamxhr", "streamxdr", "streamiframe");
-			continue;
-		} else if (transport === "longpoll") {
-			transports.unshift("longpollajax", "longpollxdr", "longpolljsonp");
-			continue;
-		}
-		
 		(function(transport, group) {
 			if (group) {
 				QUnit.module(transport, {

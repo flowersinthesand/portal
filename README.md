@@ -16,7 +16,7 @@ Since this project follows Test Driven Development (TDD) principles well, lookin
 
 ### Running
 
-In order to run test suite, you need to have Node.js.
+In order to run test suite, you need to have Node.js or write your portal server.
 
 Clone this repository or simply download it as a zip and extract it.
 
@@ -31,16 +31,20 @@ Install dependencies. If you are on Windows, you may have trouble in installing 
 npm install
 ```
 
-Start a server on localhost at port 8080.
+Start server on localhost at port 8080 and 8090. Both servers serve static assets but portal server is on 8080.
 
 ```bash
 node test/server
 ```
 
-To test portal.js as a browser client, open http://localhost:8080 in a browser and to test it as a Node.js client, type `node test/index` in other console and see the result.
+#### As browser client
+Open [http://localhost:8080](http://localhost:8080) for same origin or [http://localhost:8090](http://localhost:8090) for cross origin in a browser.
+
+#### As Node.js client
+Type `node test/index` in other console.
 
 ### Writing server
 
-A server passing the test suite is a very portal server. Writing portal server is not such hard. One of the goals of this project from day 1 (jquery-stream) is easy to implement in server-side as simple as dealing with Ajax. As various transports and features are added, it gets harder than dealing with Ajax, but still quite easy comparing to other similar projects. The portal server in test folder is less than 2KB minified and gzipped though it doesn't matter.
+A server passing the test suite is a very portal server. Writing portal server is not such hard. One of the goals of this project from day 1 (jquery-stream) is easy to implement in server-side as simple as dealing with Ajax. As various transports and features are added, it gets harder than dealing with Ajax, but still quite easy comparing to other similar projects.
 
-Anyway, the portal server for running test suite is a good example and tutorial to write portal server. check out [server.js](https://github.com/flowersinthesand/portal/blob/master/test/server.js).
+Anyway, the portal server used to develop portal.js is a good tutorial to write portal server and less than 2KB minified and gzipped though it doesn't matter. Check out [server.js](https://github.com/flowersinthesand/portal/blob/master/test/server.js).

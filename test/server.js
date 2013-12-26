@@ -15,16 +15,25 @@ var on = {},
 	send = require("send"),
 	wsServer = new ws.Server({noServer: true});
 
+// Deal with static assets
+on.asset = function(req, res) {
+	// portal.js from / and the rest from /test/webapp/
+	var root = __dirname + (/\/portal.js/.test(req.url) ? "/.." : "/webapp");
+	send(req, url.parse(req.url).pathname).root(root).pipe(res);
+};
+
+// This server accepts request from http://localhost:8090/ 
+// and serves static assets only for cross-origin test
+http.createServer(on.asset).listen(8090);
+
 // This web server accepts request from http://localhost:8080/
+// and serves static assets for same-origin and plays a role of portal server
 // The path, /test, is the path where we will implement the portal protocol
 http.createServer(function(req, res) {
 	if (/\/test/.test(req.url)) {
 		on.http(req, res);
 	} else {
-		// Serve static resources
-		// portal.js from / and the rest from /test/webapp/
-		var root = __dirname + (/\/portal.js/.test(req.url) ? "/.." : "/webapp");
-		send(req, url.parse(req.url).pathname).root(root).pipe(res);
+		on.asset(req, res);
 	}
 })
 .on("upgrade", function(req, socket, head) {
@@ -36,7 +45,6 @@ http.createServer(function(req, res) {
 	}
 })
 .listen(8080);
-
 
 // From now on, everything is about writing the portal server
 // You will see how to handle HTTP request and WebSocket, establish 
