@@ -105,10 +105,13 @@ on.http = function(req, res) {
 		// Inject new request and response to long polling transport
 		// In long polling, multiple request and response consist of a pseudo connection
 		case "poll":
-			// Certain browsers poll again after a few minutes of close for some reason
-			// so check if there is socket first but not sure why it's so
+			// Just to be sure
 			if (req.params.id in sockets) {
 				sockets[req.params.id].transport.refresh(req, res);
+			} else {
+				// 500 Internal Server Error
+				res.statusCode = 500;
+				res.end();
 			}
 			break;
 		// Detect disconnection
@@ -119,8 +122,7 @@ on.http = function(req, res) {
 		// specified in the spec. That's why notifyAbort is true in the test suite  
 		// See portal.defaults.notifyAbort
 		case "abort":
-			// According to client and server, transport may detect disconnection or not
-			// so check it first
+			// True only if transport couldn't detect disconnection
 			if (req.params.id in sockets) {
 				sockets[req.params.id].close();
 			}
