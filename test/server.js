@@ -124,7 +124,10 @@ on.http = function(req, res) {
 			if (req.params.id in sockets) {
 				sockets[req.params.id].close();
 			}
-			// Close response
+			
+			// notifyAbort request is done by script tag
+			// Set content-type to text/javascript
+			res.setHeader("content-type", "text/javascript; charset=utf-8");			// Close response
 			res.end();
 			break;
 		default:
