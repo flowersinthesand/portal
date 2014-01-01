@@ -2,7 +2,7 @@
  * Portal v1.1.1-snapshot
  * http://flowersinthesand.github.io/portal/
  * 
- * Copyright 2011-2013, Donghwan Kim 
+ * Copyright 2011-2014, Donghwan Kim 
  * Licensed under the Apache License, Version 2.0
  * http://www.apache.org/licenses/LICENSE-2.0
  */
