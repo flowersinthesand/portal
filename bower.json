@@ -1,6 +1,6 @@
 {
   "name": "portal",
-  "version": "1.1.1-snapshot",
+  "version": "1.1.1",
   "main": "portal.js",
   "ignore": [
     "node_modules",
