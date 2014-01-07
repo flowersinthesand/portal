@@ -26,7 +26,7 @@ To be a portal server
     * Socket should be able to be tagged.
     * Socket should be able to find by tag.
 
-That being said, you don't need to write this portal server. Implement only what your application needs. See [compatibility]({{ site.baseurl }}/documentation/1.1.0/compatibility/) of portal.js.
+That being said, you don't need to write this portal server. Implement only what your application needs. See [compatibility]({{ site.baseurl }}/documentation/1.1.1/compatibility/) of portal.js.
 
 To develop portal.js, I have written a test server, server.js, in JavaScript for Node.js to run the test suite. Check out [server.js](https://github.com/flowersinthesand/portal/blob/master/test/server.js). One example is worth a thousand words.
 

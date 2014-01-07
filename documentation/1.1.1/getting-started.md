@@ -9,17 +9,30 @@ title: Getting started
 
 ### As browser client
 
-Download portal.js and copy it to your static assets folder, or portal server may do that for you. If you use a script tag whose src attribute is set to one of the below one, browser may not load it because the content type served by raw.github.com is text/plain.
+Download portal.js and copy it to your static assets folder.
 
-* [portal v1.1.0 compressed](https://raw.github.com/flowersinthesand/portal/1.1.0/portal.min.js)
-* [portal v1.1.0 uncompressed](https://raw.github.com/flowersinthesand/portal/1.1.0/portal.js)
+* [portal v1.1.1 compressed](https://raw.github.com/flowersinthesand/portal/1.1.1/portal.min.js)
+* [portal v1.1.1 uncompressed](https://raw.github.com/flowersinthesand/portal/1.1.1/portal.js)
+
+If you have `bower` installed,
+
+```
+bower install portal
+```
 
 Also portal.js is available in the following ways, but there may be delays between a release and its availability.
 
-* [CDNJS CDN](http://cdnjs.com/libraries/portal)
-* [WebJars](http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22org.webjars%22%20AND%20a%3A%22portal%22)
+<ul class="inline-list">
+<li><a href="http://cdnjs.com/libraries/portal">CDNJS CDN</a></li>
+<li><a href="http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22org.webjars%22%20AND%20a%3A%22portal%22">WebJars</a></li>
+</ul>
 
-Then load it by script tag
+Then load it by using either script tag or AMD loader.
+
+<div class="row">
+<div class="large-6 columns">
+{% capture panel %}
+**Script tag**
 
 ```html
 <script src="/portal/portal.min.js"></script>
@@ -27,14 +40,20 @@ Then load it by script tag
 portal.open("/test");
 </script>
 ```
-
-Or as an AMD module.
+{% endcapture %}{{ panel | markdownify }}
+</div>
+<div class="large-6 columns">
+{% capture panel %}
+**AMD loader**
 
 ```javascript
 require(["portal"], function(portal) {
     portal.open("/test");
 });
 ```
+{% endcapture %}{{ panel | markdownify }}
+</div>
+</div>
 
 ### As Node.js client
 
@@ -59,7 +78,7 @@ Officially the following portal server is available:
 
 * [Portal for Java](https://github.com/flowersinthesand/portal-java)
 
-Or you can write your own portal server easier than expected. See [writing server]({{ site.baseurl }}/documentation/1.1.0/writing-server/). If you just want to try out portal, you can use a test server written only to run test suite. Follow instructions in [README](https://github.com/flowersinthesand/portal/blob/master/README.md#test-suite).
+Or you can write your own portal server easier than expected. See [writing server]({{ site.baseurl }}/documentation/1.1.1/writing-server/). If you just want to try out portal, you can use a test server written only to run test suite. Follow instructions in [README](https://github.com/flowersinthesand/portal/blob/master/README.md#test-suite).
 
 ## Play
 

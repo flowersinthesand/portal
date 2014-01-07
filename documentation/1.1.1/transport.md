@@ -22,7 +22,7 @@ To send data to the server, the following methods defined in `httpbase` transpor
 * Form element: always works but causes a clicking sound.
 
 ## Implementation
-The following implementations are ready to use. For their availability, see [compatibility]({{ site.baseurl }}/documentation/1.1.0/compatibility/).
+The following implementations are ready to use. For their availability, see [compatibility]({{ site.baseurl }}/documentation/1.1.1/compatibility/).
 
 ### `ws`
 
