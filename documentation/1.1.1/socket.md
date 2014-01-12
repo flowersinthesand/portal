@@ -71,6 +71,8 @@ From the semantic point of view, the unit of data to be sent and be received is 
 
     They are sent and received via the connection effectively. Only this type of event can be extended. All the custom event used by the socket or the user belong to custom message event. 
 
+---
+
 ## Event
 
 ### `connecting()`
@@ -123,6 +125,8 @@ A message event which is fired multiple times when a reply event has been receiv
     * id: The original event which requested reply
     * data: The reply of the server
     * exception: Tells there was exception and determines whether to invoke the done callback or the fail callback.
+
+---
 
 ## Method
 

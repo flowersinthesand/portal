@@ -6,6 +6,8 @@ title: portal
 # `portal`
 An interface used to manage socket.
 
+---
+
 ## Method
 
 ### `open(url, [options])`

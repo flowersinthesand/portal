@@ -21,6 +21,8 @@ To send data to the server, the following methods defined in `httpbase` transpor
 * XDomainRequest: works if the browser supports `XDomainRequest` and the `.options.xdrURL(url)` returns a appropriate url.
 * Form element: always works but causes a clicking sound.
 
+---
+
 ## Implementation
 The following implementations are ready to use. For their availability, see [compatibility]({{ site.baseurl }}/documentation/1.1.1/compatibility/).
 

@@ -4,6 +4,9 @@ title: Compatibility
 ---
 
 # Compatibility
+
+---
+
 ## Browser
 The policy for browser support is the same with the one of [jQuery 1.x](http://jquery.com/browser-support/).
 
@@ -52,7 +55,6 @@ You will see that unsupported browsers are also listed. They are tested with 1.0
 ||10.0|||`longpollajax`|
 |Android|2.1|| `streamxhr`|`longpollajax`, `longpolljsonp`|
 
-
 #### Cross origin
 | Browser | Version | WebSocket | HTTP Streaming | HTTP Long polling |
 |---|---|---|---|---|
@@ -77,6 +79,8 @@ You will see that unsupported browsers are also listed. They are tested with 1.0
 ||12||`sse`|`longpollajax`, `longpolljsonp`|
 ||11.60|||`longpolljsonp`|
 |Android|2.1|| `streamxhr`|`longpollajax`, `longpolljsonp`|
+
+---
 
 ## Node.js
 Only `ws`, `sse` and `longpollajax` are supported.

@@ -5,22 +5,21 @@ title: Getting started
 
 # Getting started
 
+---
+
 ## Install
 
 ### As browser client
 
-Download portal.js and copy it to your static assets folder.
+Download portal.js the way you want.
 
-* [portal v1.1.1 compressed](https://raw.github.com/flowersinthesand/portal/1.1.1/portal.min.js)
-* [portal v1.1.1 uncompressed](https://raw.github.com/flowersinthesand/portal/1.1.1/portal.js)
+<ul class="inline-list">
+<li><a href="https://raw.github.com/flowersinthesand/portal/1.1.1/portal.min.js">The compressed</a></li>
+<li><a href="https://raw.github.com/flowersinthesand/portal/1.1.1/portal.js">The uncompressed</a></li>
+<li><code>bower install portal</code></li>
+</ul>
 
-If you have `bower` installed,
-
-```
-bower install portal
-```
-
-Also portal.js is available in the following ways, but there may be delays between a release and its availability.
+Though there may be delays between a release and its availability, portal.js is available in the following ways
 
 <ul class="inline-list">
 <li><a href="http://cdnjs.com/libraries/portal">CDNJS CDN</a></li>
@@ -72,13 +71,17 @@ var portal = require("portal-client");
 portal.open("http://localhost:8080/test");
 ```
 
+---
+
 ## Prepare server
 
 Officially the following portal server is available:
 
-* [Portal for Java](https://github.com/flowersinthesand/portal-java)
+* [Portal for Java](http://flowersinthesand.github.io/portal-java/)
 
-Or you can write your own portal server easier than expected. See [writing server]({{ site.baseurl }}/documentation/1.1.1/writing-server/). If you just want to try out portal, you can use a test server written only to run test suite. Follow instructions in [README](https://github.com/flowersinthesand/portal/blob/master/README.md#test-suite).
+Or you can write your own server easier than expected. See [writing server]({{ site.baseurl }}/documentation/1.1.1/writing-server/). If you just want to try out portal, you can use a test server written only to run test suite. Follow instructions in [README](https://github.com/flowersinthesand/portal/blob/master/README.md#test-suite).
+
+---
 
 ## Play
 
