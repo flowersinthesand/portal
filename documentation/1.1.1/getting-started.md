@@ -4,6 +4,7 @@ title: Getting started
 ---
 
 # Getting started
+The **Portal** is a concise, lightweight and feature-rich JavaScript library for real-time web application development. 
 
 ---
 
