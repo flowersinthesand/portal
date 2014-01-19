@@ -1,6 +1,6 @@
 ---
 layout: news
-title: "Portal 0.8.0 released"
+title: "Portal for Java 0.8.0 released"
 categories: [news]
 ---
 
