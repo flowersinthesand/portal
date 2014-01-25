@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Portal is the JavaScript library for real-time web application development." />
+<meta name="description" content="{{ site.description | xml_escape }}" />
 <meta name="author" content="Donghwan Kim" />
 <title> 
 {% if page.title == "Portal" %} 
@@ -13,4 +13,5 @@
 <link rel="stylesheet" href="{{ site.baseurl }}/assets/css/foundation.min.css" />
 <link rel="stylesheet" href="{{ site.baseurl }}/assets/css/pygments-github.css" />
 <link rel="stylesheet" href="{{ site.baseurl }}/assets/css/app.css" />
+<link rel="alternate" type="application/rss+xml" title="RSS for Portal news" href="{{ site.baseurl }}/feed.xml">
 <script src="{{ site.baseurl }}/assets/js/modernizr.js"></script>

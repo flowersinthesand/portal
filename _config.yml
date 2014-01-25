@@ -1,4 +1,7 @@
 baseurl: /portal
+name: Portal
+description: Portal is the JavaScript library for real-time web application development
+url: http://flowersinthesand.github.io/portal/
 markdown: redcarpet
 redcarpet:
   extensions:
