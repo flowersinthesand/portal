@@ -23,8 +23,9 @@ Download portal.js the way you want.
 Though there may be delays between a release and its availability, portal.js is available in the following ways
 
 <ul class="inline-list">
-<li><a href="http://cdnjs.com/libraries/portal">CDNJS CDN</a></li>
 <li><a href="http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22org.webjars%22%20AND%20a%3A%22portal%22">WebJars</a></li>
+<li><a href="http://cdnjs.com/libraries/portal">CDNJS CDN</a></li>
+<li><a href="http://www.jsdelivr.com/#!portal">jsDelivr CDN</a></li>
 </ul>
 
 Then load it by using either script tag or AMD loader.
