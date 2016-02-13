@@ -1,4 +1,4 @@
-**Notice:** Portal has reached its [End-of-Life](http://flowersinthesand.github.io/portal/news/2014/10/02/portal-end-of-life/). Use [Vibe](http://vibe-project.github.io/).
+**Notice:** Portal has reached its [End-of-Life](http://flowersinthesand.github.io/portal/news/2014/10/02/portal-end-of-life/). Use [Cettia](http://cettia.io/).
 
 # Portal
 The **Portal** is a concise, lightweight and feature-rich JavaScript library for real-time web application development. The <strong>Portal</strong> provides socket for browser-based and Node.js-based applications that need two-way communication with servers, but also aims to utilize a full duplex connection for modern web application development.
